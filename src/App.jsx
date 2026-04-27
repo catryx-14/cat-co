@@ -1,0 +1,260 @@
+import { useState, useEffect } from 'react'
+import { buildBokeh } from './atmosphere.js'
+import TrackerRoom from './TrackerRoom.jsx'
+import { TweaksPanel, TweakSection, TweakSlider, TweakToggle, useTweaks } from './components/TweaksPanel.jsx'
+import { loadSettings } from './lib/db.js'
+
+const ROOMS = [
+  { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 15, y: 32, breathe: 5.2, delay: '0s'    },
+  { key: 'sparks',  name: 'Sparks',         sub: 'small joys, collected',        tone: 'rose',   x: 40, y: 18, breathe: 4.6, delay: '-1.2s' },
+  { key: 'physio',  name: 'Neural Physio',  sub: 'gentle exercises',             tone: 'teal',   x: 68, y: 30, breathe: 5.6, delay: '-2.1s' },
+  { key: 'games',   name: 'Games',          sub: 'low-stakes play',              tone: 'purple', x: 73, y: 62, breathe: 4.8, delay: '-0.6s' },
+  { key: 'library', name: 'Library',        sub: 'what i\u2019m reading',        tone: 'warm',   x: 23, y: 70, breathe: 5.0, delay: '-2.6s' },
+  { key: 'threads', name: 'Threads',        sub: 'thinking-in-progress',         tone: 'rose',   x: 47, y: 55, breathe: 5.4, delay: '-1.8s' },
+]
+
+const TWEAK_DEFAULTS = {
+  showSubtitles: true,
+  particleDensity: 1,
+  warmth: 0.7,
+  heroLine: 'This is a liminal space.',
+  showTime: true,
+  settlePrompt: 'Take a breath. Nothing here is urgent.',
+}
+
+function timeOfDay() {
+  const h = new Date().getHours()
+  if (h < 5)  return 'late'
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  if (h < 21) return 'evening'
+  return 'night'
+}
+
+function clockText() {
+  const d = new Date()
+  const hh = d.getHours()
+  const mm = d.getMinutes().toString().padStart(2, '0')
+  const day = ['sun','mon','tue','wed','thu','fri','sat'][d.getDay()]
+  return `${day} · ${hh}:${mm}`
+}
+
+// ─── RoomStar ───
+function RoomStar({ room, showSub, onPick }) {
+  return (
+    <a className={`room-star ${room.tone} ${room.key}`} href="#" tabIndex="0"
+       onClick={e => { e.preventDefault(); onPick(room.key) }}
+       style={{ left: `${room.x}%`, top: `${room.y}%`, '--breathe': `${room.breathe}s`, '--delay': room.delay }}
+       aria-label={`Enter ${room.name}`}>
+      <span className="glow" />
+      <span className="point" />
+      <div className="label">{room.name}</div>
+      {showSub && <div className="sub">{room.sub}</div>}
+    </a>
+  )
+}
+
+// ─── HubView ───
+function HubView({ tweaks, onPick }) {
+  const [clock, setClock] = useState(clockText())
+  useEffect(() => {
+    const id = setInterval(() => setClock(clockText()), 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const tod = timeOfDay()
+  return (
+    <>
+      <p className="gloaming">the threshold</p>
+      <h1 className="hub-mark">
+        Cat<span className="amp" aria-label="and">
+          <svg viewBox="0 0 229 329" aria-hidden="true">
+            <defs>
+              <linearGradient id="ampGold" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="0.6" y2="1">
+                <stop offset="0%"   stopColor="#fff5cc"/>
+                <stop offset="22%"  stopColor="#f4d28a"/>
+                <stop offset="45%"  stopColor="#c9923a"/>
+                <stop offset="65%"  stopColor="#8c5a1c"/>
+                <stop offset="82%"  stopColor="#d4a352"/>
+                <stop offset="100%" stopColor="#7a4a14"/>
+              </linearGradient>
+              <filter id="ampBevel" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+                <feSpecularLighting in="blur" surfaceScale="6" specularConstant="1.4" specularExponent="22" lightingColor="#fff8dc" result="spec">
+                  <feDistantLight azimuth="225" elevation="45"/>
+                </feSpecularLighting>
+                <feComposite in="spec" in2="SourceAlpha" operator="in" result="specClipped"/>
+                <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="specClipped"/></feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#ampBevel)">
+              <path fill="url(#ampGold)" stroke="#5a3608" strokeWidth="1.5" strokeOpacity="0.55"
+                d="M 166 0 L 186 0 L 206 8 L 221 23 L 225 30 L 229 44 L 229 71 L 219 96 L 209 110 L 199 120 L 172 142 L 156 158 L 150 167 L 147 177 L 147 182 L 152 189 L 184 199 L 197 206 L 203 214 L 207 223 L 209 235 L 208 252 L 204 266 L 190 287 L 169 306 L 157 313 L 137 321 L 118 325 L 99 326 L 71 323 L 53 317 L 47 324 L 39 328 L 23 329 L 12 326 L 6 320 L 5 313 L 12 306 L 22 304 L 24 302 L 15 292 L 6 277 L 2 266 L 0 247 L 5 225 L 22 199 L 24 191 L 20 181 L 11 167 L 8 151 L 10 140 L 16 126 L 23 116 L 33 107 L 31 100 L 37 94 L 43 94 L 49 99 L 62 94 L 85 92 L 115 71 L 120 70 L 120 104 L 116 113 L 110 119 L 97 115 L 75 115 L 69 117 L 97 136 L 99 138 L 98 141 L 94 140 L 64 119 L 59 119 L 58 121 L 73 151 L 69 151 L 58 128 L 53 122 L 52 128 L 55 156 L 52 157 L 48 127 L 47 126 L 39 136 L 37 142 L 37 155 L 44 174 L 45 186 L 30 220 L 29 242 L 35 261 L 42 272 L 53 283 L 71 292 L 94 297 L 112 297 L 129 294 L 154 284 L 163 278 L 173 268 L 181 255 L 184 243 L 184 233 L 181 225 L 169 215 L 142 206 L 131 199 L 126 191 L 124 181 L 124 172 L 130 157 L 139 146 L 187 99 L 195 88 L 201 72 L 201 51 L 195 37 L 184 27 L 177 24 L 159 22 L 157 20 L 156 10 L 158 3 L 166 0 Z"/>
+            </g>
+          </svg>
+        </span>Co
+      </h1>
+      <p className="hero-line">{tweaks.heroLine}</p>
+      <p className="hero-sub">a soft place to set your day down,</p>
+      <p className="hero-sub">and small lights for the way ahead.</p>
+      {tweaks.showTime && <p className="hero-time">{tod} · {clock}</p>}
+
+      <div className="field-wrap">
+        <div className="field">
+          {ROOMS.map(r => (
+            <RoomStar key={r.key} room={r} showSub={tweaks.showSubtitles} onPick={onPick} />
+          ))}
+        </div>
+      </div>
+
+      <footer className="footer">
+        <div className="left">{tweaks.settlePrompt}</div>
+        <div className="right">v.0 · cagliostro · the gloaming</div>
+      </footer>
+    </>
+  )
+}
+
+// ─── Rail ───
+function Rail({ inRoom, current, onPick, onHome }) {
+  return (
+    <div className={`rail ${inRoom ? 'expanded' : ''}`} aria-label="navigation">
+      <div className="rail-mark" title="home" onClick={inRoom ? onHome : undefined} />
+      <nav className="rail-nav" aria-hidden={!inRoom}>
+        {ROOMS.map(r => (
+          <a key={r.key}
+             className={`rail-nav-item ${r.tone} ${current === r.key ? 'active' : ''}`}
+             href="#"
+             onClick={e => { e.preventDefault(); onPick(r.key) }}>
+            <span className="dot" />
+            <span className="label-text">{r.name}</span>
+          </a>
+        ))}
+      </nav>
+      <a className="rail-home" href="#" onClick={e => { e.preventDefault(); onHome() }}>
+        back to the threshold
+      </a>
+    </div>
+  )
+}
+
+// ─── RoomView ───
+function RoomView({ roomKey, onHome, session, settings }) {
+  const room = ROOMS.find(r => r.key === roomKey)
+  if (roomKey === 'tracker') {
+    return <TrackerRoom onHome={onHome} session={session} settings={settings} />
+  }
+  return (
+    <>
+      <div className="room-head">
+        <h2 className="room-title">{room ? room.name : '—'}</h2>
+      </div>
+      <div className="placeholder">
+        this room hasn't been built yet — return to the threshold and choose another star.
+      </div>
+    </>
+  )
+}
+
+// ─── App ───
+export default function App({ session }) {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS)
+  const [view, setView] = useState('hub')
+  const [leaving, setLeaving] = useState(false)
+  const [fadingIn, setFadingIn] = useState(false)
+  const [fast, setFast] = useState(false)
+  const [settings, setSettings] = useState(null)
+  const inRoom = view !== 'hub'
+
+  useEffect(() => {
+    loadSettings()
+      .then(setSettings)
+      .catch(err => {
+        console.error('failed to load settings', err)
+        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
+      })
+  }, [])
+
+  // Sync atmosphere tweaks to CSS + bokeh
+  useEffect(() => {
+    document.documentElement.style.setProperty('--warmth', tweaks.warmth)
+    window.__warmth = tweaks.warmth
+    if (window.__rebuildBokeh) window.__rebuildBokeh(tweaks.warmth)
+    const bokeh = document.getElementById('bokeh-layer')
+    if (bokeh) {
+      bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
+      bokeh.style.display = tweaks.particleDensity > 0.05 ? 'block' : 'none'
+    }
+  }, [tweaks.warmth, tweaks.particleDensity])
+
+  function navigate(target, speed) {
+    const isFast = speed === 'fast'
+    setLeaving(true)
+    setTimeout(() => {
+      setView(target)
+      setLeaving(false)
+      setFast(isFast)
+      setFadingIn(true)
+    }, isFast ? 350 : 900)
+  }
+
+  const goRoom = (key) => navigate(key, 'slow')
+  const goHome = () => navigate('hub', 'fast')
+
+  const fadeClass = [
+    'view-fade',
+    leaving ? 'leaving' : '',
+    fadingIn && !leaving ? 'fading-in' : '',
+    fast ? 'fast' : '',
+    view === 'hub' ? 'is-hub' : 'is-room',
+  ].filter(Boolean).join(' ')
+
+  if (!settings) return null
+
+  return (
+    <>
+      <div className="stage">
+        {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} />}
+        <main className="view">
+          <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
+            {view === 'hub'
+              ? <HubView tweaks={tweaks} onPick={goRoom} />
+              : <RoomView roomKey={view} onHome={goHome} session={session} settings={settings} />}
+          </div>
+        </main>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Atmosphere">
+          <TweakSlider label="particle density" value={tweaks.particleDensity}
+            onChange={v => setTweak('particleDensity', v)} min={0} max={1.6} step={0.05} />
+          <TweakSlider label="warmth" value={tweaks.warmth}
+            onChange={v => setTweak('warmth', v)} min={0} max={1.6} step={0.05} />
+          <TweakToggle label="show time of day" value={tweaks.showTime}
+            onChange={v => setTweak('showTime', v)} />
+        </TweakSection>
+        <TweakSection title="Constellation">
+          <TweakToggle label="show room subtitles" value={tweaks.showSubtitles}
+            onChange={v => setTweak('showSubtitles', v)} />
+        </TweakSection>
+        <TweakSection title="Words">
+          <input
+            value={tweaks.heroLine}
+            onChange={e => setTweak('heroLine', e.target.value)}
+            style={{ width: '100%', padding: '6px 8px', fontFamily: 'inherit', fontSize: 13,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.3)',
+              color: 'inherit', borderRadius: 4 }}
+          />
+          <textarea
+            value={tweaks.settlePrompt}
+            onChange={e => setTweak('settlePrompt', e.target.value)}
+            rows={2}
+            style={{ width: '100%', padding: '6px 8px', fontFamily: 'inherit', fontSize: 13, marginTop: 6,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.3)',
+              color: 'inherit', borderRadius: 4, resize: 'vertical' }}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  )
+}
