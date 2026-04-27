@@ -85,7 +85,7 @@ export function dbToInternal(row) {
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
                                 warning, goodSigns, settings, yesterdayClosing }) {
   const { taxValue, thresholds, taxStartDate } = settings
-  const anyFlow = userEvents.some(e => e.flow)
+  const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
   const taxApplies = dateStr >= taxStartDate && !anyFlow
 
   let evPoints = 0

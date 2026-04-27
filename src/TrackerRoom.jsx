@@ -348,11 +348,10 @@ function WarningSigns({ flags, onToggle }) {
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings }) {
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false }) {
   const { taxValue, thresholds, taxStartDate } = settings
   const dateStr = todayDateStr()
-  const anyFlow = userEvents.some(e => e.flow)
-  const taxApplies = taxActive(dateStr, taxStartDate, userEvents)
+  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
   let evPts = 0
@@ -449,9 +448,9 @@ function TrackerToday({ session, settings }) {
   const allEvents = [
     ...userEvents,
     ...((() => {
-      const anyFlow = userEvents.some(e => e.flow)
+      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
       const dateStr = todayDateStr()
-      const applies = taxActive(dateStr, settings.taxStartDate, userEvents)
+      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
       return [{
         id: 'autistic-tax',
         bucket: 'evening',
@@ -501,6 +500,7 @@ function TrackerToday({ session, settings }) {
         regulation={regulation}
         openingBalance={openingBalance}
         settings={settings}
+        flowOverride={goodSigns.flow}
       />
 
       <div className="ledger-head">
