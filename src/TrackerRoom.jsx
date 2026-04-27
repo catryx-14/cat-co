@@ -497,7 +497,7 @@ function TrackerToday({ session, settings }) {
   return (
     <>
       <Sky
-        userEvents={allEvents}
+        userEvents={userEvents}
         regulation={regulation}
         openingBalance={openingBalance}
         settings={settings}
@@ -557,16 +557,13 @@ export default function TrackerRoom({ onHome, session, settings }) {
         ))}
       </div>
 
-      {/* Always keep today mounted so unsaved state survives tab switches */}
+      {/* Today stays mounted so unsaved state survives tab switches */}
       <div style={{ display: tab === 'today' ? '' : 'none' }}>
         <TrackerToday session={session} settings={settings} />
       </div>
-      <div style={{ display: tab === 'horizon' ? '' : 'none' }}>
-        <div className="placeholder">horizon — coming next</div>
-      </div>
-      <div style={{ display: tab === 'history' ? '' : 'none' }}>
-        <TrackerHistory settings={settings} />
-      </div>
+      {/* Horizon and history remount each visit — no unsaved state to preserve */}
+      {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
+      {tab === 'history' && <TrackerHistory settings={settings} />}
     </>
   )
 }
