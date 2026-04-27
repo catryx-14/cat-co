@@ -48,8 +48,8 @@ function MoonRow({ entry, expanded, onToggle, thresholds, onEdit, onDelete }) {
   const dateObj = parseDate(entry.date)
   const peak = d.peakDebit ?? entry.peak_debit ?? 0
   const openingBalance = d.openingBalance ?? 0
-  const { word: weatherWord, intensity } = weatherOf(peak, thresholds.yellow, thresholds.critical)
-  const skyState = intensity === 0 ? 0 : intensity < 5 ? 1 : 2
+  const { word: weatherWord } = weatherOf(peak, thresholds.yellow, thresholds.critical)
+  const skyState = peak >= thresholds.critical ? 2 : peak >= thresholds.yellow ? 1 : 0
 
   const reg = {
     sensory: d.regulation?.sensoryComfort ?? 0,
