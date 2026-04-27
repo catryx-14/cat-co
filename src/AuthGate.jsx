@@ -2,16 +2,20 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase.js'
 
 export default function AuthGate({ children }) {
-  const [session, setSession] = useState(undefined)
+  const [session, setSession] = useState(undefined) // undefined = initialising
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    // onAuthStateChange fires INITIAL_SESSION once Supabase finishes initialising
+    // (including processing any OAuth tokens in the URL), so we don't need getSession()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s ?? null)
+    })
     return () => subscription.unsubscribe()
   }, [])
 
+  // Still loading — show nothing so we don't flash the login screen
   if (session === undefined) return null
 
   if (!session) {
