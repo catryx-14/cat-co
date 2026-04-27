@@ -32,79 +32,12 @@ function fmtRel(d) {
   return `${Math.floor(days / 30)} months ago`
 }
 
-// ─── Sky SVG — 3 clean states ───
-// state 0 = clear sun, state 1 = sun + separate cloud, state 2 = eclipse
-function Moon({ regPct, state, size = 64 }) {
-  const haloOpacity = 0.16 + regPct * 0.52
-  const haloRadius = 8 + regPct * 16
-  const uid = `m${Math.random().toString(36).slice(2, 7)}`
-  const sunGrad = `sg-${uid}`
-  const cloudGrad = `cg-${uid}`
-  const coronaGrad = `co-${uid}`
-  const eclipseGrad = `eg-${uid}`
+const SKY_EMOJI = ['☀️', '⛅', '🌑']
 
+function Moon({ state }) {
   return (
-    <div className="moon-wrap" style={{ width: size + haloRadius * 2, height: size + haloRadius * 2 }}>
-      <div className="moon-disc" style={{
-        width: size, height: size,
-        filter: `drop-shadow(0 0 ${haloRadius}px rgba(232,201,140,${haloOpacity}))`,
-      }}>
-        <svg viewBox="0 0 100 100" width={size} height={size}>
-          <defs>
-            <radialGradient id={sunGrad} cx="38%" cy="34%" r="62%">
-              <stop offset="0%"   stopColor="#fff8d8"/>
-              <stop offset="42%"  stopColor="#f0c040"/>
-              <stop offset="100%" stopColor="#b86010"/>
-            </radialGradient>
-            {state === 1 && (
-              <linearGradient id={cloudGrad} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%"   stopColor="#9898c0"/>
-                <stop offset="100%" stopColor="#484868"/>
-              </linearGradient>
-            )}
-            {state === 2 && (
-              <>
-                <radialGradient id={coronaGrad} cx="50%" cy="50%" r="50%">
-                  <stop offset="54%" stopColor="rgba(232,201,140,0)"/>
-                  <stop offset="62%" stopColor="rgba(255,236,180,0.96)"/>
-                  <stop offset="70%" stopColor="rgba(232,201,140,0.5)"/>
-                  <stop offset="100%" stopColor="rgba(232,201,140,0)"/>
-                </radialGradient>
-                <radialGradient id={eclipseGrad} cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stopColor="#0c0618"/>
-                  <stop offset="100%" stopColor="#000000"/>
-                </radialGradient>
-              </>
-            )}
-          </defs>
-
-          {/* Clear sun */}
-          {state === 0 && (
-            <circle cx="50" cy="50" r="30" fill={`url(#${sunGrad})`}/>
-          )}
-
-          {/* Sun peeking from upper-left, cloud overlapping from bottom-right */}
-          {state === 1 && (
-            <>
-              <circle cx="34" cy="33" r="26" fill={`url(#${sunGrad})`}/>
-              <g opacity="0.9" fill={`url(#${cloudGrad})`}>
-                <ellipse cx="68" cy="72" rx="24" ry="14"/>
-                <ellipse cx="50" cy="63" rx="17" ry="13"/>
-                <ellipse cx="82" cy="63" rx="15" ry="12"/>
-              </g>
-            </>
-          )}
-
-          {/* Eclipse */}
-          {state === 2 && (
-            <>
-              <circle cx="50" cy="50" r="46" fill={`url(#${coronaGrad})`}/>
-              <circle cx="50" cy="50" r="30" fill={`url(#${eclipseGrad})`}/>
-              <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,236,180,0.88)" strokeWidth="1.4"/>
-            </>
-          )}
-        </svg>
-      </div>
+    <div className="moon-wrap">
+      <span className="moon-emoji">{SKY_EMOJI[state]}</span>
     </div>
   )
 }
