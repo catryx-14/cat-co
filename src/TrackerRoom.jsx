@@ -372,11 +372,6 @@ function Sky({ userEvents, regulation, openingBalance, settings }) {
   const peakScale = 1 + Math.min(1.0, peak / peakOf * 0.6)
   const regScale = 1 + Math.min(0.4, regPct * 0.5)
 
-  let carryNote = null
-  if (openingBalance > 0) {
-    carryNote = <span><i>woke carrying {openingBalance}</i></span>
-  }
-
   return (
     <div className="sky">
       <div className="sky-row">
@@ -386,7 +381,9 @@ function Sky({ userEvents, regulation, openingBalance, settings }) {
             {peak}{peak <= peakOf && <span className="of">/{peakOf}</span>}
           </div>
           <div className="caption">the day reads <i>{weather}</i></div>
-          {carryNote && <div className="carry-note">{carryNote}</div>}
+          {openingBalance > 0 && (
+            <div className="carry-note"><i>opening carry-in: {openingBalance}</i></div>
+          )}
         </div>
         <div className="sky-divider" />
         <div className="sky-metric">
@@ -560,9 +557,16 @@ export default function TrackerRoom({ onHome, session, settings }) {
         ))}
       </div>
 
-      {tab === 'today'   && <TrackerToday session={session} settings={settings} />}
-      {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
-      {tab === 'history' && <TrackerHistory settings={settings} />}
+      {/* Always keep today mounted so unsaved state survives tab switches */}
+      <div style={{ display: tab === 'today' ? '' : 'none' }}>
+        <TrackerToday session={session} settings={settings} />
+      </div>
+      <div style={{ display: tab === 'horizon' ? '' : 'none' }}>
+        <div className="placeholder">horizon — coming next</div>
+      </div>
+      <div style={{ display: tab === 'history' ? '' : 'none' }}>
+        <TrackerHistory settings={settings} />
+      </div>
     </>
   )
 }
