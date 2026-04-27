@@ -83,15 +83,14 @@ function Moon({ regPct, state, size = 64 }) {
             <circle cx="50" cy="50" r="30" fill={`url(#${sunGrad})`}/>
           )}
 
-          {/* Sun + separate cloud beside it */}
+          {/* Sun peeking from upper-left, cloud overlapping from bottom-right */}
           {state === 1 && (
             <>
-              <circle cx="35" cy="36" r="23" fill={`url(#${sunGrad})`}/>
-              {/* cloud sits lower-right, clearly separate from sun (sun's bottom-right edge ~x=56,y=57) */}
-              <g opacity="0.87" fill={`url(#${cloudGrad})`}>
-                <ellipse cx="79" cy="77" rx="18" ry="11"/>
-                <ellipse cx="68" cy="70" rx="13" ry="10"/>
-                <ellipse cx="88" cy="70" rx="11" ry="9"/>
+              <circle cx="34" cy="33" r="26" fill={`url(#${sunGrad})`}/>
+              <g opacity="0.9" fill={`url(#${cloudGrad})`}>
+                <ellipse cx="68" cy="72" rx="24" ry="14"/>
+                <ellipse cx="50" cy="63" rx="17" ry="13"/>
+                <ellipse cx="82" cy="63" rx="15" ry="12"/>
               </g>
             </>
           )}
