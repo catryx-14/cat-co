@@ -361,7 +361,7 @@ function Sky({ userEvents, regulation, openingBalance, settings }) {
     evPts += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
   }
   const peak = openingBalance + evPts + taxPoints
-  const peakOf = 24
+  const peakOf = thresholds.yellow
   const regT = fullRegTotal(regulation)
   const regPct = Math.min(1, regT / REG_FULL_AT)
   const nonSleepReg = nonSleepRegTotal(regulation)
