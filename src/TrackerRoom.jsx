@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import RoomMark from './components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from './lib/supabase.js'
-import { loadEntry, dbToInternal, internalToDb, saveEntry, todayDateStr, yesterdayDateStr } from './lib/db.js'
+import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, todayDateStr, yesterdayDateStr } from './lib/db.js'
 import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT, taxActive, computePeakDebit, computeClosingBalance, nonSleepRegTotal } from './lib/math.js'
 
 const AXIS_DEFS = [
@@ -348,10 +348,9 @@ function WarningSigns({ flags, onToggle }) {
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false }) {
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr }) {
   const { taxValue, thresholds, taxStartDate } = settings
-  const dateStr = todayDateStr()
-  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !flowOverride
+  const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
   let evPts = 0
@@ -388,7 +387,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         <div className="sky-metric">
           <div className="label">regulation</div>
           <div className="value" style={{ fontSize: `${36 * regScale}px` }}>
-            {regT}<span className="of">/{REG_FULL_AT}</span>
+            {nonSleepReg}<span className="of">/{REG_FULL_AT}</span>
           </div>
           <div className="caption"><i>{regWord}</i> · {Math.round(regPct * 100)}% tended</div>
           {endload > 0 && <div className="carry-note"><i>ending at {endload}</i></div>}
@@ -398,8 +397,10 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   )
 }
 
-// ─── TrackerToday ───
-function TrackerToday({ session, settings }) {
+// ─── TrackerDayEditor ───
+function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
+  const dateStr = dateProp || todayDateStr()
+  const isToday = dateStr === todayDateStr()
   const [loading, setLoading] = useState(true)
   const [userEvents, setUserEvents] = useState([])
   const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
@@ -414,8 +415,7 @@ function TrackerToday({ session, settings }) {
   useEffect(() => {
     async function init() {
       try {
-        const today = todayDateStr()
-        const existing = await loadEntry(today)
+        const existing = await loadEntry(dateStr)
         if (existing) {
           const state = dbToInternal(existing)
           setOpeningBalance(state.openingBalance)
@@ -424,8 +424,8 @@ function TrackerToday({ session, settings }) {
           setRecovery(state.recovery)
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
-          setYesterdayClosing(state.openingBalance)
-        } else {
+          setYesterdayClosing(existing.entry_data.yesterdayClosing ?? state.openingBalance)
+        } else if (isToday) {
           const yest = await loadEntry(yesterdayDateStr())
           if (yest) {
             const d = yest.entry_data
@@ -437,19 +437,18 @@ function TrackerToday({ session, settings }) {
           }
         }
       } catch (err) {
-        console.error('failed to load today entry', err)
+        console.error('failed to load entry', err)
       } finally {
         setLoading(false)
       }
     }
     init()
-  }, [])
+  }, [dateStr])
 
   const allEvents = [
     ...userEvents,
     ...((() => {
       const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
-      const dateStr = todayDateStr()
       const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
       return [{
         id: 'autistic-tax',
@@ -466,7 +465,6 @@ function TrackerToday({ session, settings }) {
     setSaving(true)
     setSaveStatus('saving…')
     try {
-      const dateStr = todayDateStr()
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents, regulation,
         recovery, warning, goodSigns, settings, yesterdayClosing,
@@ -495,12 +493,16 @@ function TrackerToday({ session, settings }) {
 
   return (
     <>
+      {onBack && (
+        <button className="back-link" onClick={onBack}>← back to history</button>
+      )}
       <Sky
         userEvents={userEvents}
         regulation={regulation}
         openingBalance={openingBalance}
         settings={settings}
         flowOverride={goodSigns.flow}
+        dateStr={dateStr}
       />
 
       <div className="ledger-head">
@@ -530,16 +532,86 @@ function TrackerToday({ session, settings }) {
       <div className="save-bar">
         <span className="save-bar-status">{saveStatus}</span>
         <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
-          {saving ? 'saving…' : 'save today'}
+          {saving ? 'saving…' : isToday ? 'save today' : 'save entry'}
         </button>
       </div>
     </>
   )
 }
 
+// ─── ThresholdSettings ───
+function ThresholdSettings({ settings, onThresholdsChange }) {
+  const [yellow, setYellow] = useState(settings.thresholds.yellow)
+  const [critical, setCritical] = useState(settings.thresholds.critical)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function handleSave() {
+    setSaving(true)
+    setStatus('')
+    try {
+      const updated = { yellow: Number(yellow), critical: Number(critical) }
+      await saveThresholds(updated)
+      onThresholdsChange(updated)
+      setStatus('saved')
+      setTimeout(() => setStatus(''), 3000)
+    } catch {
+      setStatus('failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="settings-section">
+      <div className="ledger-head">
+        <div className="ledger-title">thresholds</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>yellow threshold</label>
+          <div className="settings-field-desc">day reads as overcast above this</div>
+        </div>
+        <input
+          type="number"
+          className="settings-number-input"
+          value={yellow}
+          min={1}
+          onChange={e => setYellow(e.target.value)}
+        />
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>critical threshold</label>
+          <div className="settings-field-desc">eclipse triggers at or above this</div>
+        </div>
+        <input
+          type="number"
+          className="settings-number-input"
+          value={critical}
+          min={1}
+          onChange={e => setCritical(e.target.value)}
+        />
+      </div>
+      <div className="save-bar">
+        <span className="save-bar-status">{status}</span>
+        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+          {saving ? 'saving…' : 'save thresholds'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── TrackerRoom shell ───
-export default function TrackerRoom({ onHome, session, settings }) {
+export default function TrackerRoom({ onHome, session, settings, onThresholdsChange }) {
   const [tab, setTab] = useState('today')
+  const [editDate, setEditDate] = useState(null)
+
+  function handleTabChange(t) {
+    setTab(t)
+    if (t !== 'history') setEditDate(null)
+  }
 
   return (
     <>
@@ -548,10 +620,10 @@ export default function TrackerRoom({ onHome, session, settings }) {
         <RoomMark date={todayDisplayStr()} onHome={onHome} />
       </div>
       <div className="room-tabs">
-        {['today', 'horizon', 'history'].map(t => (
+        {['today', 'horizon', 'history', 'settings'].map(t => (
           <div key={t}
                className={`room-tab ${tab === t ? 'active' : ''}`}
-               onClick={() => setTab(t)}>
+               onClick={() => handleTabChange(t)}>
             {t}
           </div>
         ))}
@@ -559,11 +631,23 @@ export default function TrackerRoom({ onHome, session, settings }) {
 
       {/* Today stays mounted so unsaved state survives tab switches */}
       <div style={{ display: tab === 'today' ? '' : 'none' }}>
-        <TrackerToday session={session} settings={settings} />
+        <TrackerDayEditor session={session} settings={settings} />
       </div>
-      {/* Horizon and history remount each visit — no unsaved state to preserve */}
       {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
-      {tab === 'history' && <TrackerHistory settings={settings} />}
+      {tab === 'history' && !editDate && (
+        <TrackerHistory settings={settings} session={session} onEditDate={date => setEditDate(date)} />
+      )}
+      {tab === 'history' && editDate && (
+        <TrackerDayEditor
+          session={session}
+          settings={settings}
+          dateStr={editDate}
+          onBack={() => setEditDate(null)}
+        />
+      )}
+      {tab === 'settings' && (
+        <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+      )}
     </>
   )
 }

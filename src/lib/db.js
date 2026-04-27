@@ -41,6 +41,21 @@ export async function saveEntry({ dateStr, entryData, peakDebit, userId }) {
   if (error) throw error
 }
 
+export async function deleteEntry(dateStr) {
+  const { error } = await supabase
+    .from('energy_entries')
+    .delete()
+    .eq('date', dateStr)
+  if (error) throw error
+}
+
+export async function saveThresholds(thresholds) {
+  const { error } = await supabase
+    .from('almanac_settings')
+    .upsert({ key: 'thresholds', value: thresholds }, { onConflict: 'key' })
+  if (error) throw error
+}
+
 // DB row → internal UI state shape
 export function dbToInternal(row) {
   const d = row.entry_data

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { buildBokeh } from './atmosphere.js'
 import TrackerRoom from './TrackerRoom.jsx'
-import { TweaksPanel, TweakSection, TweakSlider, TweakToggle, useTweaks } from './components/TweaksPanel.jsx'
 import { loadSettings } from './lib/db.js'
 
 const ROOMS = [
@@ -139,10 +138,10 @@ function Rail({ inRoom, current, onPick, onHome }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, session, settings }) {
+function RoomView({ roomKey, onHome, session, settings, onThresholdsChange }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom onHome={onHome} session={session} settings={settings} />
+    return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} />
   }
   return (
     <>
@@ -158,7 +157,7 @@ function RoomView({ roomKey, onHome, session, settings }) {
 
 // ─── App ───
 export default function App({ session }) {
-  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS)
+  const tweaks = TWEAK_DEFAULTS
   const [view, setView] = useState('hub')
   const [leaving, setLeaving] = useState(false)
   const [fadingIn, setFadingIn] = useState(false)
@@ -174,6 +173,10 @@ export default function App({ session }) {
         setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
       })
   }, [])
+
+  const updateThresholds = (thresholds) => {
+    setSettings(prev => ({ ...prev, thresholds }))
+  }
 
   // Sync atmosphere tweaks to CSS + bokeh
   useEffect(() => {
@@ -219,42 +222,11 @@ export default function App({ session }) {
           <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
             {view === 'hub'
               ? <HubView tweaks={tweaks} onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} session={session} settings={settings} />}
+              : <RoomView roomKey={view} onHome={goHome} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
           </div>
         </main>
       </div>
 
-      <TweaksPanel title="Tweaks">
-        <TweakSection title="Atmosphere">
-          <TweakSlider label="particle density" value={tweaks.particleDensity}
-            onChange={v => setTweak('particleDensity', v)} min={0} max={1.6} step={0.05} />
-          <TweakSlider label="warmth" value={tweaks.warmth}
-            onChange={v => setTweak('warmth', v)} min={0} max={1.6} step={0.05} />
-          <TweakToggle label="show time of day" value={tweaks.showTime}
-            onChange={v => setTweak('showTime', v)} />
-        </TweakSection>
-        <TweakSection title="Constellation">
-          <TweakToggle label="show room subtitles" value={tweaks.showSubtitles}
-            onChange={v => setTweak('showSubtitles', v)} />
-        </TweakSection>
-        <TweakSection title="Words">
-          <input
-            value={tweaks.heroLine}
-            onChange={e => setTweak('heroLine', e.target.value)}
-            style={{ width: '100%', padding: '6px 8px', fontFamily: 'inherit', fontSize: 13,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.3)',
-              color: 'inherit', borderRadius: 4 }}
-          />
-          <textarea
-            value={tweaks.settlePrompt}
-            onChange={e => setTweak('settlePrompt', e.target.value)}
-            rows={2}
-            style={{ width: '100%', padding: '6px 8px', fontFamily: 'inherit', fontSize: 13, marginTop: 6,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.3)',
-              color: 'inherit', borderRadius: 4, resize: 'vertical' }}
-          />
-        </TweakSection>
-      </TweaksPanel>
     </>
   )
 }

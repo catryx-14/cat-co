@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react'
-import { loadAllEntries, dbToInternal } from './lib/db.js'
+import { loadAllEntries, deleteEntry } from './lib/db.js'
 import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT } from './lib/math.js'
-
-const AXIS_DEFS = [
-  { k: 'E', name: 'emotional' },
-  { k: 'S', name: 'sensory' },
-  { k: 'V', name: 'veracity' },
-  { k: 'X', name: 'EF' },
-]
 
 const REG_CHANNELS = [
   { k: 'sensory', name: 'sensory comfort', cap: 4 },
@@ -39,76 +32,76 @@ function fmtRel(d) {
   return `${Math.floor(days / 30)} months ago`
 }
 
-// ─── Moon SVG ───
-function Moon({ peak, regPct, intensity, size = 64 }) {
-  const px = size + intensity * 6
-  const haloOpacity = 0.18 + regPct * 0.55
-  const haloRadius = 10 + regPct * 18
-  const isEclipse = intensity >= 5
-  const uid = Math.random().toString(36).slice(2, 8)
-  const sunGradId = `sg-${uid}`
-  const eclipseId = `ec-${uid}`
-  const coronaId = `co-${uid}`
-  const cloudGradId = `cg-${uid}`
-  const vb = 100
-
-  const cloudColor = (() => {
-    if (intensity === 1) return { top: '#f4ecd9', bot: '#d4c8a8', op: 0.78 }
-    if (intensity === 2) return { top: '#a89c9c', bot: '#5a5060', op: 0.86 }
-    if (intensity === 3) return { top: '#8a6878', bot: '#3a2838', op: 0.92 }
-    if (intensity === 4) return { top: '#3a2838', bot: '#1a1020', op: 0.95 }
-    return null
-  })()
+// ─── Sky SVG — 3 clean states ───
+// state 0 = clear sun, state 1 = sun + separate cloud, state 2 = eclipse
+function Moon({ regPct, state, size = 64 }) {
+  const haloOpacity = 0.16 + regPct * 0.52
+  const haloRadius = 8 + regPct * 16
+  const uid = `m${Math.random().toString(36).slice(2, 7)}`
+  const sunGrad = `sg-${uid}`
+  const cloudGrad = `cg-${uid}`
+  const coronaGrad = `co-${uid}`
+  const eclipseGrad = `eg-${uid}`
 
   return (
-    <div className="moon-wrap" style={{ width: px + haloRadius * 2, height: px + haloRadius * 2 }}>
+    <div className="moon-wrap" style={{ width: size + haloRadius * 2, height: size + haloRadius * 2 }}>
       <div className="moon-disc" style={{
-        width: px, height: px,
+        width: size, height: size,
         filter: `drop-shadow(0 0 ${haloRadius}px rgba(232,201,140,${haloOpacity}))`,
       }}>
-        <svg viewBox={`0 0 ${vb} ${vb}`} width={px} height={px}>
+        <svg viewBox="0 0 100 100" width={size} height={size}>
           <defs>
-            <radialGradient id={sunGradId} cx="38%" cy="32%" r="65%">
-              <stop offset="0%"   stopColor="#fff4d8"/>
-              <stop offset="45%"  stopColor="#f0d9a8"/>
-              <stop offset="100%" stopColor="#c98a2a"/>
+            <radialGradient id={sunGrad} cx="38%" cy="34%" r="62%">
+              <stop offset="0%"   stopColor="#fff8d8"/>
+              <stop offset="42%"  stopColor="#f0c040"/>
+              <stop offset="100%" stopColor="#b86010"/>
             </radialGradient>
-            {cloudColor && (
-              <linearGradient id={cloudGradId} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%"   stopColor={cloudColor.top}/>
-                <stop offset="100%" stopColor={cloudColor.bot}/>
+            {state === 1 && (
+              <linearGradient id={cloudGrad} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%"   stopColor="#9898c0"/>
+                <stop offset="100%" stopColor="#484868"/>
               </linearGradient>
             )}
-            {isEclipse && (
+            {state === 2 && (
               <>
-                <radialGradient id={coronaId} cx="50%" cy="50%" r="50%">
-                  <stop offset="55%" stopColor="rgba(232,201,140,0)"/>
-                  <stop offset="62%" stopColor="rgba(255,236,180,0.95)"/>
-                  <stop offset="68%" stopColor="rgba(232,201,140,0.55)"/>
+                <radialGradient id={coronaGrad} cx="50%" cy="50%" r="50%">
+                  <stop offset="54%" stopColor="rgba(232,201,140,0)"/>
+                  <stop offset="62%" stopColor="rgba(255,236,180,0.96)"/>
+                  <stop offset="70%" stopColor="rgba(232,201,140,0.5)"/>
                   <stop offset="100%" stopColor="rgba(232,201,140,0)"/>
                 </radialGradient>
-                <radialGradient id={eclipseId} cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stopColor="#0a0610"/>
-                  <stop offset="80%"  stopColor="#000000"/>
+                <radialGradient id={eclipseGrad} cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stopColor="#0c0618"/>
                   <stop offset="100%" stopColor="#000000"/>
                 </radialGradient>
               </>
             )}
           </defs>
-          <circle cx="50" cy="50" r="32" fill={`url(#${sunGradId})`} />
-          {cloudColor && (
-            <g opacity={cloudColor.op}>
-              {intensity >= 1 && <path d="M 24,62 Q 30,52 42,55 Q 52,48 62,54 Q 74,52 78,62 Q 80,72 70,72 L 30,72 Q 20,72 24,62 Z" fill={`url(#${cloudGradId})`}/>}
-              {intensity >= 2 && <path d="M 18,38 Q 24,28 36,32 Q 48,26 58,32 Q 70,30 76,40 Q 78,48 68,50 L 28,50 Q 16,50 18,38 Z" fill={`url(#${cloudGradId})`} opacity="0.95"/>}
-              {intensity >= 3 && <path d="M 14,48 Q 22,40 34,44 Q 46,38 58,44 Q 72,42 80,52 Q 82,62 70,62 L 26,62 Q 12,62 14,48 Z" fill={`url(#${cloudGradId})`} opacity="0.95"/>}
-              {intensity >= 4 && <ellipse cx="50" cy="50" rx="38" ry="30" fill={`url(#${cloudGradId})`} opacity="0.92"/>}
-            </g>
+
+          {/* Clear sun */}
+          {state === 0 && (
+            <circle cx="50" cy="50" r="30" fill={`url(#${sunGrad})`}/>
           )}
-          {isEclipse && (
+
+          {/* Sun + separate cloud beside it */}
+          {state === 1 && (
             <>
-              <circle cx="50" cy="50" r="46" fill={`url(#${coronaId})`}/>
-              <circle cx="50" cy="50" r="30" fill={`url(#${eclipseId})`}/>
-              <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,236,180,0.85)" strokeWidth="1.2"/>
+              <circle cx="35" cy="36" r="23" fill={`url(#${sunGrad})`}/>
+              {/* cloud sits lower-right, clearly separate from sun (sun's bottom-right edge ~x=56,y=57) */}
+              <g opacity="0.87" fill={`url(#${cloudGrad})`}>
+                <ellipse cx="79" cy="77" rx="18" ry="11"/>
+                <ellipse cx="68" cy="70" rx="13" ry="10"/>
+                <ellipse cx="88" cy="70" rx="11" ry="9"/>
+              </g>
+            </>
+          )}
+
+          {/* Eclipse */}
+          {state === 2 && (
+            <>
+              <circle cx="50" cy="50" r="46" fill={`url(#${coronaGrad})`}/>
+              <circle cx="50" cy="50" r="30" fill={`url(#${eclipseGrad})`}/>
+              <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,236,180,0.88)" strokeWidth="1.4"/>
             </>
           )}
         </svg>
@@ -118,12 +111,13 @@ function Moon({ peak, regPct, intensity, size = 64 }) {
 }
 
 // ─── MoonRow ───
-function MoonRow({ entry, expanded, onToggle }) {
+function MoonRow({ entry, expanded, onToggle, thresholds, onEdit, onDelete }) {
   const d = entry.entry_data
   const dateObj = parseDate(entry.date)
   const peak = d.peakDebit ?? entry.peak_debit ?? 0
   const openingBalance = d.openingBalance ?? 0
-  const { word: weatherWord, intensity } = weatherOf(peak)
+  const { word: weatherWord, intensity } = weatherOf(peak, thresholds.yellow, thresholds.critical)
+  const skyState = intensity === 0 ? 0 : intensity < 5 ? 1 : 2
 
   const reg = {
     sensory: d.regulation?.sensoryComfort ?? 0,
@@ -142,13 +136,12 @@ function MoonRow({ entry, expanded, onToggle }) {
   const goodCount = (d.flowActivity ? 1 : 0) + (warning.crisisResponse ? 1 : 0)
 
   const events = d.events ?? []
-  const anyFlow = d.flowActivity ?? false
 
   return (
     <div className={`moon-row ${expanded ? 'expanded' : ''}`} onClick={onToggle}>
       <div className="moon-row-main">
         <div className="moon-col">
-          <Moon peak={peak} regPct={regPct} intensity={intensity} />
+          <Moon regPct={regPct} state={skyState} />
         </div>
         <div className="moon-meta">
           <div className="moon-date">
@@ -169,6 +162,10 @@ function MoonRow({ entry, expanded, onToggle }) {
             {warnCount > 0 && <span className="mark warn">{warnCount} warning {warnCount === 1 ? 'sign' : 'signs'}</span>}
             {goodCount === 0 && warnCount === 0 && <span className="mark quiet">quiet day</span>}
           </div>
+        </div>
+        <div className="moon-actions" onClick={e => e.stopPropagation()}>
+          <button className="moon-action-btn" onClick={() => onEdit(entry.date)}>edit</button>
+          <button className="moon-action-btn delete" onClick={() => onDelete(entry.date)}>delete</button>
         </div>
         <div className="moon-chevron">{expanded ? '−' : '+'}</div>
       </div>
@@ -280,7 +277,7 @@ function Almanac({ entries, onPick }) {
 }
 
 // ─── TrackerHistory ───
-export default function TrackerHistory({ settings }) {
+export default function TrackerHistory({ settings, onEditDate }) {
   const [entries, setEntries] = useState(null)
   const [expanded, setExpanded] = useState(null)
   const { thresholds } = settings
@@ -293,6 +290,18 @@ export default function TrackerHistory({ settings }) {
 
   function toggle(date) {
     setExpanded(e => e === date ? null : date)
+  }
+
+  async function handleDelete(date) {
+    if (!window.confirm(`Delete the entry for ${date}? This cannot be undone.`)) return
+    try {
+      await deleteEntry(date)
+      setEntries(es => es.filter(e => e.date !== date))
+      if (expanded === date) setExpanded(null)
+    } catch (err) {
+      console.error('delete failed', err)
+      alert('Failed to delete entry.')
+    }
   }
 
   if (entries === null) {
@@ -316,6 +325,9 @@ export default function TrackerHistory({ settings }) {
               entry={row}
               expanded={expanded === row.date}
               onToggle={() => toggle(row.date)}
+              thresholds={thresholds}
+              onEdit={onEditDate}
+              onDelete={handleDelete}
             />
           </div>
         ))}
