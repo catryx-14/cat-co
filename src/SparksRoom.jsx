@@ -648,17 +648,22 @@ export default function SparksRoom({ onHome }) {
 
       {/* controls row */}
       {!loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '40px 0 16px', flexWrap: 'wrap', gap: 18 }}>
-          <div>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.42em', textTransform: 'uppercase', color: 'rgba(240,227,194,0.55)' }}>
-              your sparks
-            </span>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.12em', color: 'rgba(240,227,194,0.4)', marginLeft: 14 }}>
-              {sparks.length} caught
-            </span>
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '40px 0 6px', flexWrap: 'wrap', gap: 18 }}>
+            <div>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.42em', textTransform: 'uppercase', color: 'rgba(240,227,194,0.55)' }}>
+                your sparks
+              </span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.12em', color: 'rgba(240,227,194,0.4)', marginLeft: 14 }}>
+                {sparks.length} caught
+              </span>
+            </div>
+            <ViewToggle value={view} onChange={setView} />
           </div>
-          <ViewToggle value={view} onChange={setView} />
-        </div>
+          <div style={{ fontFamily: '"Crimson Pro", Georgia, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(240,227,194,0.38)', letterSpacing: '0.04em', marginBottom: 16 }}>
+            sparks, fireflies and fleeting thoughts
+          </div>
+        </>
       )}
 
       {/* constellation field */}
