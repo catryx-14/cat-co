@@ -98,6 +98,25 @@ body {
   50%      { opacity: 0.95; }
 }
 
+@keyframes sp-amb-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  25%       { transform: translate(14px, -10px); }
+  50%       { transform: translate(20px, 6px); }
+  75%       { transform: translate(-8px, 14px); }
+}
+@keyframes sp-amb-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  25%       { transform: translate(-12px, 8px); }
+  50%       { transform: translate(-18px, -6px); }
+  75%       { transform: translate(10px, -14px); }
+}
+@keyframes sp-amb-twinkle {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 1; }
+}
+@keyframes sp-amb-rot-a { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes sp-amb-rot-b { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
 @media (prefers-reduced-motion: reduce) {
   .bokeh-dot, .star-twinkle, .room-star, .gloaming { animation: none !important; }
 }

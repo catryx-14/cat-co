@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { buildBokeh } from './atmosphere.js'
 import TrackerRoom from './TrackerRoom.jsx'
+import SparksRoom from './SparksRoom.jsx'
+import EngineRoom from './EngineRoom.jsx'
 import { loadSettings } from './lib/db.js'
 
 const ROOMS = [
   { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 15, y: 32, breathe: 5.2, delay: '0s'    },
-  { key: 'sparks',  name: 'Sparks',         sub: 'small joys, collected',        tone: 'rose',   x: 40, y: 18, breathe: 4.6, delay: '-1.2s' },
+  { key: 'sparks',  name: 'Sparks',         sub: 'hold them gently',             tone: 'rose',   x: 40, y: 18, breathe: 4.6, delay: '-1.2s' },
   { key: 'physio',  name: 'Neural Physio',  sub: 'gentle exercises',             tone: 'teal',   x: 68, y: 30, breathe: 5.6, delay: '-2.1s' },
   { key: 'games',   name: 'Games',          sub: 'low-stakes play',              tone: 'purple', x: 73, y: 62, breathe: 4.8, delay: '-0.6s' },
   { key: 'library', name: 'Library',        sub: 'what i\u2019m reading',        tone: 'warm',   x: 23, y: 70, breathe: 5.0, delay: '-2.6s' },
@@ -138,10 +140,16 @@ function Rail({ inRoom, current, onPick, onHome }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, session, settings, onThresholdsChange }) {
+function RoomView({ roomKey, onHome, onRoom, session, settings, onThresholdsChange }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
     return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} />
+  }
+  if (roomKey === 'sparks') {
+    return <SparksRoom onHome={onHome} onEngineRoom={() => onRoom('engine-room')} session={session} />
+  }
+  if (roomKey === 'engine-room') {
+    return <EngineRoom onHome={onHome} />
   }
   return (
     <>
@@ -222,7 +230,7 @@ export default function App({ session }) {
           <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
             {view === 'hub'
               ? <HubView tweaks={tweaks} onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
           </div>
         </main>
       </div>
