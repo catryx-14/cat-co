@@ -523,7 +523,7 @@ function ViewToggle({ value, onChange }) {
 }
 
 // ─── main Sparks room ──────────────────────────────────────────────────
-export default function SparksRoom({ onHome, onEngineRoom }) {
+export default function SparksRoom({ onHome }) {
   const [sparks, setSparks] = useState([])
   const [draft, setDraft] = useState('')
   const [draftTag, setDraftTag] = useState('general')
@@ -548,7 +548,7 @@ export default function SparksRoom({ onHome, onEngineRoom }) {
     const ro = new ResizeObserver(([e]) => setFieldSize({ w: e.contentRect.width, h: e.contentRect.height }))
     ro.observe(fieldRef.current)
     return () => ro.disconnect()
-  }, [])
+  }, [loading, view])
 
   const fetchSparks = async () => {
     const { data } = await supabase.from('sparks').select('*').order('created_at', { ascending: false })
@@ -709,26 +709,6 @@ export default function SparksRoom({ onHome, onEngineRoom }) {
         </div>
       )}
 
-      {/* engine room */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 0 8px' }}>
-        <button onClick={onEngineRoom} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: 'transparent', border: 0, padding: 0,
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
-          letterSpacing: '0.28em', textTransform: 'uppercase',
-          color: 'rgba(155,142,196,0.3)', cursor: 'pointer',
-          transition: 'color 200ms ease',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = 'rgba(155,142,196,0.6)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'rgba(155,142,196,0.3)'}
-        >
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-            <circle cx="8" cy="8" r="3"/>
-            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
-          </svg>
-          engine room
-        </button>
-      </div>
     </>
   )
 }

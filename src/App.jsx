@@ -110,7 +110,28 @@ function HubView({ tweaks, onPick }) {
 
       <footer className="footer">
         <div className="left">{tweaks.settlePrompt}</div>
-        <div className="right">v.0 · cagliostro · the gloaming</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+          <button
+            onClick={() => onPick('engine-room')}
+            style={{
+              background: 'transparent', border: 0, padding: 0,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 9,
+              letterSpacing: '0.28em', textTransform: 'uppercase',
+              color: 'rgba(155,142,196,0.3)', cursor: 'pointer',
+              transition: 'color 200ms ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(155,142,196,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(155,142,196,0.3)'}
+          >
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+              <circle cx="8" cy="8" r="3"/>
+              <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
+            </svg>
+            engine room
+          </button>
+          <div className="right">v.0 · cagliostro · the gloaming</div>
+        </div>
       </footer>
     </>
   )
@@ -146,7 +167,7 @@ function RoomView({ roomKey, onHome, onRoom, session, settings, onThresholdsChan
     return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} />
   }
   if (roomKey === 'sparks') {
-    return <SparksRoom onHome={onHome} onEngineRoom={() => onRoom('engine-room')} session={session} />
+    return <SparksRoom onHome={onHome} session={session} />
   }
   if (roomKey === 'engine-room') {
     return <EngineRoom onHome={onHome} />
@@ -227,7 +248,7 @@ export default function App({ session }) {
       <div className="stage">
         {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} />}
         <main className="view">
-          <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
+          <div className={fadeClass} key={leaving ? `leaving-${view}` : view} style={(view === 'sparks' || view === 'engine-room') ? { background: '#04040e' } : undefined}>
             {view === 'hub'
               ? <HubView tweaks={tweaks} onPick={goRoom} />
               : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
