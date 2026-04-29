@@ -288,15 +288,16 @@ body {
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  padding-bottom: 16px;
+  padding-bottom: 0;
 }
 .view-fade.is-hub .field-wrap {
-  flex: 1;
+  flex: none;
   min-height: 0;
   overflow: hidden;
-  margin-top: 16px;
+  margin-top: 0;
 }
 .view-fade.is-hub .field {
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
