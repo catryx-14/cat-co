@@ -127,12 +127,12 @@ function RoomDoor({ door, idx, onPick }) {
               position: 'absolute', inset: 0, borderRadius: '9999px',
               background: 'rgba(255,255,255,1)', opacity: 0,
             }} />
-            {/* specular highlight — small, sharp, upper-left */}
+            {/* specular highlight — soft embedded reflection */}
             <div style={{
-              position: 'absolute', top: '11%', left: '16%',
-              width: '23%', height: '18%', borderRadius: '9999px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.52) 42%, transparent 70%)',
-              filter: 'blur(0.5px)', pointerEvents: 'none',
+              position: 'absolute', top: '9%', left: '13%',
+              width: '34%', height: '27%', borderRadius: '9999px',
+              background: `radial-gradient(ellipse at 38% 38%, rgba(255,255,255,0.55) 0%, rgba(${br},${bg},${bb},0.22) 50%, transparent 78%)`,
+              filter: 'blur(3.5px)', pointerEvents: 'none',
             }} />
             {/* internal fleck 1 */}
             <div style={{
