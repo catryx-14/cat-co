@@ -418,13 +418,24 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
         const existing = await loadEntry(dateStr)
         if (existing) {
           const state = dbToInternal(existing)
-          setOpeningBalance(state.openingBalance)
+          if (isToday) {
+            const yest = await loadEntry(yesterdayDateStr())
+            if (yest) {
+              const d = yest.entry_data
+              const closing = d.closingBalance ?? 0
+              const sleep = d.sleepReset ?? 0
+              setOpeningBalance(Math.max(0, closing - sleep))
+              setYesterdayClosing(closing)
+            }
+          } else {
+            setOpeningBalance(state.openingBalance)
+            setYesterdayClosing(existing.entry_data.yesterdayClosing ?? state.openingBalance)
+          }
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
           setRecovery(state.recovery)
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
-          setYesterdayClosing(existing.entry_data.yesterdayClosing ?? state.openingBalance)
         } else if (isToday) {
           const yest = await loadEntry(yesterdayDateStr())
           if (yest) {
