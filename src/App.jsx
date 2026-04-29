@@ -114,7 +114,7 @@ function RoomDoor({ door, idx, onPick }) {
               radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,0.78) 100%),
               radial-gradient(circle at 66% 72%, rgba(${dr},${dg},${db},0.90) 0%, transparent 48%),
               radial-gradient(circle at 36% 38%, rgba(${br},${bg},${bb},0.14) 0%, transparent 38%),
-              radial-gradient(ellipse at 50% 50%, rgba(${mr},${mg},${mb},0.46) 0%, rgba(${mr},${mg},${mb},0.76) 44%, rgba(${dr},${dg},${db},0.97) 100%)`,
+              radial-gradient(ellipse at 50% 50%, rgba(${mr},${mg},${mb},0.68) 0%, rgba(${mr},${mg},${mb},0.90) 44%, rgba(${dr},${dg},${db},0.99) 100%)`,
             boxShadow: `
               0 0 10px rgba(${mr},${mg},${mb},0.48),
               0 0 24px rgba(${mr},${mg},${mb},0.16),
@@ -129,7 +129,7 @@ function RoomDoor({ door, idx, onPick }) {
             }} />
             {/* specular highlight — soft embedded reflection */}
             <div style={{
-              position: 'absolute', top: '9%', left: '13%',
+              position: 'absolute', top: '15%', left: '20%',
               width: '34%', height: '27%', borderRadius: '9999px',
               background: `radial-gradient(ellipse at 38% 38%, rgba(255,255,255,0.55) 0%, rgba(${br},${bg},${bb},0.22) 50%, transparent 78%)`,
               filter: 'blur(3.5px)', pointerEvents: 'none',
