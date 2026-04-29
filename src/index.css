@@ -544,16 +544,22 @@ body {
   transform: translate(-50%, -50%);
   cursor: pointer;
   text-decoration: none;
-  width: 210px;
-  height: 220px;
+  width: 320px;
+  height: 320px;
+  --sparkle-dur: 4s;
+  --sparkle-delay: 0s;
 }
+.room-door.tracker { --sparkle-dur: 3.4s; --sparkle-delay:  0s;    }
+.room-door.sparks  { --sparkle-dur: 5.1s; --sparkle-delay: -1.7s;  }
+.room-door.physio  { --sparkle-dur: 4.3s; --sparkle-delay: -2.6s;  }
+.room-door.games   { --sparkle-dur: 6.0s; --sparkle-delay: -0.8s;  }
 .room-door:focus-visible { outline: none; }
 .room-door-drift {
   position: absolute;
   left: 50%;
   top: 44%;
-  margin-left: -24px;
-  margin-top: -24px;
+  margin-left: -42px;
+  margin-top: -42px;
   will-change: transform;
 }
 

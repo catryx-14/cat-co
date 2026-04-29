@@ -25,13 +25,15 @@ const HUB_DOORS = [
   { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',
     bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 73, y: 62 },
 ]
-const STAR_PATH = 'M50,4 Q64,36 96,50 Q64,64 50,96 Q36,64 4,50 Q36,36 50,4 Z'
-const STAR_SZ = 48
-const GLOW_SZ = 130
+// Exact shape from SparksRoom SparklePath
+const STAR_PATH = 'M50,4 C52,30 54,46 96,50 C54,54 52,70 50,96 C48,70 46,54 4,50 C46,46 48,30 50,4 Z'
+const STAR_SZ = 84
+const GLOW_SZ = 220
 
 // ─── RoomDoor ─── (Threshold 4-point star icons)
 function RoomDoor({ door, idx, onPick }) {
   const driftRef = useRef(null)
+  const bodyRef  = useRef(null)
   const orbitRef = useRef(null)
   const shimRef  = useRef(null)
 
@@ -41,15 +43,21 @@ function RoomDoor({ door, idx, onPick }) {
     s = (s * 9301 + 49297) % 233280
     return s / 233280
   }
-  const aX = 26 + R(4) * 38
-  const aY = 18 + R(5) * 28
+  // Drift — widened amplitudes so stars wander the full canvas
+  const aX = 80  + R(4) * 120
+  const aY = 60  + R(5) * 100
   const periodX = 9  + R(6)  * 10
   const periodY = 11 + R(7)  * 9
   const phaseX  = R(8)  * Math.PI * 2
   const phaseY  = R(9)  * Math.PI * 2
+  // Rotation — exact same recipe as Sparks FireflySpark
+  const rotPeriod = 18 + R(10) * 14
+  const rotDir    = R(11) > 0.5 ? 1 : -1
+  // Orbit
   const orbitPeriod = 6  + R(12) * 5
   const orbitDir    = R(13) > 0.55 ? 1 : -1
-  const orbitR      = STAR_SZ / 2 + 10
+  const orbitR      = STAR_SZ / 2 + 12
+  // Shimmer
   const shimPeriod  = 3.5 + R(15) * 2.5
   const shimPhase   = R(16) * Math.PI * 2
 
@@ -62,6 +70,8 @@ function RoomDoor({ door, idx, onPick }) {
       const dy = Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
       if (driftRef.current)
         driftRef.current.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`
+      if (bodyRef.current)
+        bodyRef.current.style.transform = `rotate(${((t / rotPeriod) * 360 * rotDir).toFixed(2)}deg)`
       const oA = (t / orbitPeriod) * Math.PI * 2 * orbitDir
       if (orbitRef.current)
         orbitRef.current.style.transform =
@@ -73,7 +83,7 @@ function RoomDoor({ door, idx, onPick }) {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [aX, aY, periodX, periodY, phaseX, phaseY, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase])
+  }, [aX, aY, periodX, periodY, phaseX, phaseY, rotPeriod, rotDir, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase])
 
   const [br, bg, bb] = door.bright
   const [mr, mg, mb] = door.mid
@@ -90,33 +100,56 @@ function RoomDoor({ door, idx, onPick }) {
       aria-label={`Enter ${door.name}`}
     >
       <div ref={driftRef} className="room-door-drift">
-        {/* soft outer glow */}
+        {/* soft outer glow — not rotated */}
         <div style={{
           position: 'absolute',
           left: -(GLOW_SZ - STAR_SZ) / 2, top: -(GLOW_SZ - STAR_SZ) / 2,
           width: GLOW_SZ, height: GLOW_SZ,
           borderRadius: '50%',
           background: `radial-gradient(circle, rgba(${mr},${mg},${mb},0.28) 0%, transparent 68%)`,
-          filter: 'blur(20px)',
+          filter: 'blur(26px)',
           pointerEvents: 'none',
         }} />
 
-        {/* 4-point star */}
-        <svg width={STAR_SZ} height={STAR_SZ} viewBox="0 0 100 100"
-             style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
-          <defs>
-            <radialGradient id={gradId} cx="50%" cy="50%" r="50%">
-              <stop offset="0%"   stopColor={`rgb(${br},${bg},${bb})`} />
-              <stop offset="55%"  stopColor={`rgb(${mr},${mg},${mb})`} />
-              <stop offset="100%" stopColor={`rgb(${dr},${dg},${db})`} />
-            </radialGradient>
-          </defs>
-          <path d={STAR_PATH} fill={`url(#${gradId})`} />
-          <path ref={shimRef} d={STAR_PATH} fill="white" style={{ opacity: 0 }} />
-        </svg>
+        {/* rotating star body */}
+        <div ref={bodyRef} style={{
+          position: 'absolute', left: 0, top: 0,
+          width: STAR_SZ, height: STAR_SZ,
+          willChange: 'transform',
+        }}>
+          <svg width={STAR_SZ} height={STAR_SZ} viewBox="0 0 100 100"
+               style={{ display: 'block', overflow: 'visible' }}>
+            <defs>
+              <radialGradient id={gradId} cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stopColor={`rgb(${br},${bg},${bb})`} />
+                <stop offset="55%"  stopColor={`rgb(${mr},${mg},${mb})`} />
+                <stop offset="100%" stopColor={`rgb(${dr},${dg},${db})`} />
+              </radialGradient>
+            </defs>
+            <path d={STAR_PATH} fill={`url(#${gradId})`} />
+            <path ref={shimRef} d={STAR_PATH} fill="white" style={{ opacity: 0 }} />
+          </svg>
 
-        {/* orbiting sparkle */}
-        <div style={{ position: 'absolute', left: STAR_SZ / 2, top: STAR_SZ / 2, width: 0, height: 0, zIndex: 2 }}>
+          {/* flickering sparkle — centered on star, matches old .point::after */}
+          <div style={{
+            position: 'absolute',
+            left: STAR_SZ / 2 - 19, top: STAR_SZ / 2 - 19,
+            width: 38, height: 38,
+            pointerEvents: 'none', mixBlendMode: 'screen',
+            background: `
+              linear-gradient(90deg,  transparent 0%,transparent 38%,rgba(255,255,255,0.95) 50%,transparent 62%,transparent 100%),
+              linear-gradient(0deg,   transparent 0%,transparent 38%,rgba(255,255,255,0.85) 50%,transparent 62%,transparent 100%),
+              linear-gradient(45deg,  transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%),
+              linear-gradient(-45deg, transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%)`,
+            WebkitMask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
+            mask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
+            animation: 'sparkle-flash var(--sparkle-dur,4s) ease-in-out infinite',
+            animationDelay: 'var(--sparkle-delay,0s)',
+          }} />
+        </div>
+
+        {/* orbiting sparkle — not part of rotating body */}
+        <div style={{ position: 'absolute', left: STAR_SZ / 2, top: STAR_SZ / 2, width: 0, height: 0 }}>
           <div ref={orbitRef} style={{ position: 'absolute', willChange: 'transform' }}>
             <div style={{
               position: 'absolute', marginLeft: -1.8, marginTop: -1.8,
@@ -127,24 +160,26 @@ function RoomDoor({ door, idx, onPick }) {
           </div>
         </div>
 
-        {/* labels */}
+        {/* labels — restored from git history: Cagliostro + Crimson Pro */}
         <div style={{
-          position: 'absolute', left: '50%', top: STAR_SZ + 12,
+          position: 'absolute', left: '50%', top: STAR_SZ + 14,
           transform: 'translateX(-50%)',
           textAlign: 'center', whiteSpace: 'nowrap',
           pointerEvents: 'none', userSelect: 'none',
         }}>
           <div style={{
             color: 'rgba(255,255,255,0.88)',
-            fontFamily: 'system-ui,-apple-system,sans-serif',
-            fontWeight: 400, fontSize: 11.5, letterSpacing: '0.025em', lineHeight: 1.4,
+            fontFamily: '"Cagliostro", serif',
+            fontWeight: 400, fontSize: 22, letterSpacing: '0.04em', lineHeight: 1.3,
+            textShadow: '0 0 14px rgba(14,19,34,0.9)',
           }}>
             {door.name}
           </div>
           <div style={{
             color: `rgba(${br},${bg},${bb},0.65)`,
-            fontFamily: 'Georgia,serif', fontStyle: 'italic',
-            fontSize: 9, marginTop: 2, letterSpacing: '0.02em',
+            fontFamily: '"Crimson Pro", serif', fontStyle: 'italic',
+            fontSize: 13, marginTop: 4, letterSpacing: '0.04em',
+            textShadow: '0 0 10px rgba(14,19,34,0.85)',
           }}>
             {door.sub}
           </div>
