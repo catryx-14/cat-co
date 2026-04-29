@@ -96,8 +96,8 @@ function RoomDoor({ door, idx, onPick }) {
           left: -(GLOW_SZ - STAR_SZ) / 2, top: -(GLOW_SZ - STAR_SZ) / 2,
           width: GLOW_SZ, height: GLOW_SZ,
           borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(${mr},${mg},${mb},0.28) 0%, transparent 68%)`,
-          filter: 'blur(26px)',
+          background: `radial-gradient(circle, rgba(${mr},${mg},${mb},0.32) 0%, transparent 62%)`,
+          filter: 'blur(16px)',
           pointerEvents: 'none',
         }} />
 
@@ -110,27 +110,51 @@ function RoomDoor({ door, idx, onPick }) {
           <div style={{
             width: '100%', height: '100%',
             borderRadius: '9999px',
-            background: `radial-gradient(circle at 38% 32%,
-              rgb(${br},${bg},${bb}) 0%,
-              rgb(${mr},${mg},${mb}) 48%,
-              rgb(${dr},${dg},${db}) 100%)`,
+            background: `
+              radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,0.78) 100%),
+              radial-gradient(circle at 66% 72%, rgba(${dr},${dg},${db},0.90) 0%, transparent 48%),
+              radial-gradient(circle at 36% 38%, rgba(${br},${bg},${bb},0.14) 0%, transparent 38%),
+              radial-gradient(ellipse at 50% 50%, rgba(${mr},${mg},${mb},0.46) 0%, rgba(${mr},${mg},${mb},0.76) 44%, rgba(${dr},${dg},${db},0.97) 100%)`,
             boxShadow: `
-              0 0 18px rgba(${mr},${mg},${mb},0.65),
-              0 0 42px rgba(${mr},${mg},${mb},0.28),
-              inset 0 0 16px rgba(0,0,0,0.38)`,
+              0 0 10px rgba(${mr},${mg},${mb},0.48),
+              0 0 24px rgba(${mr},${mg},${mb},0.16),
+              inset 0 0 26px rgba(0,0,0,0.70),
+              inset 4px 4px 12px rgba(0,0,0,0.48)`,
             position: 'relative', overflow: 'hidden',
           }}>
-            {/* shimmer overlay — keeps existing opacity animation */}
+            {/* shimmer overlay */}
             <div ref={shimRef} style={{
               position: 'absolute', inset: 0, borderRadius: '9999px',
               background: 'rgba(255,255,255,1)', opacity: 0,
             }} />
-            {/* off-center highlight for spherical depth */}
+            {/* specular highlight — small, sharp, upper-left */}
             <div style={{
-              position: 'absolute', top: '10%', left: '15%',
-              width: '42%', height: '33%', borderRadius: '9999px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.18) 60%, transparent 100%)',
-              filter: 'blur(2px)', pointerEvents: 'none',
+              position: 'absolute', top: '11%', left: '16%',
+              width: '23%', height: '18%', borderRadius: '9999px',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.52) 42%, transparent 70%)',
+              filter: 'blur(0.5px)', pointerEvents: 'none',
+            }} />
+            {/* internal fleck 1 */}
+            <div style={{
+              position: 'absolute', top: '44%', left: '29%',
+              width: '3px', height: '3px', borderRadius: '50%',
+              background: `rgba(${br},${bg},${bb},0.52)`,
+              boxShadow: `0 0 3px rgba(${br},${bg},${bb},0.32)`,
+              pointerEvents: 'none',
+            }} />
+            {/* internal fleck 2 */}
+            <div style={{
+              position: 'absolute', top: '63%', left: '57%',
+              width: '2px', height: '2px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.36)',
+              pointerEvents: 'none',
+            }} />
+            {/* internal fleck 3 */}
+            <div style={{
+              position: 'absolute', top: '34%', left: '64%',
+              width: '2px', height: '2px', borderRadius: '50%',
+              background: `rgba(${br},${bg},${bb},0.42)`,
+              pointerEvents: 'none',
             }} />
           </div>
         </div>
