@@ -285,8 +285,21 @@ body {
 .view-fade.is-hub {
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-bottom: 16px;
 }
-.view-fade.is-hub .field-wrap { flex: 1; }
+.view-fade.is-hub .field-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.view-fade.is-hub .field {
+  min-height: 0;
+  overflow: hidden;
+}
 
 .gloaming {
   font-family: "Crimson Pro", serif;
@@ -604,8 +617,9 @@ body {
   .rail.expanded .rail-nav-item .dot { width: 9px; height: 9px; }
   .rail.expanded .rail-home { font-size: 11px; text-align: center; }
   .rail { flex-basis: 8px; width: 8px; }
-  .field-wrap { min-height: 720px; margin-top: 22px; }
-  .field { min-height: 720px; }
+  .field-wrap { min-height: 0; margin-top: 16px; }
+  .field { min-height: 0; }
+  .view-fade.is-hub { padding: 36px 22px 16px; }
   .room-star .label { font-size: 17px; }
   .room-star .sub { font-size: 11px; max-width: 180px; }
   .room-star { left: 50% !important; transform: translateX(-50%) !important; }
