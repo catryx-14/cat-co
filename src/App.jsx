@@ -259,11 +259,13 @@ function HubView({ tweaks, onPick }) {
   return (
     <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── HERO CONTAINER — 40vh, content vertically centred ── */}
+      {/* ── HERO CONTAINER — max 320px, content vertically centred ── */}
       <div style={{
-        height: '40vh', flexShrink: 0,
+        maxHeight: '320px', flexShrink: 0,
+        flex: '0 0 auto', minHeight: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
+        padding: '24px 0',
       }}>
         <p className="gloaming">the threshold</p>
         <h1 className="hub-mark">
@@ -300,9 +302,9 @@ function HubView({ tweaks, onPick }) {
         {tweaks.showTime && <p className="hero-time">{tod} · {clock}</p>}
       </div>
 
-      {/* ── STARS CONTAINER — 60vh, clips all drift, footer pinned at bottom ── */}
+      {/* ── STARS CONTAINER — remaining height, clips all drift, footer pinned at bottom ── */}
       <div style={{
-        height: '60vh', flexShrink: 0,
+        flex: 1, minHeight: 0,
         display: 'flex', flexDirection: 'column',
         position: 'relative', overflow: 'hidden',
       }}>
