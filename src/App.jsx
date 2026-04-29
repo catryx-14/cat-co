@@ -17,13 +17,17 @@ const ROOMS = [
 // ─── Threshold door definitions ───
 const HUB_DOORS = [
   { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history',
-    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 15, y: 32 },
+    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 15, y: 32,
+    zone: [0.02, 0.38, 0.04, 0.58] },
   { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',
-    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 40, y: 18 },
+    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 40, y: 18,
+    zone: [0.18, 0.65, 0.02, 0.46] },
   { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',
-    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 68, y: 30 },
+    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 68, y: 30,
+    zone: [0.46, 0.94, 0.08, 0.62] },
   { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',
-    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 73, y: 62 },
+    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 73, y: 62,
+    zone: [0.38, 0.96, 0.40, 0.95] },
 ]
 // Exact shape from SparksRoom SparklePath
 const STAR_PATH = 'M50,4 C52,30 54,46 96,50 C54,54 52,70 50,96 C48,70 46,54 4,50 C46,46 48,30 50,4 Z'
@@ -43,7 +47,7 @@ function RoomDoor({ door, idx, onPick }) {
     s = (s * 9301 + 49297) % 233280
     return s / 233280
   }
-  // Drift — widened amplitudes so stars wander the full canvas
+  // Drift — raw amplitudes; actual travel is zone-clamped in tick
   const aX = 80  + R(4) * 120
   const aY = 60  + R(5) * 100
   const periodX = 9  + R(6)  * 10
@@ -66,8 +70,15 @@ function RoomDoor({ door, idx, onPick }) {
     const t0 = performance.now()
     const tick = (now) => {
       const t = (now - t0) / 1000 * 0.55
-      const dx = Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
-      const dy = Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
+      const vw = window.innerWidth, vh = window.innerHeight
+      const [xLo, xHi, yLo, yHi] = door.zone
+      const baseXpx = (door.x / 100) * vw
+      const baseYpx = (door.y / 100) * vh
+      const pad = STAR_SZ / 2 + 16
+      const rawDx = Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
+      const rawDy = Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
+      const dx = Math.max(xLo * vw - baseXpx + pad, Math.min(xHi * vw - baseXpx - pad, rawDx))
+      const dy = Math.max(yLo * vh - baseYpx + pad, Math.min(yHi * vh - baseYpx - pad, rawDy))
       if (driftRef.current)
         driftRef.current.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`
       if (bodyRef.current)
@@ -130,22 +141,6 @@ function RoomDoor({ door, idx, onPick }) {
             <path ref={shimRef} d={STAR_PATH} fill="white" style={{ opacity: 0 }} />
           </svg>
 
-          {/* flickering sparkle — centered on star, matches old .point::after */}
-          <div style={{
-            position: 'absolute',
-            left: STAR_SZ / 2 - 19, top: STAR_SZ / 2 - 19,
-            width: 38, height: 38,
-            pointerEvents: 'none', mixBlendMode: 'screen',
-            background: `
-              linear-gradient(90deg,  transparent 0%,transparent 38%,rgba(255,255,255,0.95) 50%,transparent 62%,transparent 100%),
-              linear-gradient(0deg,   transparent 0%,transparent 38%,rgba(255,255,255,0.85) 50%,transparent 62%,transparent 100%),
-              linear-gradient(45deg,  transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%),
-              linear-gradient(-45deg, transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%)`,
-            WebkitMask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
-            mask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
-            animation: 'sparkle-flash var(--sparkle-dur,4s) ease-in-out infinite',
-            animationDelay: 'var(--sparkle-delay,0s)',
-          }} />
         </div>
 
         {/* orbiting sparkle — not part of rotating body */}
@@ -167,13 +162,31 @@ function RoomDoor({ door, idx, onPick }) {
           textAlign: 'center', whiteSpace: 'nowrap',
           pointerEvents: 'none', userSelect: 'none',
         }}>
-          <div style={{
-            color: 'rgba(255,255,255,0.88)',
-            fontFamily: '"Cagliostro", serif',
-            fontWeight: 400, fontSize: 22, letterSpacing: '0.04em', lineHeight: 1.3,
-            textShadow: '0 0 14px rgba(14,19,34,0.9)',
-          }}>
-            {door.name}
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            {/* label sparkle — flickers at top-left of room name */}
+            <div style={{
+              position: 'absolute',
+              right: 'calc(100% + 3px)', top: 0,
+              width: 32, height: 32,
+              pointerEvents: 'none', mixBlendMode: 'screen',
+              background: `
+                linear-gradient(90deg,  transparent 0%,transparent 38%,rgba(255,255,255,0.95) 50%,transparent 62%,transparent 100%),
+                linear-gradient(0deg,   transparent 0%,transparent 38%,rgba(255,255,255,0.85) 50%,transparent 62%,transparent 100%),
+                linear-gradient(45deg,  transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%),
+                linear-gradient(-45deg, transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%)`,
+              WebkitMask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
+              mask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
+              animation: 'label-sparkle-flash var(--sparkle-dur,4s) ease-in-out infinite',
+              animationDelay: 'var(--sparkle-delay,0s)',
+            }} />
+            <div style={{
+              color: 'rgba(255,255,255,0.88)',
+              fontFamily: '"Cagliostro", serif',
+              fontWeight: 400, fontSize: 22, letterSpacing: '0.04em', lineHeight: 1.3,
+              textShadow: '0 0 14px rgba(14,19,34,0.9)',
+            }}>
+              {door.name}
+            </div>
           </div>
           <div style={{
             color: `rgba(${br},${bg},${bb},0.65)`,

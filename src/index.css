@@ -490,6 +490,13 @@ body {
   60%      { opacity: 0.55; transform: translate(-50%, -50%) scale(1);    }
   72%      { opacity: 0;    transform: translate(-50%, -50%) scale(0.7);  }
 }
+@keyframes label-sparkle-flash {
+  0%, 100% { opacity: 0;    transform: scale(0.55); }
+  40%      { opacity: 0;    transform: scale(0.55); }
+  52%      { opacity: 0.95; transform: scale(1.15); }
+  60%      { opacity: 0.55; transform: scale(1);    }
+  72%      { opacity: 0;    transform: scale(0.7);  }
+}
 .room-star .label {
   font-family: "Cagliostro", serif;
   font-size: 22px;
