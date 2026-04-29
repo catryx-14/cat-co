@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { buildBokeh } from './atmosphere.js'
 import TrackerRoom from './TrackerRoom.jsx'
 import SparksRoom from './SparksRoom.jsx'
@@ -13,6 +13,146 @@ const ROOMS = [
   { key: 'library', name: 'Library',        sub: 'what i\u2019m reading',        tone: 'warm',   x: 23, y: 70, breathe: 5.0, delay: '-2.6s' },
   { key: 'threads', name: 'Threads',        sub: 'thinking-in-progress',         tone: 'rose',   x: 47, y: 55, breathe: 5.4, delay: '-1.8s' },
 ]
+
+// ─── Threshold door definitions ───
+const HUB_DOORS = [
+  { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history',
+    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 15, y: 32 },
+  { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',
+    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 40, y: 18 },
+  { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',
+    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 68, y: 30 },
+  { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',
+    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 73, y: 62 },
+]
+const STAR_PATH = 'M50,4 Q64,36 96,50 Q64,64 50,96 Q36,64 4,50 Q36,36 50,4 Z'
+const STAR_SZ = 48
+const GLOW_SZ = 130
+
+// ─── RoomDoor ─── (Threshold 4-point star icons)
+function RoomDoor({ door, idx, onPick }) {
+  const driftRef = useRef(null)
+  const orbitRef = useRef(null)
+  const shimRef  = useRef(null)
+
+  // Deterministic params — same formulas as FireflySpark in SparksRoom
+  const R = (k) => {
+    let s = ((idx + 1) * 7919 + k * 49297) % 233280
+    s = (s * 9301 + 49297) % 233280
+    return s / 233280
+  }
+  const aX = 26 + R(4) * 38
+  const aY = 18 + R(5) * 28
+  const periodX = 9  + R(6)  * 10
+  const periodY = 11 + R(7)  * 9
+  const phaseX  = R(8)  * Math.PI * 2
+  const phaseY  = R(9)  * Math.PI * 2
+  const orbitPeriod = 6  + R(12) * 5
+  const orbitDir    = R(13) > 0.55 ? 1 : -1
+  const orbitR      = STAR_SZ / 2 + 10
+  const shimPeriod  = 3.5 + R(15) * 2.5
+  const shimPhase   = R(16) * Math.PI * 2
+
+  useEffect(() => {
+    let raf
+    const t0 = performance.now()
+    const tick = (now) => {
+      const t = (now - t0) / 1000 * 0.55
+      const dx = Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
+      const dy = Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
+      if (driftRef.current)
+        driftRef.current.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`
+      const oA = (t / orbitPeriod) * Math.PI * 2 * orbitDir
+      if (orbitRef.current)
+        orbitRef.current.style.transform =
+          `translate(${(Math.cos(oA)*orbitR).toFixed(1)}px,${(Math.sin(oA)*orbitR).toFixed(1)}px)`
+      if (shimRef.current)
+        shimRef.current.style.opacity =
+          ((0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / shimPeriod) + shimPhase)) * 0.2).toFixed(3)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [aX, aY, periodX, periodY, phaseX, phaseY, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase])
+
+  const [br, bg, bb] = door.bright
+  const [mr, mg, mb] = door.mid
+  const [dr, dg, db] = door.deep
+  const gradId = `dg-${door.key}`
+
+  return (
+    <a
+      className={`room-door ${door.key}`}
+      href="#"
+      tabIndex={0}
+      onClick={e => { e.preventDefault(); onPick(door.key) }}
+      style={{ left: `${door.x}%`, top: `${door.y}%` }}
+      aria-label={`Enter ${door.name}`}
+    >
+      <div ref={driftRef} className="room-door-drift">
+        {/* soft outer glow */}
+        <div style={{
+          position: 'absolute',
+          left: -(GLOW_SZ - STAR_SZ) / 2, top: -(GLOW_SZ - STAR_SZ) / 2,
+          width: GLOW_SZ, height: GLOW_SZ,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(${mr},${mg},${mb},0.28) 0%, transparent 68%)`,
+          filter: 'blur(20px)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* 4-point star */}
+        <svg width={STAR_SZ} height={STAR_SZ} viewBox="0 0 100 100"
+             style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
+          <defs>
+            <radialGradient id={gradId} cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor={`rgb(${br},${bg},${bb})`} />
+              <stop offset="55%"  stopColor={`rgb(${mr},${mg},${mb})`} />
+              <stop offset="100%" stopColor={`rgb(${dr},${dg},${db})`} />
+            </radialGradient>
+          </defs>
+          <path d={STAR_PATH} fill={`url(#${gradId})`} />
+          <path ref={shimRef} d={STAR_PATH} fill="white" style={{ opacity: 0 }} />
+        </svg>
+
+        {/* orbiting sparkle */}
+        <div style={{ position: 'absolute', left: STAR_SZ / 2, top: STAR_SZ / 2, width: 0, height: 0, zIndex: 2 }}>
+          <div ref={orbitRef} style={{ position: 'absolute', willChange: 'transform' }}>
+            <div style={{
+              position: 'absolute', marginLeft: -1.8, marginTop: -1.8,
+              width: 3.6, height: 3.6, borderRadius: '50%',
+              background: `rgba(${br},${bg},${bb},0.95)`,
+              boxShadow: `0 0 5px rgba(${br},${bg},${bb},0.8), 0 0 10px rgba(${br},${bg},${bb},0.4)`,
+            }} />
+          </div>
+        </div>
+
+        {/* labels */}
+        <div style={{
+          position: 'absolute', left: '50%', top: STAR_SZ + 12,
+          transform: 'translateX(-50%)',
+          textAlign: 'center', whiteSpace: 'nowrap',
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          <div style={{
+            color: 'rgba(255,255,255,0.88)',
+            fontFamily: 'system-ui,-apple-system,sans-serif',
+            fontWeight: 400, fontSize: 11.5, letterSpacing: '0.025em', lineHeight: 1.4,
+          }}>
+            {door.name}
+          </div>
+          <div style={{
+            color: `rgba(${br},${bg},${bb},0.65)`,
+            fontFamily: 'Georgia,serif', fontStyle: 'italic',
+            fontSize: 9, marginTop: 2, letterSpacing: '0.02em',
+          }}>
+            {door.sub}
+          </div>
+        </div>
+      </div>
+    </a>
+  )
+}
 
 const TWEAK_DEFAULTS = {
   showSubtitles: true,
@@ -102,8 +242,8 @@ function HubView({ tweaks, onPick }) {
 
       <div className="field-wrap">
         <div className="field">
-          {ROOMS.map(r => (
-            <RoomStar key={r.key} room={r} showSub={tweaks.showSubtitles} onPick={onPick} />
+          {HUB_DOORS.map((d, i) => (
+            <RoomDoor key={d.key} door={d} idx={i} onPick={onPick} />
           ))}
         </div>
       </div>
@@ -207,17 +347,21 @@ export default function App({ session }) {
     setSettings(prev => ({ ...prev, thresholds }))
   }
 
-  // Sync atmosphere tweaks to CSS + bokeh
+  // Sync atmosphere tweaks to CSS + bokeh (hidden on hub)
   useEffect(() => {
     document.documentElement.style.setProperty('--warmth', tweaks.warmth)
     window.__warmth = tweaks.warmth
     if (window.__rebuildBokeh) window.__rebuildBokeh(tweaks.warmth)
     const bokeh = document.getElementById('bokeh-layer')
     if (bokeh) {
-      bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
-      bokeh.style.display = tweaks.particleDensity > 0.05 ? 'block' : 'none'
+      if (view === 'hub') {
+        bokeh.style.display = 'none'
+      } else {
+        bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
+        bokeh.style.display = tweaks.particleDensity > 0.05 ? 'block' : 'none'
+      }
     }
-  }, [tweaks.warmth, tweaks.particleDensity])
+  }, [view, tweaks.warmth, tweaks.particleDensity])
 
   function navigate(target, speed) {
     const isFast = speed === 'fast'

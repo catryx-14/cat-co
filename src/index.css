@@ -537,6 +537,26 @@ body {
 }
 .room-star:focus-visible { outline: none; }
 
+/* ── Threshold room doors ── */
+.room-door {
+  position: absolute;
+  display: block;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  text-decoration: none;
+  width: 210px;
+  height: 220px;
+}
+.room-door:focus-visible { outline: none; }
+.room-door-drift {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  margin-left: -24px;
+  margin-top: -24px;
+  will-change: transform;
+}
+
 .footer {
   position: relative;
   z-index: 2;
@@ -582,6 +602,11 @@ body {
   .room-star.games   { top: 54% !important; }
   .room-star.library { top: 70% !important; }
   .room-star.threads { top: 86% !important; }
+  .room-door { left: 50% !important; transform: translateX(-50%) !important; }
+  .room-door.tracker { top:  8% !important; }
+  .room-door.sparks  { top: 28% !important; }
+  .room-door.physio  { top: 48% !important; }
+  .room-door.games   { top: 70% !important; }
   .footer { flex-direction: column; align-items: flex-start; }
   .footer .left { max-width: 100%; }
 }
