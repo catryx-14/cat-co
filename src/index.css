@@ -305,12 +305,12 @@ body {
 .gloaming {
   font-family: "Crimson Pro", serif;
   font-style: italic;
-  font-size: 15px;
+  font-size: 13px;
   letter-spacing: 0.34em;
   color: rgba(232,201,140,0.78);
   text-transform: lowercase;
   text-align: center;
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   animation: shimmer 6s ease-in-out infinite;
   text-shadow: 0 0 18px rgba(232,201,140,0.18);
 }
@@ -321,7 +321,7 @@ body {
 }
 .hub-mark {
   font-family: "Cagliostro", serif;
-  font-size: clamp(68px, 9.4vw, 110px);
+  font-size: clamp(44px, 6.2vw, 76px);
   font-weight: 400;
   text-align: center;
   margin: 0;
@@ -355,15 +355,15 @@ body {
 }
 .hero-line {
   font-family: "Caveat", cursive;
-  font-size: 22px;
+  font-size: 17px;
   color: var(--candle-soft);
   text-align: center;
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   opacity: 0.92;
 }
 .hero-sub {
   font-family: "Caveat", cursive;
-  font-size: 22px;
+  font-size: 17px;
   color: var(--candle-soft);
   text-align: center;
   margin: 0 0 0;
@@ -375,12 +375,12 @@ body {
 .hero-time {
   font-family: "JetBrains Mono", monospace;
   font-style: normal;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.42em;
   text-transform: uppercase;
   color: rgba(228, 218, 232, 0.78);
   text-align: center;
-  margin: 28px 0 6px;
+  margin: 18px 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
