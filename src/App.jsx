@@ -27,7 +27,6 @@ const HUB_DOORS = [
     bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 58, y: 70 },
 ]
 // Exact shape from SparksRoom SparklePath
-const STAR_PATH = 'M50,4 C52,30 54,46 96,50 C54,54 52,70 50,96 C48,70 46,54 4,50 C46,46 48,30 50,4 Z'
 const STAR_SZ = 84
 const GLOW_SZ = 220
 
@@ -80,7 +79,6 @@ function RoomDoor({ door, idx, onPick }) {
   const [br, bg, bb] = door.bright
   const [mr, mg, mb] = door.mid
   const [dr, dg, db] = door.deep
-  const gradId = `dg-${door.key}`
 
   return (
     <a
@@ -103,25 +101,38 @@ function RoomDoor({ door, idx, onPick }) {
           pointerEvents: 'none',
         }} />
 
-        {/* rotating star body */}
+        {/* orb body */}
         <div ref={bodyRef} style={{
           position: 'absolute', left: 0, top: 0,
           width: STAR_SZ, height: STAR_SZ,
           willChange: 'transform',
         }}>
-          <svg width={STAR_SZ} height={STAR_SZ} viewBox="0 0 100 100"
-               style={{ display: 'block', overflow: 'visible' }}>
-            <defs>
-              <radialGradient id={gradId} cx="50%" cy="50%" r="50%">
-                <stop offset="0%"   stopColor={`rgb(${br},${bg},${bb})`} />
-                <stop offset="55%"  stopColor={`rgb(${mr},${mg},${mb})`} />
-                <stop offset="100%" stopColor={`rgb(${dr},${dg},${db})`} />
-              </radialGradient>
-            </defs>
-            <path d={STAR_PATH} fill={`url(#${gradId})`} />
-            <path ref={shimRef} d={STAR_PATH} fill="white" style={{ opacity: 0 }} />
-          </svg>
-
+          <div style={{
+            width: '100%', height: '100%',
+            borderRadius: '9999px',
+            background: `radial-gradient(circle at 38% 32%,
+              rgb(${br},${bg},${bb}) 0%,
+              rgb(${mr},${mg},${mb}) 48%,
+              rgb(${dr},${dg},${db}) 100%)`,
+            boxShadow: `
+              0 0 18px rgba(${mr},${mg},${mb},0.65),
+              0 0 42px rgba(${mr},${mg},${mb},0.28),
+              inset 0 0 16px rgba(0,0,0,0.38)`,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {/* shimmer overlay — keeps existing opacity animation */}
+            <div ref={shimRef} style={{
+              position: 'absolute', inset: 0, borderRadius: '9999px',
+              background: 'rgba(255,255,255,1)', opacity: 0,
+            }} />
+            {/* off-center highlight for spherical depth */}
+            <div style={{
+              position: 'absolute', top: '10%', left: '15%',
+              width: '42%', height: '33%', borderRadius: '9999px',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.18) 60%, transparent 100%)',
+              filter: 'blur(2px)', pointerEvents: 'none',
+            }} />
+          </div>
         </div>
 
         {/* orbiting sparkle — not part of rotating body */}
