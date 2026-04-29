@@ -284,7 +284,7 @@ body {
 }
 .view-fade.is-hub {
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .gloaming {
@@ -566,7 +566,6 @@ body {
   top: 44%;
   margin-left: -42px;
   margin-top: -42px;
-  will-change: transform;
 }
 
 .footer {

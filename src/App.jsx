@@ -15,21 +15,16 @@ const ROOMS = [
 ]
 
 // ─── Threshold door definitions ───
-// x/y are % of .field (not viewport). zone is [xLo, xHi, yLo, yHi] as fractions of .field.
-// physio yHi=0.45 and games yLo=0.55 creates a clean 10% gap so they never overlap vertically.
+// x/y are fixed positions as % of .field
 const HUB_DOORS = [
   { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history',
-    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 20, y: 50,
-    zone: [0.08, 0.42, 0.15, 0.85] },
+    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 16, y: 38 },
   { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',
-    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 50, y: 22,
-    zone: [0.28, 0.72, 0.00, 0.50] },
+    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 44, y: 22 },
   { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',
-    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 75, y: 22,
-    zone: [0.54, 0.96, 0.00, 0.45] },
+    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 74, y: 30 },
   { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',
-    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 62, y: 72,
-    zone: [0.36, 0.86, 0.55, 1.00] },
+    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 58, y: 70 },
 ]
 // Exact shape from SparksRoom SparklePath
 const STAR_PATH = 'M50,4 C52,30 54,46 96,50 C54,54 52,70 50,96 C48,70 46,54 4,50 C46,46 48,30 50,4 Z'
@@ -38,25 +33,16 @@ const GLOW_SZ = 220
 
 // ─── RoomDoor ─── (Threshold 4-point star icons)
 function RoomDoor({ door, idx, onPick }) {
-  const driftRef = useRef(null)
   const bodyRef  = useRef(null)
   const orbitRef = useRef(null)
   const shimRef  = useRef(null)
 
-  // Deterministic params — same formulas as FireflySpark in SparksRoom
   const R = (k) => {
     let s = ((idx + 1) * 7919 + k * 49297) % 233280
     s = (s * 9301 + 49297) % 233280
     return s / 233280
   }
-  // Drift — amplitudes sized for a ~400-600px tall field; zone-clamped in tick
-  const aX = 40  + R(4) * 60
-  const aY = 28  + R(5) * 36
-  const periodX = 9  + R(6)  * 10
-  const periodY = 11 + R(7)  * 9
-  const phaseX  = R(8)  * Math.PI * 2
-  const phaseY  = R(9)  * Math.PI * 2
-  // Rotation — exact same recipe as Sparks FireflySpark
+  // Rotation
   const rotPeriod = 18 + R(10) * 14
   const rotDir    = R(11) > 0.5 ? 1 : -1
   // Orbit
@@ -66,27 +52,18 @@ function RoomDoor({ door, idx, onPick }) {
   // Shimmer
   const shimPeriod  = 3.5 + R(15) * 2.5
   const shimPhase   = R(16) * Math.PI * 2
+  // Scale pulse — gentle breath, each star on its own rhythm
+  const pulsePeriod = 4 + R(20) * 4
+  const pulsePhase  = R(21) * Math.PI * 2
 
   useEffect(() => {
     let raf
     const t0 = performance.now()
     const tick = (now) => {
       const t = (now - t0) / 1000 * 0.55
-      const fieldEl = document.querySelector('.field')
-      const fw = fieldEl ? fieldEl.offsetWidth  : window.innerWidth
-      const fh = fieldEl ? fieldEl.offsetHeight : window.innerHeight * 0.52
-      const [xLo, xHi, yLo, yHi] = door.zone
-      const baseXpx = (door.x / 100) * fw
-      const baseYpx = (door.y / 100) * fh
-      const pad = STAR_SZ / 2 + 16
-      const rawDx = Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
-      const rawDy = Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
-      const dx = Math.max(xLo * fw - baseXpx + pad, Math.min(xHi * fw - baseXpx - pad, rawDx))
-      const dy = Math.max(yLo * fh - baseYpx + pad, Math.min(yHi * fh - baseYpx - pad, rawDy))
-      if (driftRef.current)
-        driftRef.current.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`
+      const scale = (0.92 + 0.16 * (0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / pulsePeriod) + pulsePhase))).toFixed(4)
       if (bodyRef.current)
-        bodyRef.current.style.transform = `rotate(${((t / rotPeriod) * 360 * rotDir).toFixed(2)}deg)`
+        bodyRef.current.style.transform = `rotate(${((t / rotPeriod) * 360 * rotDir).toFixed(2)}deg) scale(${scale})`
       const oA = (t / orbitPeriod) * Math.PI * 2 * orbitDir
       if (orbitRef.current)
         orbitRef.current.style.transform =
@@ -98,7 +75,7 @@ function RoomDoor({ door, idx, onPick }) {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [aX, aY, periodX, periodY, phaseX, phaseY, rotPeriod, rotDir, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase])
+  }, [rotPeriod, rotDir, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase, pulsePeriod, pulsePhase])
 
   const [br, bg, bb] = door.bright
   const [mr, mg, mb] = door.mid
@@ -114,7 +91,7 @@ function RoomDoor({ door, idx, onPick }) {
       style={{ left: `${door.x}%`, top: `${door.y}%` }}
       aria-label={`Enter ${door.name}`}
     >
-      <div ref={driftRef} className="room-door-drift">
+      <div className="room-door-drift">
         {/* soft outer glow — not rotated */}
         <div style={{
           position: 'absolute',
@@ -257,7 +234,7 @@ function HubView({ tweaks, onPick }) {
 
   const tod = timeOfDay()
   return (
-    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
 
       {/* ── HERO CONTAINER — max 320px, content vertically centred ── */}
       <div style={{
