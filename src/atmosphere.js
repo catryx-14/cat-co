@@ -31,11 +31,20 @@ function initStars() {
     const warmThresh = 0.05 + Math.min(1.5, w) * 0.17;
     for (const s of stars) {
       const a = s.base + Math.sin(t * 0.001 * s.spd + s.tw) * 0.25;
+      const isWarm = s.warmRoll < warmThresh;
+      const [cr, cg, cb] = isWarm ? [232, 201, 140] : [200, 210, 240];
+      const orbR = s.r * devicePixelRatio * 3.5;
+      const grad = ctx.createRadialGradient(
+        s.x - orbR * 0.22, s.y - orbR * 0.22, 0,
+        s.x, s.y, orbR
+      );
+      grad.addColorStop(0,    `rgba(255,255,255,${(a * 0.92).toFixed(3)})`);
+      grad.addColorStop(0.13, `rgba(${cr},${cg},${cb},${a.toFixed(3)})`);
+      grad.addColorStop(0.42, `rgba(${cr},${cg},${cb},${(a * 0.32).toFixed(3)})`);
+      grad.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * devicePixelRatio, 0, Math.PI * 2);
-      ctx.fillStyle = (s.warmRoll < warmThresh)
-        ? `rgba(232, 201, 140, ${a})`
-        : `rgba(200, 210, 240, ${a * 0.85})`;
+      ctx.arc(s.x, s.y, orbR, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -130,7 +139,7 @@ export function buildBokeh(_warmth) {
     d.style.filter = `blur(${Math.round(sz * 0.17)}px)`;
     d.style.opacity = '1';
     const angle = Math.random() * Math.PI * 2;
-    const dist = 60 + Math.random() * 80;
+    const dist = 10 + Math.random() * 14;
     d.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
     d.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
     d.style.animationDuration = (50 + Math.random() * 30) + 's';

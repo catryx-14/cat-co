@@ -20,7 +20,7 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #060606;
+  background: #0b1020;
   color: var(--ink);
   font-family: "Crimson Pro", Georgia, serif;
   font-size: 18px;
@@ -29,7 +29,7 @@ html, body {
   overflow-x: hidden;
 }
 body {
-  background: #060606;
+  background: linear-gradient(160deg, #0b1020 0%, #111a33 50%, #1a2547 100%) fixed;
 }
 
 .stars, .bokeh, .haze {
@@ -59,16 +59,20 @@ body {
   filter: blur(7px);
   animation: drift linear infinite;
   background:
-    radial-gradient(ellipse 90% 85% at 30% 28%,
-      rgba(255,255,255,0.22) 0%,
-      rgba(255,255,255,0.14) 18%,
-      rgba(255,255,255,0.07) 38%,
-      rgba(255,255,255,0.02) 60%,
-      transparent 78%),
+    /* Layer 3: core highlight — bright specular for spherical depth */
+    radial-gradient(circle at 32% 28%,
+      rgba(255,255,255,0.58) 0%,
+      rgba(255,255,255,0.24) 12%,
+      transparent 27%),
+    /* Layer 2: main jewel body — rich color, fades to transparent */
     radial-gradient(circle at 50% 50%,
-      var(--c, rgba(120, 150, 230, 0.55)) 0%,
-      var(--c, rgba(120, 150, 230, 0.55)) 35%,
-      transparent 78%);
+      var(--c, rgba(120, 150, 230, 0.68)) 0%,
+      var(--c, rgba(120, 150, 230, 0.68)) 20%,
+      transparent 60%),
+    /* Layer 1: outer glow — large, very soft, low opacity */
+    radial-gradient(circle at 50% 50%,
+      var(--c, rgba(120, 150, 230, 0.20)) 0%,
+      transparent 88%);
 }
 @keyframes drift {
   from { transform: translate(0,0); }
@@ -1758,7 +1762,7 @@ body {
   padding: 14px 0 18px;
   margin-top: 32px;
   border-top: 1px solid rgba(232,201,140,0.12);
-  background: rgba(6,6,6,0.7);
+  background: rgba(11,16,32,0.82);
   z-index: 10;
 }
 .save-bar-status {
