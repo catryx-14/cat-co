@@ -283,15 +283,8 @@ body {
   animation: view-fade-in 0.35s ease reverse forwards;
 }
 .view-fade.is-hub {
-  display: flex;
-  flex-direction: column;
-}
-.view-fade.is-hub .field-wrap {
-  flex: none;
-  margin-top: 0;
-}
-.view-fade.is-hub .field {
-  height: 100%;
+  padding: 0;
+  overflow: hidden;
 }
 
 .gloaming {

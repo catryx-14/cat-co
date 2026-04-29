@@ -257,8 +257,9 @@ function HubView({ tweaks, onPick }) {
 
   const tod = timeOfDay()
   return (
-    <>
-      {/* hero — 40vh, content vertically centred within that band */}
+    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── HERO CONTAINER — 40vh, content vertically centred ── */}
       <div style={{
         height: '40vh', flexShrink: 0,
         display: 'flex', flexDirection: 'column',
@@ -299,42 +300,50 @@ function HubView({ tweaks, onPick }) {
         {tweaks.showTime && <p className="hero-time">{tod} · {clock}</p>}
       </div>
 
-      {/* star field — exactly 60vh */}
-      <div className="field-wrap" style={{ height: '60vh', flexShrink: 0 }}>
-        <div className="field">
-          {HUB_DOORS.map((d, i) => (
-            <RoomDoor key={d.key} door={d} idx={i} onPick={onPick} />
-          ))}
+      {/* ── STARS CONTAINER — 60vh, clips all drift, footer pinned at bottom ── */}
+      <div style={{
+        height: '60vh', flexShrink: 0,
+        display: 'flex', flexDirection: 'column',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* field fills all space above footer */}
+        <div className="field-wrap" style={{ flex: 1, position: 'relative', overflow: 'hidden', margin: 0 }}>
+          <div className="field" style={{ position: 'absolute', inset: 0 }}>
+            {HUB_DOORS.map((d, i) => (
+              <RoomDoor key={d.key} door={d} idx={i} onPick={onPick} />
+            ))}
+          </div>
         </div>
+
+        {/* footer pinned at bottom of stars container */}
+        <footer className="footer" style={{ flexShrink: 0, margin: 0, padding: '14px 56px 16px' }}>
+          <div className="left">{tweaks.settlePrompt}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+            <button
+              onClick={() => onPick('engine-room')}
+              style={{
+                background: 'transparent', border: 0, padding: 0,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 9,
+                letterSpacing: '0.28em', textTransform: 'uppercase',
+                color: 'rgba(155,142,196,0.3)', cursor: 'pointer',
+                transition: 'color 200ms ease',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(155,142,196,0.6)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(155,142,196,0.3)'}
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                <circle cx="8" cy="8" r="3"/>
+                <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
+              </svg>
+              engine room
+            </button>
+            <div className="right">v.0 · cagliostro · the gloaming</div>
+          </div>
+        </footer>
       </div>
 
-      {/* footer — absolute overlay so it doesn't affect the 40/60 split */}
-      <footer className="footer" style={{ position: 'absolute', bottom: 16, left: 56, right: 56 }}>
-        <div className="left">{tweaks.settlePrompt}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-          <button
-            onClick={() => onPick('engine-room')}
-            style={{
-              background: 'transparent', border: 0, padding: 0,
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 9,
-              letterSpacing: '0.28em', textTransform: 'uppercase',
-              color: 'rgba(155,142,196,0.3)', cursor: 'pointer',
-              transition: 'color 200ms ease',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'rgba(155,142,196,0.6)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(155,142,196,0.3)'}
-          >
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-              <circle cx="8" cy="8" r="3"/>
-              <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
-            </svg>
-            engine room
-          </button>
-          <div className="right">v.0 · cagliostro · the gloaming</div>
-        </div>
-      </footer>
-    </>
+    </div>
   )
 }
 
