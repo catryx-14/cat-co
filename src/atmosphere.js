@@ -101,49 +101,40 @@ function initStars() {
   requestAnimationFrame(tick);
 }
 
-export function buildBokeh(warmth) {
+export function buildBokeh(_warmth) {
   const layer = document.getElementById('bokeh-layer');
   if (!layer) return;
   layer.innerHTML = '';
-  const blues = [
-    'rgba(110, 150, 230, 0.55)', 'rgba(80, 130, 220, 0.50)',
-    'rgba(140, 175, 240, 0.50)', 'rgba(70, 110, 200, 0.55)',
-    'rgba(120, 165, 235, 0.45)', 'rgba(95, 140, 215, 0.55)',
-    'rgba(155, 185, 245, 0.45)', 'rgba(85, 125, 205, 0.50)',
-  ];
-  const purples = [
-    'rgba(168, 144, 212, 0.55)', 'rgba(140, 110, 200, 0.50)',
-    'rgba(190, 160, 225, 0.45)', 'rgba(125, 100, 195, 0.55)',
-  ];
-  const roses = [
-    'rgba(201, 138, 160, 0.50)', 'rgba(220, 155, 175, 0.45)', 'rgba(190, 125, 150, 0.50)',
-  ];
-  const golds = ['rgba(232, 201, 140, 0.55)', 'rgba(220, 180, 120, 0.50)'];
 
-  function pickColor() {
-    const r = Math.random();
-    if (r < 0.60) return blues[Math.floor(Math.random() * blues.length)];
-    if (r < 0.80) return purples[Math.floor(Math.random() * purples.length)];
-    if (r < 0.95) return roses[Math.floor(Math.random() * roses.length)];
-    return golds[Math.floor(Math.random() * golds.length)];
-  }
+  const jewels = [
+    [180, 40,  220],  // deep purple
+    [220, 60,  160],  // magenta
+    [40,  100, 220],  // sapphire
+    [160, 30,  200],  // deep violet
+    [60,  180, 200],  // teal
+    [220, 100, 40],   // amber
+    [200, 40,  120],  // ruby
+  ];
 
   for (let i = 0; i < 32; i++) {
     const d = document.createElement('div');
     d.className = 'bokeh-dot';
-    const sz = 18 + Math.pow(Math.random(), 1.6) * 130;
+    const sz = 100 + Math.random() * 80; // 100–180 px diameter (50–90 px radius)
     d.style.width = sz + 'px';
     d.style.height = sz + 'px';
-    d.style.left = (Math.random() * 100) + '%';
-    d.style.top = (Math.random() * 100) + '%';
-    d.style.setProperty('--c', pickColor());
-    d.style.opacity = 0.45 + Math.random() * 0.45;
+    d.style.left = (Math.random() * 105 - 2.5) + '%';
+    d.style.top  = (Math.random() * 105 - 2.5) + '%';
+    const [r, g, b] = jewels[Math.floor(Math.random() * jewels.length)];
+    const alpha = (0.22 + Math.random() * 0.06).toFixed(3);
+    d.style.setProperty('--c', `rgba(${r},${g},${b},${alpha})`);
+    d.style.filter = `blur(${Math.round(sz * 0.17)}px)`;
+    d.style.opacity = '1';
     const angle = Math.random() * Math.PI * 2;
-    const dist = 180 + Math.random() * 340;
+    const dist = 60 + Math.random() * 80;
     d.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
     d.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-    d.style.animationDuration = (12 + Math.random() * 11) + 's';
-    d.style.animationDelay = -(Math.random() * 20) + 's';
+    d.style.animationDuration = (50 + Math.random() * 30) + 's';
+    d.style.animationDelay = -(Math.random() * 60) + 's';
     d.style.animationDirection = Math.random() < 0.5 ? 'alternate' : 'alternate-reverse';
     layer.appendChild(d);
   }

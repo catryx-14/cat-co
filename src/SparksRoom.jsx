@@ -404,11 +404,9 @@ function CaptureBox({ value, onChange, tag, onTagChange, editing, onSave, onCanc
 
   return (
     <div style={{
-      background: 'linear-gradient(180deg, rgba(36,16,32,0.55), rgba(20,8,24,0.45))',
-      border: '1px solid rgba(232,201,140,0.18)',
+      background: 'transparent',
+      border: 'none',
       borderRadius: 4, padding: '20px 24px 18px',
-      backdropFilter: 'blur(6px)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.45), inset 0 0 30px rgba(255,100,130,0.04)',
     }}>
       <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.34em', textTransform: 'uppercase', color: 'rgba(240,227,194,0.55)', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{editing ? 'editing spark' : 'ooh, what was that?'}</span>

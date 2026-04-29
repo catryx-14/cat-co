@@ -12,15 +12,15 @@
   --reg-blue: #7eb8d9;
   --reg-blue-glow: rgba(126,184,217,0.6);
   --sage: #a3c9a8;
-  --ink: #f0e3c2;
-  --ink-soft: rgba(240,227,194,0.78);
-  --ink-faint: rgba(240,227,194,0.5);
+  --ink: #ffffff;
+  --ink-soft: rgba(255,255,255,0.78);
+  --ink-faint: rgba(255,255,255,0.5);
 }
 
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: var(--night-1);
+  background: #060606;
   color: var(--ink);
   font-family: "Crimson Pro", Georgia, serif;
   font-size: 18px;
@@ -29,16 +29,7 @@ html, body {
   overflow-x: hidden;
 }
 body {
-  --w: var(--warmth, 0.7);
-  background:
-    radial-gradient(ellipse 90% 60% at 20% 10%,
-      rgba(168, 144, 212, calc(0.12 - var(--w) * 0.04)) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 85% 90%,
-      rgba(201, 138, 42, calc(0.04 + var(--w) * 0.10)) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 60% at 65% 50%,
-      rgba(80, 100, 180, calc(0.10 - var(--w) * 0.07)) 0%, transparent 60%),
-    radial-gradient(ellipse 100% 80% at 50% 50%, var(--night-2) 0%, var(--night-1) 100%);
-  transition: background 1.2s ease;
+  background: #060606;
 }
 
 .stars, .bokeh, .haze {
@@ -302,7 +293,7 @@ body {
   font-style: italic;
   font-size: 15px;
   letter-spacing: 0.34em;
-  color: var(--ink-soft);
+  color: rgba(232,201,140,0.78);
   text-transform: lowercase;
   text-align: center;
   margin: 0 0 14px;
@@ -322,7 +313,7 @@ body {
   margin: 0;
   line-height: 1;
   letter-spacing: 0.02em;
-  color: var(--ink);
+  color: var(--candle-soft);
   text-shadow:
     0 0 24px rgba(232, 201, 140, 0.18),
     0 0 60px rgba(168, 144, 212, 0.12);
@@ -608,7 +599,7 @@ body {
   font-size: clamp(24px, 4vw, 30px);
   letter-spacing: 0.02em;
   margin: 0;
-  color: var(--ink);
+  color: var(--candle-soft);
   line-height: 1.15;
   white-space: nowrap;
   flex: 1 1 auto;
@@ -688,20 +679,10 @@ body {
   padding: 26px 28px 30px;
   margin-bottom: 30px;
   border-radius: 10px;
-  background: linear-gradient(135deg,
-    rgba(168,144,212,0.10),
-    rgba(110,140,220,0.06) 60%,
-    rgba(232,201,140,0.04));
-  border: 1px solid rgba(232,201,140,0.10);
-  overflow: hidden;
+  background: transparent;
+  border: none;
 }
-.sky::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 80% 0%, rgba(232,201,140,0.18), transparent 60%);
-  pointer-events: none;
-}
+.sky::before { display: none; }
 .sky-row {
   display: flex;
   align-items: center;
@@ -762,7 +743,7 @@ body {
   font-family: "Cagliostro", serif;
   font-size: 22px;
   letter-spacing: 0.04em;
-  color: var(--ink);
+  color: var(--candle-soft);
 }
 .ledger-count {
   font-family: "Crimson Pro", serif;
@@ -915,15 +896,14 @@ body {
 .composer {
   margin-top: 18px;
   padding: 14px 14px 14px 14px;
-  border: 1px solid rgba(232,201,140,0.16);
+  border: none;
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(232,201,140,0.04), transparent);
-  transition: border-color .35s ease, background .35s ease;
+  background: transparent;
 }
 .composer:focus-within {
-  border-color: rgba(232,201,140,0.4);
-  background: linear-gradient(180deg, rgba(232,201,140,0.08), rgba(232,201,140,0.01));
-  box-shadow: 0 0 24px rgba(232,201,140,0.08);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 .composer-input {
   width: 100%;
@@ -981,7 +961,7 @@ body {
   font-style: italic;
 }
 .bucket-pick select {
-  background: rgba(20,24,42,0.5);
+  background: transparent;
   color: var(--ink);
   border: 1px solid rgba(232,201,140,0.2);
   border-radius: 4px;
@@ -1162,14 +1142,14 @@ body {
 }
 .event:hover .event-edit-hint { opacity: 0.7; }
 .event.editing {
-  background: rgba(232,201,140,0.04);
+  background: transparent;
   border-radius: 8px;
   padding: 12px;
   cursor: default;
-  border: 1px solid rgba(232,201,140,0.18);
+  border: none;
 }
 .event.editing .event-time select {
-  background: rgba(20,24,42,0.5);
+  background: transparent;
   color: var(--ink-soft);
   border: 1px solid rgba(232,201,140,0.2);
   border-radius: 4px;
@@ -1182,8 +1162,8 @@ body {
 }
 .event-edit-input {
   width: 100%;
-  background: rgba(20,24,42,0.4);
-  border: 1px solid rgba(232,201,140,0.22);
+  background: transparent;
+  border: none;
   border-radius: 4px;
   padding: 8px 10px;
   font-family: "Architects Daughter", cursive;
@@ -1194,8 +1174,7 @@ body {
   outline: 0;
 }
 .event-edit-input:focus {
-  border-color: rgba(232,201,140,0.45);
-  background: rgba(20,24,42,0.6);
+  background: transparent;
 }
 .axis .pip.editable { cursor: pointer; transition: transform .2s ease, background .25s ease; }
 .axis .pip.editable:hover { transform: scale(1.25); }
@@ -1287,14 +1266,13 @@ body {
 .almanac {
   margin-bottom: 24px;
   padding: 14px 16px;
-  border: 1px solid rgba(232,201,140,0.14);
+  border: none;
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(232,201,140,0.04), transparent);
-  transition: border-color .35s ease, background .35s ease;
+  background: transparent;
 }
 .almanac:focus-within {
-  border-color: rgba(232,201,140,0.4);
-  background: linear-gradient(180deg, rgba(232,201,140,0.08), rgba(232,201,140,0.01));
+  background: transparent;
+  border: none;
 }
 .almanac-input {
   width: 100%;
@@ -1361,12 +1339,12 @@ body {
   border: 1px solid transparent;
 }
 .moon-row:hover {
-  background: rgba(232,201,140,0.03);
-  border-color: rgba(232,201,140,0.10);
+  background: transparent;
+  border-color: transparent;
 }
 .moon-row.expanded {
-  background: rgba(232,201,140,0.04);
-  border-color: rgba(232,201,140,0.18);
+  background: transparent;
+  border-color: transparent;
   cursor: default;
 }
 .moon-row-main {
@@ -1534,8 +1512,8 @@ body {
 .moon-detail-edit .composer,
 .moon-detail-edit .reg-section,
 .moon-detail-edit .signals-section {
-  background: rgba(20,24,42,0.32);
-  border: 1px solid rgba(232,201,140,0.10);
+  background: transparent;
+  border: none;
   border-radius: 4px;
   padding: 14px 16px;
 }
@@ -1593,9 +1571,9 @@ body {
 
 .moon-detail-tend {
   padding: 14px 14px 8px;
-  background: rgba(20,24,42,0.3);
+  background: transparent;
   border-radius: 6px;
-  border: 1px solid rgba(232,201,140,0.06);
+  border: none;
 }
 .moon-detail-label {
   font-family: "JetBrains Mono", monospace;
@@ -1743,6 +1721,7 @@ body {
   padding: 14px 0 18px;
   margin-top: 32px;
   border-top: 1px solid rgba(232,201,140,0.12);
+  background: rgba(6,6,6,0.7);
   z-index: 10;
 }
 .save-bar-status {

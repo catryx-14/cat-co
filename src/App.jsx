@@ -248,7 +248,7 @@ export default function App({ session }) {
       <div className="stage">
         {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} />}
         <main className="view">
-          <div className={fadeClass} key={leaving ? `leaving-${view}` : view} style={(view === 'sparks' || view === 'engine-room') ? { background: '#04040e' } : undefined}>
+          <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
             {view === 'hub'
               ? <HubView tweaks={tweaks} onPick={goRoom} />
               : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
