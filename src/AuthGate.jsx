@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './lib/supabase.js'
+import { supabase } from './shared/lib/supabase.js'
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined) // undefined = initialising

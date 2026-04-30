@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import './index.css'
-import { initAtmosphere } from './atmosphere.js'
+import './shared/index.css'
+import { initAtmosphere } from './shared/atmosphere.js'
 import App from './App.jsx'
 import AuthGate from './AuthGate.jsx'
 

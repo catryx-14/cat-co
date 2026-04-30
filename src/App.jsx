@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { buildBokeh } from './atmosphere.js'
-import TrackerRoom from './TrackerRoom.jsx'
-import SparksRoom from './SparksRoom.jsx'
-import EngineRoom from './EngineRoom.jsx'
-import { loadSettings } from './lib/db.js'
+import { buildBokeh } from './shared/atmosphere.js'
+import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
+import SparksRoom from './rooms/sparks/SparksRoom.jsx'
+import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
+import { loadSettings } from './shared/lib/db.js'
 
 const ROOMS = [
   { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 15, y: 32, breathe: 5.2, delay: '0s'    },

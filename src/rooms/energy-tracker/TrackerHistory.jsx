@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { loadAllEntries, deleteEntry } from './lib/db.js'
-import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT } from './lib/math.js'
+import { loadAllEntries, deleteEntry } from '../../shared/lib/db.js'
+import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT } from '../../shared/lib/math.js'
 
 const REG_CHANNELS = [
   { k: 'sensory', name: 'sensory comfort', cap: 4 },

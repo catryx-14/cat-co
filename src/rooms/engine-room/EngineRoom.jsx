@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import RoomMark from './components/RoomMark.jsx'
-import { supabase } from './lib/supabase.js'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+import { supabase } from '../../shared/lib/supabase.js'
 
 const CATEGORY_COLORS = {
   design:    'rgba(168,144,212,0.7)',

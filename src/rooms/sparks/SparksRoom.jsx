@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import RoomMark from './components/RoomMark.jsx'
-import { supabase } from './lib/supabase.js'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+import { supabase } from '../../shared/lib/supabase.js'
 
 // ─── tag system ────────────────────────────────────────────────────────
 const TAGS = {

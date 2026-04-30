@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import RoomMark from './components/RoomMark.jsx'
+import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
-import { supabase } from './lib/supabase.js'
-import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, todayDateStr, yesterdayDateStr } from './lib/db.js'
-import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT, taxActive, computePeakDebit, computeClosingBalance, nonSleepRegTotal } from './lib/math.js'
+import { supabase } from '../../shared/lib/supabase.js'
+import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT, taxActive, computePeakDebit, computeClosingBalance, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
   { k: 'E', name: 'emotional', meaning: 'how strong was the emotional charge of this event?' },
