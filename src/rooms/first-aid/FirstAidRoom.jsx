@@ -98,7 +98,7 @@ export default function FirstAidRoom({ onHome }) {
         textAlign: "center",
         borderBottom: showCards ? "1px solid #1e2040" : "none",
       }}>
-        <div style={{
+        <div className="fa-title" style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 400,
           fontSize: "38px",
@@ -111,7 +111,7 @@ export default function FirstAidRoom({ onHome }) {
           breathe.
         </div>
 
-        <div style={{
+        <div className="fa-subtitle" style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 300,
           fontSize: "14px",
@@ -141,7 +141,7 @@ export default function FirstAidRoom({ onHome }) {
 
         {/* Large breathe. — animated during FULL, locked tiny during HOLDING/FADING */}
         {!showHeader && (
-          <span style={{
+          <span className="fa-breathe-word" style={{
             fontFamily: "'Outfit', sans-serif",
             fontWeight: 400,
             display: "block",
@@ -284,6 +284,16 @@ export default function FirstAidRoom({ onHome }) {
             55%  { font-size: 30px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
             100% { font-size: 56px;  opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
           }
+          .fa-breathe-word {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90vw;
+            text-align: center;
+          }
+          .fa-title    { font-size: 48px !important; }
+          .fa-subtitle { font-size: 18px !important; letter-spacing: 0.14em !important; }
         }
         .state-btn:hover {
           background: rgba(180,160,220,0.08) !important;
