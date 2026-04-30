@@ -139,12 +139,12 @@ export function buildBokeh(_warmth) {
     d.style.filter = `blur(${Math.round(sz * 0.17)}px)`;
     d.style.opacity = '1';
     const angle = Math.random() * Math.PI * 2;
-    const dist = 10 + Math.random() * 14;
+    const dist = 34 + Math.random() * 28;
     d.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
     d.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-    d.style.animationDuration = (50 + Math.random() * 30) + 's';
-    d.style.animationDelay = -(Math.random() * 60) + 's';
-    d.style.animationDirection = Math.random() < 0.5 ? 'alternate' : 'alternate-reverse';
+    d.style.animationDuration = (70 + Math.random() * 40) + 's';
+    d.style.animationDelay = -(Math.random() * 80) + 's';
+    d.style.animationDirection = 'normal';
     layer.appendChild(d);
   }
 }

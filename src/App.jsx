@@ -7,10 +7,10 @@ import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import { loadSettings } from './shared/lib/db.js'
 
 const ROOMS = [
-  { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 12, y: 42, breathe: 5.2, delay: '0s'    },
-  { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',           tone: 'rose',   x: 38, y: 26, breathe: 4.6, delay: '-1.2s' },
-  { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',           tone: 'teal',   x: 66, y: 38, breathe: 5.6, delay: '-2.1s' },
-  { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple', x: 75, y: 56, breathe: 4.8, delay: '-0.6s' },
+  { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 12, y: 28, breathe: 5.2, delay: '0s'    },
+  { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',           tone: 'rose',   x: 38, y: 12, breathe: 4.6, delay: '-1.2s' },
+  { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',           tone: 'teal',   x: 66, y: 24, breathe: 5.6, delay: '-2.1s' },
+  { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple', x: 75, y: 42, breathe: 4.8, delay: '-0.6s' },
 ]
 
 
