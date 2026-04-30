@@ -657,7 +657,14 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
         />
       )}
       {tab === 'settings' && (
-        <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+        <>
+          <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          <div className="settings-signout">
+            <button className="settings-signout-btn" onClick={() => supabase.auth.signOut()}>
+              sign out
+            </button>
+          </div>
+        </>
       )}
     </>
   )

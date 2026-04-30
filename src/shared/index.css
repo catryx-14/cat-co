@@ -1981,6 +1981,24 @@ body {
 .settings-section {
   padding-top: 8px;
 }
+.settings-signout {
+  padding: 32px 0 16px;
+  text-align: center;
+}
+.settings-signout-btn {
+  background: none;
+  border: none;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity .2s ease;
+  padding: 4px 8px;
+}
+.settings-signout-btn:hover { opacity: 1; }
 .settings-field-row {
   display: flex;
   align-items: center;
