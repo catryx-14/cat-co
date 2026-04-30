@@ -604,21 +604,89 @@ body {
 
 @media (max-width: 720px) {
   .view-fade { padding: 36px 22px 60px; }
-  .rail.expanded { flex-basis: 60px; width: 60px; }
-  .rail.expanded .rail-nav-item { font-size: 0; padding: 10px 8px; justify-content: center; }
-  .rail.expanded .rail-nav-item .dot { width: 9px; height: 9px; }
-  .rail.expanded .rail-home { font-size: 11px; text-align: center; }
-  .rail { flex-basis: 8px; width: 8px; }
+
+  /* ── sidebar → fixed bottom nav bar ── */
+  .rail {
+    flex-basis: 0 !important;
+    width: 0 !important;
+    overflow: visible;
+    background: none;
+    transition: none;
+  }
+  .rail::before { display: none; }
+  .rail.expanded {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    width: 100% !important;
+    flex-basis: 0 !important;
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    background: rgba(11, 16, 32, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(232, 201, 140, 0.14);
+    z-index: 100;
+    padding: 0 4px;
+  }
+  .rail.expanded::before { display: none; }
+  .rail.expanded .rail-mark {
+    position: static !important;
+    transform: none !important;
+    top: auto !important; left: auto !important;
+    width: 16px !important; height: 16px !important;
+    margin: 0 10px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .rail.expanded .rail-nav {
+    position: static !important;
+    inset: auto !important;
+    flex-direction: row !important;
+    opacity: 1 !important;
+    flex: 1;
+    display: flex !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    align-items: stretch;
+    transition: none !important;
+  }
+  .rail.expanded .rail-nav-item {
+    flex: 1;
+    flex-direction: column !important;
+    padding: 6px 2px !important;
+    gap: 2px !important;
+    align-items: center !important;
+    justify-content: center;
+    font-size: inherit;
+  }
+  .rail.expanded .rail-nav-item .dot { width: 8px !important; height: 8px !important; }
+  .rail.expanded .rail-nav-item .label-text {
+    font-size: 8px !important;
+    max-width: none !important;
+    letter-spacing: 0.02em !important;
+    text-align: center;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .rail.expanded .rail-home { display: none !important; }
+  /* push room content above the bottom bar */
+  .view-fade:not(.is-hub) { padding-bottom: 74px; }
+
+  /* ── threshold field ── */
   .field-wrap { min-height: 380px; margin-top: 16px; }
   .field { min-height: 380px; }
   .view-fade.is-hub { padding: 36px 22px 16px; }
   .room-star .label { font-size: 17px; }
   .room-star .sub { font-size: 11px; max-width: 180px; }
+
+  /* ── threshold: room positions with breathing room ── */
   .room-star { left: 50% !important; transform: translateX(-50%) !important; }
-  .room-star.tracker { top:  6% !important; }
-  .room-star.sparks  { top: 22% !important; }
-  .room-star.physio  { top: 38% !important; }
-  .room-star.games   { top: 54% !important; }
+  .room-star.tracker { top:  4% !important; }
+  .room-star.sparks  { top: 28% !important; }
+  .room-star.physio  { top: 52% !important; }
+  .room-star.games   { top: 76% !important; }
   .room-star.library { top: 70% !important; }
   .room-star.threads { top: 86% !important; }
   .room-door { left: 50% !important; transform: translateX(-50%) !important; }
@@ -626,8 +694,12 @@ body {
   .room-door.sparks  { top: 28% !important; }
   .room-door.physio  { top: 48% !important; }
   .room-door.games   { top: 70% !important; }
+
+  /* ── footer ── */
   .footer { flex-direction: column; align-items: flex-start; }
   .footer .left { max-width: 100%; }
+
+  /* ── energy tracker ── */
   .room-tab { padding: 10px 11px 12px; font-size: 15px; letter-spacing: 0.03em; }
   .event-axes { flex-wrap: wrap; gap: 8px; }
 }

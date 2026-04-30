@@ -153,7 +153,7 @@ export default function FirstAidRoom({ onHome }) {
             } : {}),
             // HOLDING: locked at exhale bottom, no transition
             ...(isHolding ? {
-              fontSize: "64px",
+              fontSize: "clamp(30px, 8vw, 64px)",
               opacity: 0.35,
               letterSpacing: "0.20em",
               color: "#7a6aa0",
@@ -161,7 +161,7 @@ export default function FirstAidRoom({ onHome }) {
             } : {}),
             // FADING: stays tiny, opacity fades to 0 over 2s
             ...(isFading ? {
-              fontSize: "64px",
+              fontSize: "clamp(30px, 8vw, 64px)",
               opacity: 0,
               letterSpacing: "0.20em",
               color: "#7a6aa0",
@@ -276,6 +276,14 @@ export default function FirstAidRoom({ onHome }) {
           40%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
           55%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
           100% { font-size: 120px; opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+        }
+        @media (max-width: 720px) {
+          @keyframes breathePulse {
+            0%   { font-size: 56px;  opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+            40%  { font-size: 30px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
+            55%  { font-size: 30px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
+            100% { font-size: 56px;  opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+          }
         }
         .state-btn:hover {
           background: rgba(180,160,220,0.08) !important;
