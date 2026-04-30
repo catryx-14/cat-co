@@ -670,7 +670,7 @@ export default function SparksRoom({ onHome }) {
           ref={fieldRef}
           style={{
             position: 'relative', borderRadius: 10, overflow: 'hidden',
-            background: 'rgba(8,6,20,0.55)', border: '1px solid rgba(155,142,196,0.08)',
+            background: 'transparent', border: 'none',
             marginBottom: '2rem', height: fieldHeight,
           }}
         >
