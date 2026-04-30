@@ -95,27 +95,26 @@ export default function FirstAidRoom({ onHome }) {
 
       {/* Header area */}
       <div style={{
-        padding: showHeader ? "32px 36px 16px" : "0 36px",
+        padding: showHeader ? "40px 36px 32px" : "0 36px",
         overflow: "hidden",
         transition: "padding 0.4s ease",
         flexShrink: 0,
+        textAlign: "center",
         borderBottom: showCards ? "1px solid #1e2040" : "none",
       }}>
-        {/* "breathe." header — Outfit 400, 22px, #9988bb, letter-spacing 0.18em */}
         <div style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 400,
-          fontSize: "22px",
+          fontSize: "38px",
           color: "#f5edd6",
           letterSpacing: "0.18em",
           opacity: showHeader ? 1 : 0,
           transition: "opacity 0.4s ease",
-          marginBottom: "6px",
+          marginBottom: "12px",
         }}>
           breathe.
         </div>
 
-        {/* "where do we start?" — Outfit 300, 14px, #5a4a70, letter-spacing 0.10em */}
         <div style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 300,
@@ -196,8 +195,8 @@ export default function FirstAidRoom({ onHome }) {
           <div style={{
             width: "100%",
             maxWidth: "520px",
-            display: "flex",
-            flexDirection: "column",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
             gap: "10px",
           }}>
             {states.map((state, i) => (
@@ -210,7 +209,7 @@ export default function FirstAidRoom({ onHome }) {
                   border:       "1.5px solid rgba(180,160,220,0.6)",
                   borderRadius: "10px",
                   padding:      "18px 22px",
-                  textAlign:    "left",
+                  textAlign:    "center",
                   cursor:       "pointer",
                   width:        "100%",
                   fontFamily:   "'Outfit', sans-serif",
@@ -231,6 +230,7 @@ export default function FirstAidRoom({ onHome }) {
               <button
                 onClick={handleConfirm}
                 style={{
+                  gridColumn:   "1 / -1",
                   marginTop:    "8px",
                   width:        "100%",
                   padding:      "16px",
