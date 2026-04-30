@@ -28,7 +28,7 @@ export default function FirstAidRoom({ onHome }) {
 
   // Outfit is loaded globally via index.html — no dynamic injection needed.
 
-  // Transition sequence: 3 cycles (26.4s) → holds tiny 5s → fades over 2s →
+  // Transition sequence: +1 cycle (37.4s) → holds tiny 5s → fades over 2s →
   // header snaps in 0.4s → subtitle drifts in 0.8s → cards stagger 180ms apart
   useEffect(() => {
     if (autoPlayed) return;
@@ -39,7 +39,7 @@ export default function FirstAidRoom({ onHome }) {
       setTimeout(() => setStage(STAGES.HEADER),   7300);
       setTimeout(() => setStage(STAGES.SUBTITLE), 8200);
       setTimeout(() => setStage(STAGES.CARDS),    9400);
-    }, 26400);
+    }, 37400);
     return () => clearTimeout(timer);
   }, [autoPlayed]);
 
