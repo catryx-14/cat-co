@@ -106,7 +106,7 @@ export default function FirstAidRoom({ onHome }) {
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 400,
           fontSize: "22px",
-          color: "#9988bb",
+          color: "#f5edd6",
           letterSpacing: "0.18em",
           opacity: showHeader ? 1 : 0,
           transition: "opacity 0.4s ease",
@@ -120,7 +120,7 @@ export default function FirstAidRoom({ onHome }) {
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 300,
           fontSize: "14px",
-          color: "#5a4a70",
+          color: "rgba(245,237,214,0.6)",
           letterSpacing: "0.10em",
           opacity: showSubtitle ? 1 : 0,
           transform: showSubtitle ? "translateY(0)" : "translateY(6px)",
@@ -206,10 +206,8 @@ export default function FirstAidRoom({ onHome }) {
                 className="state-btn"
                 onClick={() => setSelected(state.id)}
                 style={{
-                  // Unselected: bg #131630, border gold, text near-white
-                  // Selected:   bg #2a2545, border gold bright, text #e8e0ff
-                  background:   selected === state.id ? "#2a2545"  : "#131630",
-                  border:       `1.5px solid ${selected === state.id ? "rgba(212,175,55,0.95)" : "rgba(212,175,55,0.7)"}`,
+                  background:   "#131630",
+                  border:       "1.5px solid rgba(180,160,220,0.6)",
                   borderRadius: "10px",
                   padding:      "18px 22px",
                   textAlign:    "left",
@@ -218,7 +216,7 @@ export default function FirstAidRoom({ onHome }) {
                   fontFamily:   "'Outfit', sans-serif",
                   fontSize:     "16px",
                   fontWeight:   400,
-                  color:        selected === state.id ? "#e8e0ff" : "rgba(255,255,255,0.9)",
+                  color:        "rgba(245,237,214,0.75)",
                   letterSpacing: "0.02em",
                   lineHeight:   1.4,
                   opacity:      visibleCards.includes(i) ? 1 : 0,
@@ -236,10 +234,10 @@ export default function FirstAidRoom({ onHome }) {
                   marginTop:    "8px",
                   width:        "100%",
                   padding:      "16px",
-                  background:   "transparent",
-                  border:       "1px solid #6a4aaa",
+                  background:   "rgba(180,160,220,0.08)",
+                  border:       "1.5px solid rgba(180,160,220,0.95)",
                   borderRadius: "10px",
-                  color:        "#c8b8ff",
+                  color:        "rgba(255,255,255,0.95)",
                   fontFamily:   "'Outfit', sans-serif",
                   fontSize:     "15px",
                   fontWeight:   400,
@@ -284,8 +282,9 @@ export default function FirstAidRoom({ onHome }) {
           100% { font-size: 120px; opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
         }
         .state-btn:hover {
-          background: rgba(212,175,55,0.12) !important;
-          border-color: rgba(212,175,55,1) !important;
+          background: rgba(180,160,220,0.08) !important;
+          border-color: rgba(180,160,220,0.95) !important;
+          color: rgba(255,255,255,0.95) !important;
         }
       `}</style>
     </div>
