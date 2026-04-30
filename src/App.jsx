@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { buildBokeh } from './shared/atmosphere.js'
 import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
@@ -8,216 +8,11 @@ import { loadSettings } from './shared/lib/db.js'
 
 const ROOMS = [
   { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm',   x: 15, y: 32, breathe: 5.2, delay: '0s'    },
-  { key: 'sparks',  name: 'Sparks',         sub: 'hold them gently',             tone: 'rose',   x: 40, y: 18, breathe: 4.6, delay: '-1.2s' },
-  { key: 'physio',  name: 'Neural Physio',  sub: 'gentle exercises',             tone: 'teal',   x: 68, y: 30, breathe: 5.6, delay: '-2.1s' },
-  { key: 'games',   name: 'Games',          sub: 'low-stakes play',              tone: 'purple', x: 73, y: 62, breathe: 4.8, delay: '-0.6s' },
-  { key: 'library', name: 'Library',        sub: 'what i\u2019m reading',        tone: 'warm',   x: 23, y: 70, breathe: 5.0, delay: '-2.6s' },
-  { key: 'threads', name: 'Threads',        sub: 'thinking-in-progress',         tone: 'rose',   x: 47, y: 55, breathe: 5.4, delay: '-1.8s' },
+  { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',           tone: 'rose',   x: 40, y: 18, breathe: 4.6, delay: '-1.2s' },
+  { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',           tone: 'teal',   x: 68, y: 30, breathe: 5.6, delay: '-2.1s' },
+  { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple', x: 73, y: 62, breathe: 4.8, delay: '-0.6s' },
 ]
 
-// ─── Threshold door definitions ───
-// x/y are fixed positions as % of .field
-const HUB_DOORS = [
-  { key: 'tracker', name: 'Energy Tracker', sub: 'today · horizon · history',
-    bright: [210,235,255], mid: [25,90,235],  deep: [8,25,120],  x: 16, y: 38 },
-  { key: 'sparks',  name: 'Sparks',          sub: 'hold them gently',
-    bright: [255,188,205], mid: [205,28,65],  deep: [110,5,25],  x: 44, y: 22 },
-  { key: 'physio',  name: 'First Aid',        sub: 'gentle attention',
-    bright: [185,255,212], mid: [12,165,72],  deep: [0,75,30],   x: 74, y: 30 },
-  { key: 'games',   name: 'More Lights',      sub: 'more rooms this way',
-    bright: [238,212,255], mid: [130,25,210], deep: [55,5,130],  x: 58, y: 70 },
-]
-// Exact shape from SparksRoom SparklePath
-const STAR_SZ = 84
-const GLOW_SZ = 220
-
-// ─── RoomDoor ─── (Threshold 4-point star icons)
-function RoomDoor({ door, idx, onPick }) {
-  const bodyRef  = useRef(null)
-  const orbitRef = useRef(null)
-  const shimRef  = useRef(null)
-
-  const R = (k) => {
-    let s = ((idx + 1) * 7919 + k * 49297) % 233280
-    s = (s * 9301 + 49297) % 233280
-    return s / 233280
-  }
-  // Rotation
-  const rotPeriod = 18 + R(10) * 14
-  const rotDir    = R(11) > 0.5 ? 1 : -1
-  // Orbit
-  const orbitPeriod = 6  + R(12) * 5
-  const orbitDir    = R(13) > 0.55 ? 1 : -1
-  const orbitR      = STAR_SZ / 2 + 12
-  // Shimmer
-  const shimPeriod  = 3.5 + R(15) * 2.5
-  const shimPhase   = R(16) * Math.PI * 2
-  // Scale pulse — gentle breath, each star on its own rhythm
-  const pulsePeriod = 4 + R(20) * 4
-  const pulsePhase  = R(21) * Math.PI * 2
-
-  useEffect(() => {
-    let raf
-    const t0 = performance.now()
-    const tick = (now) => {
-      const t = (now - t0) / 1000 * 0.55
-      const scale = (0.92 + 0.16 * (0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / pulsePeriod) + pulsePhase))).toFixed(4)
-      if (bodyRef.current)
-        bodyRef.current.style.transform = `rotate(${((t / rotPeriod) * 360 * rotDir).toFixed(2)}deg) scale(${scale})`
-      const oA = (t / orbitPeriod) * Math.PI * 2 * orbitDir
-      if (orbitRef.current)
-        orbitRef.current.style.transform =
-          `translate(${(Math.cos(oA)*orbitR).toFixed(1)}px,${(Math.sin(oA)*orbitR).toFixed(1)}px)`
-      if (shimRef.current)
-        shimRef.current.style.opacity =
-          ((0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / shimPeriod) + shimPhase)) * 0.2).toFixed(3)
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [rotPeriod, rotDir, orbitPeriod, orbitDir, orbitR, shimPeriod, shimPhase, pulsePeriod, pulsePhase])
-
-  const [br, bg, bb] = door.bright
-  const [mr, mg, mb] = door.mid
-  const [dr, dg, db] = door.deep
-
-  return (
-    <a
-      className={`room-door ${door.key}`}
-      href="#"
-      tabIndex={0}
-      onClick={e => { e.preventDefault(); onPick(door.key) }}
-      style={{ left: `${door.x}%`, top: `${door.y}%` }}
-      aria-label={`Enter ${door.name}`}
-    >
-      <div className="room-door-drift">
-        {/* soft outer glow — not rotated */}
-        <div style={{
-          position: 'absolute',
-          left: -(GLOW_SZ - STAR_SZ) / 2, top: -(GLOW_SZ - STAR_SZ) / 2,
-          width: GLOW_SZ, height: GLOW_SZ,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(${mr},${mg},${mb},0.32) 0%, transparent 62%)`,
-          filter: 'blur(16px)',
-          pointerEvents: 'none',
-        }} />
-
-        {/* orb body */}
-        <div ref={bodyRef} style={{
-          position: 'absolute', left: 0, top: 0,
-          width: STAR_SZ, height: STAR_SZ,
-          willChange: 'transform',
-        }}>
-          <div style={{
-            width: '100%', height: '100%',
-            borderRadius: '9999px',
-            background: `
-              radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,0.78) 100%),
-              radial-gradient(circle at 66% 72%, rgba(${dr},${dg},${db},0.90) 0%, transparent 48%),
-              radial-gradient(circle at 36% 38%, rgba(${br},${bg},${bb},0.14) 0%, transparent 38%),
-              radial-gradient(ellipse at 50% 50%, rgba(${mr},${mg},${mb},0.68) 0%, rgba(${mr},${mg},${mb},0.90) 44%, rgba(${dr},${dg},${db},0.99) 100%)`,
-            boxShadow: `
-              0 0 10px rgba(${mr},${mg},${mb},0.48),
-              0 0 24px rgba(${mr},${mg},${mb},0.16),
-              inset 0 0 26px rgba(0,0,0,0.70),
-              inset 4px 4px 12px rgba(0,0,0,0.48)`,
-            position: 'relative', overflow: 'hidden',
-          }}>
-            {/* shimmer overlay */}
-            <div ref={shimRef} style={{
-              position: 'absolute', inset: 0, borderRadius: '9999px',
-              background: 'rgba(255,255,255,1)', opacity: 0,
-            }} />
-            {/* specular highlight — soft embedded reflection */}
-            <div style={{
-              position: 'absolute', top: '15%', left: '20%',
-              width: '34%', height: '27%', borderRadius: '9999px',
-              background: `radial-gradient(ellipse at 38% 38%, rgba(255,255,255,0.55) 0%, rgba(${br},${bg},${bb},0.22) 50%, transparent 78%)`,
-              filter: 'blur(3.5px)', pointerEvents: 'none',
-            }} />
-            {/* internal fleck 1 */}
-            <div style={{
-              position: 'absolute', top: '44%', left: '29%',
-              width: '3px', height: '3px', borderRadius: '50%',
-              background: `rgba(${br},${bg},${bb},0.52)`,
-              boxShadow: `0 0 3px rgba(${br},${bg},${bb},0.32)`,
-              pointerEvents: 'none',
-            }} />
-            {/* internal fleck 2 */}
-            <div style={{
-              position: 'absolute', top: '63%', left: '57%',
-              width: '2px', height: '2px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.36)',
-              pointerEvents: 'none',
-            }} />
-            {/* internal fleck 3 */}
-            <div style={{
-              position: 'absolute', top: '34%', left: '64%',
-              width: '2px', height: '2px', borderRadius: '50%',
-              background: `rgba(${br},${bg},${bb},0.42)`,
-              pointerEvents: 'none',
-            }} />
-          </div>
-        </div>
-
-        {/* orbiting sparkle — not part of rotating body */}
-        <div style={{ position: 'absolute', left: STAR_SZ / 2, top: STAR_SZ / 2, width: 0, height: 0 }}>
-          <div ref={orbitRef} style={{ position: 'absolute', willChange: 'transform' }}>
-            <div style={{
-              position: 'absolute', marginLeft: -1.8, marginTop: -1.8,
-              width: 3.6, height: 3.6, borderRadius: '50%',
-              background: `rgba(${br},${bg},${bb},0.95)`,
-              boxShadow: `0 0 5px rgba(${br},${bg},${bb},0.8), 0 0 10px rgba(${br},${bg},${bb},0.4)`,
-            }} />
-          </div>
-        </div>
-
-        {/* labels — restored from git history: Cagliostro + Crimson Pro */}
-        <div style={{
-          position: 'absolute', left: '50%', top: STAR_SZ + 14,
-          transform: 'translateX(-50%)',
-          textAlign: 'center', whiteSpace: 'nowrap',
-          pointerEvents: 'none', userSelect: 'none',
-        }}>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            {/* label sparkle — flickers at top-left of room name */}
-            <div style={{
-              position: 'absolute',
-              right: 'calc(100% + 3px)', top: 0,
-              width: 32, height: 32,
-              pointerEvents: 'none', mixBlendMode: 'screen',
-              background: `
-                linear-gradient(90deg,  transparent 0%,transparent 38%,rgba(255,255,255,0.95) 50%,transparent 62%,transparent 100%),
-                linear-gradient(0deg,   transparent 0%,transparent 38%,rgba(255,255,255,0.85) 50%,transparent 62%,transparent 100%),
-                linear-gradient(45deg,  transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%),
-                linear-gradient(-45deg, transparent 0%,transparent 44%,rgba(255,255,255,0.35) 50%,transparent 56%,transparent 100%)`,
-              WebkitMask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
-              mask: 'radial-gradient(circle, #000 0%, #000 35%, transparent 70%)',
-              animation: 'label-sparkle-flash var(--sparkle-dur,4s) ease-in-out infinite',
-              animationDelay: 'var(--sparkle-delay,0s)',
-            }} />
-            <div style={{
-              color: 'rgba(255,255,255,0.88)',
-              fontFamily: '"Cagliostro", serif',
-              fontWeight: 400, fontSize: 22, letterSpacing: '0.04em', lineHeight: 1.3,
-              textShadow: '0 0 14px rgba(14,19,34,0.9)',
-            }}>
-              {door.name}
-            </div>
-          </div>
-          <div style={{
-            color: `rgba(${br},${bg},${bb},0.65)`,
-            fontFamily: '"Crimson Pro", serif', fontStyle: 'italic',
-            fontSize: 13, marginTop: 4, letterSpacing: '0.04em',
-            textShadow: '0 0 10px rgba(14,19,34,0.85)',
-          }}>
-            {door.sub}
-          </div>
-        </div>
-      </div>
-    </a>
-  )
-}
 
 const TWEAK_DEFAULTS = {
   showSubtitles: true,
@@ -324,8 +119,8 @@ function HubView({ tweaks, onPick }) {
         {/* field fills all space above footer */}
         <div className="field-wrap" style={{ flex: 1, position: 'relative', overflow: 'hidden', margin: 0 }}>
           <div className="field" style={{ position: 'absolute', inset: 0 }}>
-            {HUB_DOORS.map((d, i) => (
-              <RoomDoor key={d.key} door={d} idx={i} onPick={onPick} />
+            {ROOMS.map(r => (
+              <RoomStar key={r.key} room={r} showSub={tweaks.showSubtitles} onPick={onPick} />
             ))}
           </div>
         </div>
@@ -442,12 +237,8 @@ export default function App({ session }) {
     if (window.__rebuildBokeh) window.__rebuildBokeh(tweaks.warmth)
     const bokeh = document.getElementById('bokeh-layer')
     if (bokeh) {
-      if (view === 'hub' || view === 'physio') {
-        bokeh.style.display = 'none'
-      } else {
-        bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
-        bokeh.style.display = tweaks.particleDensity > 0.05 ? 'block' : 'none'
-      }
+      bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
+      bokeh.style.display = tweaks.particleDensity > 0.05 ? 'block' : 'none'
     }
   }, [view, tweaks.warmth, tweaks.particleDensity])
 
