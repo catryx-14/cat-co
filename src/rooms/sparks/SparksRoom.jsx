@@ -180,6 +180,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
   const orbitDir = rand(13) > 0.55 ? 1 : -1
   const orbitR = size * 0.62
   const flickerPhase = rand(14) * Math.PI * 2
+  const tiltDeg = (rand(15) - 0.5) * 60
 
   const wrapRef = useRef(null)
   const bodyRef = useRef(null)
@@ -197,7 +198,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
       const x = baseX + Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
       const y = baseY + Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
       if (wrapRef.current) wrapRef.current.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`
-      const scaleY = 0.97 + 0.06 * (0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / flickerPeriod) + flickerPhase))
+      const scaleY = 0.93 + 0.12 * (0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / flickerPeriod) + flickerPhase))
       const scaleX = 1 / scaleY
       if (bodyRef.current) bodyRef.current.style.transform = `scaleY(${scaleY.toFixed(4)}) scaleX(${scaleX.toFixed(4)})`
       const oA = (t / orbitPeriod) * 360 * orbitDir
@@ -251,7 +252,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
       }}>
         <div style={{
           position: 'absolute', inset: 0,
-          transform: `scale(${hovered ? 1.12 : 1})`,
+          transform: `rotate(${tiltDeg}deg) scale(${hovered ? 1.12 : 1})`,
           transformOrigin: 'center',
           transition: 'transform 280ms cubic-bezier(0.2,0.8,0.3,1)',
         }}>
