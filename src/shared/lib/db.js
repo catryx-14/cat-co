@@ -12,20 +12,22 @@ export async function loadSettings() {
   }
 }
 
-export async function loadEntry(dateStr) {
+export async function loadEntry(dateStr, userId) {
   const { data, error } = await supabase
     .from('energy_entries')
     .select('*')
     .eq('date', dateStr)
+    .eq('user_id', userId)
     .maybeSingle()
   if (error) throw error
   return data
 }
 
-export async function loadAllEntries() {
+export async function loadAllEntries(userId) {
   const { data, error } = await supabase
     .from('energy_entries')
     .select('*')
+    .eq('user_id', userId)
     .order('date', { ascending: false })
   if (error) throw error
   return data ?? []
@@ -36,16 +38,17 @@ export async function saveEntry({ dateStr, entryData, peakDebit, userId }) {
     .from('energy_entries')
     .upsert(
       { date: dateStr, entry_data: entryData, peak_debit: peakDebit, user_id: userId },
-      { onConflict: 'date' }
+      { onConflict: 'user_id,date' }
     )
   if (error) throw error
 }
 
-export async function deleteEntry(dateStr) {
+export async function deleteEntry(dateStr, userId) {
   const { error } = await supabase
     .from('energy_entries')
     .delete()
     .eq('date', dateStr)
+    .eq('user_id', userId)
   if (error) throw error
 }
 

@@ -415,11 +415,11 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   useEffect(() => {
     async function init() {
       try {
-        const existing = await loadEntry(dateStr)
+        const existing = await loadEntry(dateStr, session.user.id)
         if (existing) {
           const state = dbToInternal(existing)
           if (isToday) {
-            const yest = await loadEntry(yesterdayDateStr())
+            const yest = await loadEntry(yesterdayDateStr(), session.user.id)
             if (yest) {
               const d = yest.entry_data
               const closing = d.closingBalance ?? 0
@@ -437,7 +437,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
         } else if (isToday) {
-          const yest = await loadEntry(yesterdayDateStr())
+          const yest = await loadEntry(yesterdayDateStr(), session.user.id)
           if (yest) {
             const d = yest.entry_data
             const closing = d.closingBalance ?? 0

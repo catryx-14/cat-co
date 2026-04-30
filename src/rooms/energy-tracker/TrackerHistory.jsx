@@ -209,13 +209,13 @@ function Almanac({ entries, onPick }) {
 }
 
 // ─── TrackerHistory ───
-export default function TrackerHistory({ settings, onEditDate }) {
+export default function TrackerHistory({ settings, session, onEditDate }) {
   const [entries, setEntries] = useState(null)
   const [expanded, setExpanded] = useState(null)
   const { thresholds } = settings
 
   useEffect(() => {
-    loadAllEntries()
+    loadAllEntries(session.user.id)
       .then(rows => setEntries(rows))
       .catch(err => { console.error('history load failed', err); setEntries([]) })
   }, [])
@@ -227,7 +227,7 @@ export default function TrackerHistory({ settings, onEditDate }) {
   async function handleDelete(date) {
     if (!window.confirm(`Delete the entry for ${date}? This cannot be undone.`)) return
     try {
-      await deleteEntry(date)
+      await deleteEntry(date, session.user.id)
       setEntries(es => es.filter(e => e.date !== date))
       if (expanded === date) setExpanded(null)
     } catch (err) {
