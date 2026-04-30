@@ -46,52 +46,37 @@ function GemPip({ color, dark, size = 11 }) {
   )
 }
 
-// ─── sparkle SVG ───────────────────────────────────────────────────────
-function SparklePath({ size, gradId, ring, sparkId, dark, hovered }) {
-  const p = 'M50,4 C52,30 54,46 96,50 C54,54 52,70 50,96 C48,70 46,54 4,50 C46,46 48,30 50,4 Z'
-  const clipId = `sp-clip-${sparkId}`
-  const facetId = `sp-facet-${sparkId}`
-  const rimId = `sp-rim-${sparkId}`
-  const shineId = `sp-shine-${sparkId}`
+// ─── flame SVG ─────────────────────────────────────────────────────────
+function FlamePath({ size, sparkId, tag, hovered }) {
+  const p = 'M26,5 C22,13 10,25 9,40 C8,57 16,67 26,67 C36,67 44,57 43,40 C42,25 30,13 26,5Z'
+  const bodyId = `fl-body-${sparkId}`
+  const innerGlowId = `fl-inner-${sparkId}`
+  const bright  = hslOff(tag.hue, 25, 20)
+  const mid     = hslOff(tag.hue, 10, 2)
+  const deep    = hslOff(tag.hue, 0, -16)
+  const glowCol = hslOff(tag.hue, 12, 5, 0.6)
+  const flameH = size * 0.84
+  const flameW = flameH * (52 / 72)
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" style={{ display: 'block', overflow: 'visible' }}>
-      <defs>
-        <clipPath id={clipId}><path d={p} /></clipPath>
-        <linearGradient id={facetId} x1="12%" y1="8%" x2="88%" y2="92%">
-          <stop offset="0%"   stopColor="#fff" stopOpacity={hovered ? 0.98 : 0.92} />
-          <stop offset="15%"  stopColor="#fff" stopOpacity={0.45} />
-          <stop offset="32%"  stopColor="#fff" stopOpacity={0.06} />
-          <stop offset="55%"  stopColor="#000" stopOpacity={0.05} />
-          <stop offset="75%"  stopColor="#000" stopOpacity={0.42} />
-          <stop offset="100%" stopColor="#000" stopOpacity={0.85} />
-        </linearGradient>
-        <radialGradient id={rimId} cx="28%" cy="20%" r="55%">
-          <stop offset="50%"  stopColor="#fff" stopOpacity={0} />
-          <stop offset="80%"  stopColor="#fff" stopOpacity={hovered ? 1 : 0.95} />
-          <stop offset="100%" stopColor="#fff" stopOpacity={0} />
-        </radialGradient>
-        <radialGradient id={shineId} cx="32%" cy="28%" r="22%">
-          <stop offset="0%"   stopColor="#fff" stopOpacity={hovered ? 0.95 : 0.78} />
-          <stop offset="100%" stopColor="#fff" stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      <path d={p} fill={`url(#${gradId})`} />
-      <g clipPath={`url(#${clipId})`}>
-        <rect x="0" y="0" width="100" height="100" fill={`url(#${facetId})`} />
-      </g>
-      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: 'screen' }}>
-        <rect x="0" y="0" width="100" height="100" fill={`url(#${shineId})`} />
-      </g>
-      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: 'screen' }}>
-        <path d={p} fill="none" stroke={`url(#${rimId})`} strokeWidth={4} strokeLinejoin="miter" />
-      </g>
-      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: 'multiply' }}>
-        <g transform="translate(50 50) rotate(180) translate(-50 -50)">
-          <path d={p} fill="none" stroke={dark} strokeOpacity={0.9} strokeWidth={3} strokeLinejoin="miter" />
-        </g>
-      </g>
-      <path d={p} fill="none" stroke={ring} strokeWidth={0.7} strokeLinejoin="miter" />
-    </svg>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={flameW} height={flameH} viewBox="0 0 52 72" style={{ display: 'block', overflow: 'visible' }}>
+        <defs>
+          <radialGradient id={bodyId} cx="50%" cy="75%" r="65%">
+            <stop offset="0%"   stopColor="#fff"   stopOpacity={hovered ? 0.98 : 0.85} />
+            <stop offset="22%"  stopColor={bright} stopOpacity={1} />
+            <stop offset="62%"  stopColor={mid}    stopOpacity={1} />
+            <stop offset="100%" stopColor={deep}   stopOpacity={1} />
+          </radialGradient>
+          <radialGradient id={innerGlowId} cx="50%" cy="60%" r="50%">
+            <stop offset="0%"   stopColor="#fff" stopOpacity={hovered ? 0.62 : 0.45} />
+            <stop offset="100%" stopColor="#fff" stopOpacity={0} />
+          </radialGradient>
+        </defs>
+        <ellipse cx="26" cy="65" rx="13" ry="5" fill={glowCol} opacity={0.2} style={{ filter: 'blur(3px)' }} />
+        <path d={p} fill={`url(#${bodyId})`} />
+        <path d={p} fill={`url(#${innerGlowId})`} style={{ mixBlendMode: 'screen' }} />
+      </svg>
+    </div>
   )
 }
 
@@ -190,8 +175,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
   const periodY = 11 + rand(7) * 9
   const phaseX = rand(8) * Math.PI * 2
   const phaseY = rand(9) * Math.PI * 2
-  const rotPeriod = 18 + rand(10) * 14
-  const rotDir = rand(11) > 0.5 ? 1 : -1
+  const flickerPeriod = 2.5 + rand(10) * 2.0
   const orbitPeriod = 6 + rand(12) * 5
   const orbitDir = rand(13) > 0.55 ? 1 : -1
   const orbitR = size * 0.62
@@ -213,7 +197,9 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
       const x = baseX + Math.sin(t * (Math.PI * 2 / periodX) + phaseX) * aX
       const y = baseY + Math.cos(t * (Math.PI * 2 / periodY) + phaseY) * aY
       if (wrapRef.current) wrapRef.current.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`
-      if (bodyRef.current) bodyRef.current.style.transform = `rotate(${(t / rotPeriod) * 360 * rotDir}deg)`
+      const scaleY = 0.97 + 0.06 * (0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / flickerPeriod) + flickerPhase))
+      const scaleX = 1 / scaleY
+      if (bodyRef.current) bodyRef.current.style.transform = `scaleY(${scaleY.toFixed(4)}) scaleX(${scaleX.toFixed(4)})`
       const oA = (t / orbitPeriod) * 360 * orbitDir
       if (orb1Ref.current) orb1Ref.current.style.transform = `rotate(${oA}deg)`
       if (orb2Ref.current) orb2Ref.current.style.transform = `rotate(${-oA * 0.7 + 140}deg)`
@@ -222,11 +208,8 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [baseX, baseY, aX, aY, periodX, periodY, phaseX, phaseY, rotPeriod, rotDir, orbitPeriod, orbitDir, size, flickerPhase])
+  }, [baseX, baseY, aX, aY, periodX, periodY, phaseX, phaseY, flickerPeriod, orbitPeriod, orbitDir, size, flickerPhase])
 
-  const fill = hslOff(tag.hue, 10)
-  const fillSoft = hslOff(tag.hue, -16, -4)
-  const ring = hslOff(tag.hue, 22, 0, 0.95)
   const haloSize = size * (hovered ? 1.85 : 1.55)
 
   return (
@@ -272,16 +255,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
           transformOrigin: 'center',
           transition: 'transform 280ms cubic-bezier(0.2,0.8,0.3,1)',
         }}>
-          <SparklePath size={size} gradId={`sg-${sparkIdStr}`} ring={ring} sparkId={sparkIdStr} dark={tag.gemDark} hovered={hovered} />
-          <svg width="0" height="0" style={{ position: 'absolute' }}>
-            <defs>
-              <radialGradient id={`sg-${sparkIdStr}`} cx="50%" cy="50%" r="50%">
-                <stop offset="0%"   stopColor={hslOff(tag.hue, 28, -10)} />
-                <stop offset="55%"  stopColor={fill} />
-                <stop offset="100%" stopColor={fillSoft} />
-              </radialGradient>
-            </defs>
-          </svg>
+          <FlamePath size={size} sparkId={sparkIdStr} tag={tag} hovered={hovered} />
         </div>
       </div>
 
