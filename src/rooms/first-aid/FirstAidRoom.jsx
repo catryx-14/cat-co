@@ -56,11 +56,7 @@ export default function FirstAidRoom({ onHome }) {
   const skip = () => {
     if (stage !== STAGES.FULL) return;
     setAutoPlayed(true);
-    setStage(STAGES.HOLDING);
-    setTimeout(() => setStage(STAGES.FADING),   5000);
-    setTimeout(() => setStage(STAGES.HEADER),   7300);
-    setTimeout(() => setStage(STAGES.SUBTITLE), 8200);
-    setTimeout(() => setStage(STAGES.CARDS),    9400);
+    setStage(STAGES.CARDS);
   };
 
   const reset = () => {
