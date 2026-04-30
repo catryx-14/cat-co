@@ -203,12 +203,13 @@ export default function FirstAidRoom({ onHome }) {
             {states.map((state, i) => (
               <button
                 key={state.id}
+                className="state-btn"
                 onClick={() => setSelected(state.id)}
                 style={{
-                  // Unselected: bg #131630, border #1e2040, text #9988bb
-                  // Selected:   bg #2a2545, border #6a4aaa, text #e8e0ff
+                  // Unselected: bg #131630, border gold, text near-white
+                  // Selected:   bg #2a2545, border gold bright, text #e8e0ff
                   background:   selected === state.id ? "#2a2545"  : "#131630",
-                  border:       `1px solid ${selected === state.id ? "#6a4aaa" : "#1e2040"}`,
+                  border:       `1.5px solid ${selected === state.id ? "rgba(212,175,55,0.95)" : "rgba(212,175,55,0.7)"}`,
                   borderRadius: "10px",
                   padding:      "18px 22px",
                   textAlign:    "left",
@@ -217,7 +218,7 @@ export default function FirstAidRoom({ onHome }) {
                   fontFamily:   "'Outfit', sans-serif",
                   fontSize:     "16px",
                   fontWeight:   400,
-                  color:        selected === state.id ? "#e8e0ff" : "#9988bb",
+                  color:        selected === state.id ? "#e8e0ff" : "rgba(255,255,255,0.9)",
                   letterSpacing: "0.02em",
                   lineHeight:   1.4,
                   opacity:      visibleCards.includes(i) ? 1 : 0,
@@ -281,6 +282,10 @@ export default function FirstAidRoom({ onHome }) {
           40%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
           55%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
           100% { font-size: 120px; opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+        }
+        .state-btn:hover {
+          background: rgba(212,175,55,0.12) !important;
+          border-color: rgba(212,175,55,1) !important;
         }
       `}</style>
     </div>
