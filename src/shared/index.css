@@ -1765,7 +1765,7 @@ body {
   padding: 14px 0 18px;
   margin-top: 32px;
   border-top: 1px solid rgba(232,201,140,0.12);
-  background: rgba(11,16,32,0.82);
+  background: transparent;
   z-index: 10;
 }
 .save-bar-status {

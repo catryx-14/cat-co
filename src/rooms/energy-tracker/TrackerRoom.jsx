@@ -376,7 +376,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         <div className="sky-metric">
           <div className="label">today's peak</div>
           <div className="value" style={{ fontSize: `${44 * peakScale}px` }}>
-            {peak}{peak <= peakOf && <span className="of">/{peakOf}</span>}
+            {peak}
           </div>
           <div className="caption">the day reads <i>{weather}</i></div>
           {openingBalance > 0 && (
@@ -387,7 +387,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         <div className="sky-metric">
           <div className="label">regulation</div>
           <div className="value" style={{ fontSize: `${36 * regScale}px` }}>
-            {nonSleepReg}<span className="of">/{REG_FULL_AT}</span>
+            {nonSleepReg}
           </div>
           <div className="caption"><i>{regWord}</i> · {Math.round(regPct * 100)}% tended</div>
           {endload > 0 && <div className="carry-note"><i>ending at {endload}</i></div>}
