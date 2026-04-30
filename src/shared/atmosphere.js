@@ -128,7 +128,7 @@ export function buildBokeh(_warmth) {
   for (let i = 0; i < 32; i++) {
     const d = document.createElement('div');
     d.className = 'bokeh-dot';
-    const sz = 100 + Math.random() * 80; // 100–180 px diameter (50–90 px radius)
+    const sz = 55 + Math.random() * 45; // 55–100 px diameter (~half original size)
     d.style.width = sz + 'px';
     d.style.height = sz + 'px';
     d.style.left = (Math.random() * 105 - 2.5) + '%';
