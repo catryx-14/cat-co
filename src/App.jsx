@@ -3,6 +3,7 @@ import { buildBokeh } from './shared/atmosphere.js'
 import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
+import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import { loadSettings } from './shared/lib/db.js'
 
 const ROOMS = [
@@ -396,6 +397,9 @@ function RoomView({ roomKey, onHome, onRoom, session, settings, onThresholdsChan
   if (roomKey === 'engine-room') {
     return <EngineRoom onHome={onHome} />
   }
+  if (roomKey === 'physio') {
+    return <FirstAidRoom onHome={onHome} />
+  }
   return (
     <>
       <div className="room-head">
@@ -438,7 +442,7 @@ export default function App({ session }) {
     if (window.__rebuildBokeh) window.__rebuildBokeh(tweaks.warmth)
     const bokeh = document.getElementById('bokeh-layer')
     if (bokeh) {
-      if (view === 'hub') {
+      if (view === 'hub' || view === 'physio') {
         bokeh.style.display = 'none'
       } else {
         bokeh.style.opacity = 0.25 + tweaks.particleDensity * 0.6
