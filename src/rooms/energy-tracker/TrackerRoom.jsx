@@ -435,24 +435,24 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         {/* Left: Today's Peak */}
         <div className="sky-col">
           <div className="sky-col-label">today's peak</div>
-          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{peak}</div>
+          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{Math.round(peak)}</div>
           <div className="sky-breakdown">
             {PEAK_BREAKDOWN.map(({ k, name }) => (
               <div key={k} className={`sky-breakdown-row${highestAxis[0] === k && highestAxis[1] > 0 ? ' highlight-amber' : ''}`}>
                 <span className="sky-bd-name">{name}</span>
                 <span className="sky-bd-sep">·</span>
-                <span className="sky-bd-val">{axisSums[k]}</span>
+                <span className="sky-bd-val">{Math.round(axisSums[k])}</span>
               </div>
             ))}
             <div className="sky-bd-divider" />
             <div className="sky-breakdown-row dimmer">
               <span className="sky-bd-name">autistic tax</span>
               <span className="sky-bd-sep">·</span>
-              <span className="sky-bd-val">+{taxPoints}</span>
+              <span className="sky-bd-val">+{Math.round(taxPoints)}</span>
             </div>
           </div>
           {openingBalance > 0 && (
-            <div className="sky-carry-in">opening carry-in: {openingBalance}</div>
+            <div className="sky-carry-in">opening carry-in: {Math.round(openingBalance)}</div>
           )}
         </div>
 
@@ -461,14 +461,14 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         {/* Centre: Lived Experience */}
         <div className="sky-col sky-col-centre">
           <div className="sky-col-label">lived experience</div>
-          <div className="sky-col-value" style={{ fontSize: '72px', color: leColor }}>{livedExperience}</div>
+          <div className="sky-col-value" style={{ fontSize: '72px', color: leColor }}>{Math.round(livedExperience)}</div>
           <div className="sky-le-caption">
-            <span>{peak} peak</span>
+            <span>{Math.round(peak)} peak</span>
             <span className="sky-le-sep">·</span>
-            <span>−{nonSleepReg} reg</span>
+            <span>−{Math.round(nonSleepReg)} reg</span>
             <span className="sky-le-sep">·</span>
             {siFlowActive
-              ? <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit * 10) / 10} SI</span>
+              ? <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit)} SI</span>
               : <span style={{ color: 'var(--ink-faint)' }}>no SI</span>
             }
           </div>
@@ -479,7 +479,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
         {/* Right: Regulation */}
         <div className="sky-col">
           <div className="sky-col-label">regulation</div>
-          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{nonSleepReg}</div>
+          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{Math.round(nonSleepReg)}</div>
           <div className="sky-breakdown">
             {REG_CHANNELS.map(c => {
               const cur = regulation[c.k] || 0
@@ -488,7 +488,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
                 <div key={c.k} className={`sky-breakdown-row${underTended ? ' highlight-teal' : ''}`}>
                   <span className="sky-bd-name">{c.name}</span>
                   <span className="sky-bd-sep">·</span>
-                  <span className="sky-bd-val">{cur}/{c.cap}</span>
+                  <span className="sky-bd-val">{Math.round(cur)}/{Math.round(c.cap)}</span>
                 </div>
               )
             })}
