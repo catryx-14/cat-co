@@ -94,6 +94,13 @@ export function dbToInternal(row) {
       flow: d.flowActivity ?? false,
       crisis: d.warningSign?.crisisResponse ?? false,
     },
+    meltdown: d.meltdown ?? false,
+    siFlow: {
+      active: d.siFlowActive ?? false,
+      duration: d.siFlowDuration ?? null,
+      intensity: d.siFlowIntensity ?? null,
+      credit: d.siFlowCredit ?? null,
+    },
     closingBalance: d.closingBalance ?? 0,
     peakDebit: d.peakDebit ?? 0,
   }
@@ -101,7 +108,7 @@ export function dbToInternal(row) {
 
 // Internal UI state → DB entry_data blob + computed peak
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
-                                warning, goodSigns, settings, yesterdayClosing }) {
+                                warning, goodSigns, settings, yesterdayClosing, meltdown, siFlow }) {
   const { taxValue, thresholds, taxStartDate } = settings
   const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
   const taxApplies = dateStr >= taxStartDate && !anyFlow
@@ -155,6 +162,11 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
       sunny: warning.other || false,
       crisisResponse: goodSigns.crisis || false,
     },
+    meltdown: meltdown || false,
+    siFlowActive: siFlow?.active || false,
+    siFlowDuration: siFlow?.active ? (siFlow.duration ?? null) : null,
+    siFlowIntensity: siFlow?.active ? (siFlow.intensity ?? null) : null,
+    siFlowCredit: siFlow?.active ? (siFlow.credit ?? null) : null,
   }
 
   return { entryData, peakDebit }

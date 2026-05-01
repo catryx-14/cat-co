@@ -347,6 +347,80 @@ function WarningSigns({ flags, onToggle }) {
   )
 }
 
+// ─── MeltdownSection ───
+function MeltdownSection({ active, onToggle }) {
+  return (
+    <section className="signals-section">
+      <div className="ledger-head">
+        <div className="ledger-title">meltdown / shutdown</div>
+      </div>
+      <div className="signals-row">
+        <button className={`signal ${active ? 'lit' : ''}`} onClick={onToggle}>
+          <span className="signal-glyph">▽</span>
+          <span className="signal-name">{active ? 'yes' : 'no'}</span>
+        </button>
+      </div>
+    </section>
+  )
+}
+
+// ─── SIFlowSection ───
+function SIFlowSection({ data, onChange }) {
+  const set = (k, v) => onChange(d => ({ ...d, [k]: v }))
+  return (
+    <section className="signals-section">
+      <div className="ledger-head">
+        <div className="ledger-title">SI flow</div>
+      </div>
+      <div className="signals-row">
+        <button className={`signal ${data.active ? 'lit' : ''}`}
+                onClick={() => set('active', !data.active)}>
+          <span className="signal-glyph">⟳</span>
+          <span className="signal-name">{data.active ? 'active' : 'inactive'}</span>
+        </button>
+      </div>
+      {data.active && (
+        <div className="si-flow-fields">
+          <div className="si-flow-field">
+            <span className="si-flow-label">duration</span>
+            <select className="si-flow-select"
+                    value={data.duration ?? ''}
+                    onChange={e => set('duration', e.target.value || null)}>
+              <option value="">—</option>
+              <option value="less than 4hrs">less than 4hrs</option>
+              <option value="4-8hrs">4-8hrs</option>
+              <option value="8+ hrs">8+ hrs</option>
+            </select>
+          </div>
+          <div className="si-flow-field">
+            <span className="si-flow-label">intensity</span>
+            <div className="si-flow-toggle">
+              {['present', 'pulled'].map(opt => (
+                <button key={opt}
+                        className={`signal ${data.intensity === opt ? 'lit' : ''}`}
+                        onClick={() => set('intensity', data.intensity === opt ? null : opt)}>
+                  <span className="signal-name">{opt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="si-flow-field">
+            <span className="si-flow-label">credit (pts)</span>
+            <input
+              type="number"
+              className="settings-number-input"
+              value={data.credit ?? ''}
+              min={0}
+              placeholder="0"
+              onChange={e => set('credit', e.target.value === '' ? null : Number(e.target.value))}
+            />
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 // ─── Sky ───
 function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr }) {
   const { taxValue, thresholds, taxStartDate } = settings
@@ -407,6 +481,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const [recovery, setRecovery] = useState(false)
   const [warning, setWarning] = useState({ skin: false, vision: false, thought: false, other: false })
   const [goodSigns, setGoodSigns] = useState({ flow: false, crisis: false })
+  const [meltdown, setMeltdown] = useState(false)
+  const [siFlow, setSiFlow] = useState({ active: false, duration: null, intensity: null, credit: null })
   const [openingBalance, setOpeningBalance] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -436,6 +512,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
           setRecovery(state.recovery)
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
+          setMeltdown(state.meltdown)
+          setSiFlow(state.siFlow)
         } else if (isToday) {
           const yest = await loadEntry(yesterdayDateStr(), session.user.id)
           if (yest) {
@@ -478,7 +556,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
     try {
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents, regulation,
-        recovery, warning, goodSigns, settings, yesterdayClosing,
+        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown, siFlow,
       })
       await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
       setSaveStatus('saved')
@@ -539,6 +617,10 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
       />
 
       <WarningSigns flags={warning} onToggle={onWarning} />
+
+      <MeltdownSection active={meltdown} onToggle={() => setMeltdown(v => !v)} />
+
+      <SIFlowSection data={siFlow} onChange={setSiFlow} />
 
       <div className="save-bar">
         <span className="save-bar-status">{saveStatus}</span>
