@@ -613,9 +613,39 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
     return <div className="history-loading">opening the almanac…</div>
   }
 
-  const onAdd = (ev) => setUserEvents(es => [...es, ev])
-  const onUpdate = (ev) => setUserEvents(es => es.map(x => x.id === ev.id ? ev : x))
-  const onDelete = (id) => setUserEvents(es => es.filter(x => x.id !== id))
+  async function autoSaveEntry(eventsToSave) {
+    setSaveStatus('saving…')
+    try {
+      const { entryData, peakDebit } = internalToDb({
+        dateStr, openingBalance, userEvents: eventsToSave, regulation,
+        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown,
+      })
+      await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
+      await recalculateFromDate(session.user.id, dateStr)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2000)
+    } catch (err) {
+      console.error('auto-save failed', err)
+      setSaveStatus('auto-save failed')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }
+
+  const onAdd = (ev) => {
+    const next = [...userEvents, ev]
+    setUserEvents(next)
+    autoSaveEntry(next)
+  }
+  const onUpdate = (ev) => {
+    const next = userEvents.map(x => x.id === ev.id ? ev : x)
+    setUserEvents(next)
+    autoSaveEntry(next)
+  }
+  const onDelete = (id) => {
+    const next = userEvents.filter(x => x.id !== id)
+    setUserEvents(next)
+    autoSaveEntry(next)
+  }
   const onRegChange = (k, v) => setRegulation(r => ({ ...r, [k]: v }))
   const onWarning = (k) => setWarning(s => ({ ...s, [k]: !s[k] }))
   const onGood = (k) => setGoodSigns(s => ({ ...s, [k]: !s[k] }))
