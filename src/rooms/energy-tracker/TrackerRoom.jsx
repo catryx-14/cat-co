@@ -3,7 +3,7 @@ import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
-import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT, taxActive, computePeakDebit, computeClosingBalance, nonSleepRegTotal } from '../../shared/lib/math.js'
+import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
   { k: 'E', name: 'emotional', meaning: 'how strong was the emotional charge of this event?' },
@@ -142,6 +142,18 @@ function EventRow({ e, onUpdate, onDelete }) {
             <label><input type="checkbox" checked={draft.flow} onChange={ev => setDraft(d => ({ ...d, flow: ev.target.checked }))} />flow</label>
             <label><input type="checkbox" checked={draft.delayed} onChange={ev => setDraft(d => ({ ...d, delayed: ev.target.checked }))} />delayed</label>
             <label><input type="checkbox" checked={draft.cancelled} onChange={ev => setDraft(d => ({ ...d, cancelled: ev.target.checked }))} />cancelled</label>
+            <span className="event-si-wrap">
+              <span className="event-si-label">SI flow</span>
+              <span className="event-si-btns">
+                {['present', 'pulled'].map(opt => (
+                  <button key={opt}
+                    className={`event-si-btn ${draft.siFlow === opt ? 'active' : ''}`}
+                    onClick={() => setDraft(d => ({ ...d, siFlow: d.siFlow === opt ? null : opt }))}>
+                    {opt}
+                  </button>
+                ))}
+              </span>
+            </span>
             <button className="event-edit-btn delete" onClick={() => { if (window.confirm('delete this event?')) onDelete(e.id) }}>delete</button>
             <button className="event-edit-btn cancel" onClick={cancel}>cancel</button>
             <button className="event-edit-btn save" onClick={save}>save</button>
@@ -161,6 +173,7 @@ function EventRow({ e, onUpdate, onDelete }) {
           {e.text}
           {e.flow && <span className="event-tag flow">~ flow</span>}
           {e.delayed && <span className="event-tag">~ delayed</span>}
+          {e.siFlow && <span className="event-tag si-flow">⟳ SI {e.siFlow}</span>}
           <span className="event-edit-hint">edit</span>
         </div>
         {anyLit && (
@@ -188,16 +201,17 @@ function Composer({ onAdd }) {
   const [axes, setAxes] = useState({ E: 0, S: 0, V: 0, X: 0 })
   const [delayed, setDelayed] = useState(false)
   const [flow, setFlow] = useState(false)
+  const [siFlow, setSiFlow] = useState(null)
   const [bucket, setBucket] = useState(nowBucket())
 
   const set = (k, v) => setAxes(a => ({ ...a, [k]: a[k] === v ? 0 : v }))
   function reset() {
     setText(''); setAxes({ E: 0, S: 0, V: 0, X: 0 })
-    setDelayed(false); setFlow(false); setBucket(nowBucket())
+    setDelayed(false); setFlow(false); setSiFlow(null); setBucket(nowBucket())
   }
   function save() {
     if (!text.trim()) return
-    onAdd({ id: 'e' + Date.now(), bucket, text: text.trim(), ...axes, delayed, flow, cancelled: false })
+    onAdd({ id: 'e' + Date.now(), bucket, text: text.trim(), ...axes, delayed, flow, siFlow, cancelled: false })
     reset()
   }
   function onKey(ev) {
@@ -237,6 +251,18 @@ function Composer({ onAdd }) {
         </label>
         <label><input type="checkbox" checked={delayed} onChange={e => setDelayed(e.target.checked)} />delayed reaction</label>
         <label><input type="checkbox" checked={flow} onChange={e => setFlow(e.target.checked)} />flow state</label>
+        <span className="event-si-wrap">
+          <span className="event-si-label">SI flow</span>
+          <span className="event-si-btns">
+            {['present', 'pulled'].map(opt => (
+              <button key={opt}
+                className={`event-si-btn ${siFlow === opt ? 'active' : ''}`}
+                onClick={() => setSiFlow(s => s === opt ? null : opt)}>
+                {opt}
+              </button>
+            ))}
+          </span>
+        </span>
         <button className="save" onClick={save}>save</button>
       </div>
     </div>
@@ -364,107 +390,109 @@ function MeltdownSection({ active, onToggle }) {
   )
 }
 
-// ─── SIFlowSection ───
-function SIFlowSection({ data, onChange }) {
-  const set = (k, v) => onChange(d => ({ ...d, [k]: v }))
-  return (
-    <section className="signals-section">
-      <div className="ledger-head">
-        <div className="ledger-title">SI flow</div>
-      </div>
-      <div className="signals-row">
-        <button className={`signal ${data.active ? 'lit' : ''}`}
-                onClick={() => set('active', !data.active)}>
-          <span className="signal-glyph">⟳</span>
-          <span className="signal-name">{data.active ? 'active' : 'inactive'}</span>
-        </button>
-      </div>
-      {data.active && (
-        <div className="si-flow-fields">
-          <div className="si-flow-field">
-            <span className="si-flow-label">duration</span>
-            <select className="si-flow-select"
-                    value={data.duration ?? ''}
-                    onChange={e => set('duration', e.target.value || null)}>
-              <option value="">—</option>
-              <option value="less than 4hrs">less than 4hrs</option>
-              <option value="4-8hrs">4-8hrs</option>
-              <option value="8+ hrs">8+ hrs</option>
-            </select>
-          </div>
-          <div className="si-flow-field">
-            <span className="si-flow-label">intensity</span>
-            <div className="si-flow-toggle">
-              {['present', 'pulled'].map(opt => (
-                <button key={opt}
-                        className={`signal ${data.intensity === opt ? 'lit' : ''}`}
-                        onClick={() => set('intensity', data.intensity === opt ? null : opt)}>
-                  <span className="signal-name">{opt}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="si-flow-field">
-            <span className="si-flow-label">credit (pts)</span>
-            <input
-              type="number"
-              className="settings-number-input"
-              value={data.credit ?? ''}
-              min={0}
-              placeholder="0"
-              onChange={e => set('credit', e.target.value === '' ? null : Number(e.target.value))}
-            />
-          </div>
-        </div>
-      )}
-    </section>
-  )
-}
-
 // ─── Sky ───
 function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr }) {
-  const { taxValue, thresholds, taxStartDate } = settings
+  const { taxValue, thresholds, taxStartDate, livedExperienceThresholds } = settings
+  const leThr = livedExperienceThresholds || { yellow: 12, critical: 22 }
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
-  let evPts = 0
+  const axisSums = { E: 0, S: 0, V: 0, X: 0 }
   for (const e of userEvents) {
     if (e.cancelled) continue
-    evPts += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    axisSums.E += e.E || 0
+    axisSums.S += e.S || 0
+    axisSums.V += e.V || 0
+    axisSums.X += e.X || 0
   }
+  const evPts = axisSums.E + axisSums.S + axisSums.V + axisSums.X
   const peak = openingBalance + evPts + taxPoints
-  const peakOf = thresholds.yellow
-  const regT = fullRegTotal(regulation)
-  const regPct = Math.min(1, regT / REG_FULL_AT)
   const nonSleepReg = nonSleepRegTotal(regulation)
-  const endload = Math.max(0, peak - nonSleepReg)
 
-  const { word: weather } = weatherOf(peak, thresholds.yellow, thresholds.critical)
-  const regWord = regWordOf(regPct)
-  const peakScale = 1 + Math.min(1.0, peak / peakOf * 0.6)
-  const regScale = 1 + Math.min(0.4, regPct * 0.5)
+  const totalSICredit = userEvents.reduce((sum, e) => {
+    if (!e.siFlow || e.cancelled) return sum
+    return sum + ((e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)) * 0.3
+  }, 0)
+  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
+  const livedExperience = Math.max(0, peak - nonSleepReg - totalSICredit)
+
+  const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
+
+  let leColor = '#5abf7a'
+  if (livedExperience >= leThr.critical) leColor = '#c94a4a'
+  else if (livedExperience >= leThr.yellow) leColor = '#c9a84c'
+
+  const PEAK_BREAKDOWN = [
+    { k: 'E', name: 'emotional' },
+    { k: 'S', name: 'sensory' },
+    { k: 'X', name: 'EF' },
+    { k: 'V', name: 'veracity' },
+  ]
 
   return (
     <div className="sky">
-      <div className="sky-row">
-        <div className="sky-metric">
-          <div className="label">today's peak</div>
-          <div className="value" style={{ fontSize: `${44 * peakScale}px` }}>
-            {peak}
+      <div className="sky-three-col">
+        {/* Left: Today's Peak */}
+        <div className="sky-col">
+          <div className="sky-col-label">today's peak</div>
+          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{peak}</div>
+          <div className="sky-breakdown">
+            {PEAK_BREAKDOWN.map(({ k, name }) => (
+              <div key={k} className={`sky-breakdown-row${highestAxis[0] === k && highestAxis[1] > 0 ? ' highlight-amber' : ''}`}>
+                <span className="sky-bd-name">{name}</span>
+                <span className="sky-bd-sep">·</span>
+                <span className="sky-bd-val">{axisSums[k]}</span>
+              </div>
+            ))}
+            <div className="sky-bd-divider" />
+            <div className="sky-breakdown-row dimmer">
+              <span className="sky-bd-name">autistic tax</span>
+              <span className="sky-bd-sep">·</span>
+              <span className="sky-bd-val">+{taxPoints}</span>
+            </div>
           </div>
-          <div className="caption">the day reads <i>{weather}</i></div>
           {openingBalance > 0 && (
-            <div className="carry-note"><i>opening carry-in: {openingBalance}</i></div>
+            <div className="sky-carry-in">opening carry-in: {openingBalance}</div>
           )}
         </div>
-        <div className="sky-divider" />
-        <div className="sky-metric">
-          <div className="label">regulation</div>
-          <div className="value" style={{ fontSize: `${36 * regScale}px` }}>
-            {nonSleepReg}
+
+        <div className="sky-vert-divider" />
+
+        {/* Centre: Lived Experience */}
+        <div className="sky-col sky-col-centre">
+          <div className="sky-col-label">lived experience</div>
+          <div className="sky-col-value" style={{ fontSize: '72px', color: leColor }}>{livedExperience}</div>
+          <div className="sky-le-caption">
+            <span>{peak} peak</span>
+            <span className="sky-le-sep">·</span>
+            <span>−{nonSleepReg} reg</span>
+            <span className="sky-le-sep">·</span>
+            {siFlowActive
+              ? <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit * 10) / 10} SI</span>
+              : <span style={{ color: 'var(--ink-faint)' }}>no SI</span>
+            }
           </div>
-          <div className="caption"><i>{regWord}</i> · {Math.round(regPct * 100)}% tended</div>
-          {endload > 0 && <div className="carry-note"><i>ending at {endload}</i></div>}
+        </div>
+
+        <div className="sky-vert-divider" />
+
+        {/* Right: Regulation */}
+        <div className="sky-col">
+          <div className="sky-col-label">regulation</div>
+          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{nonSleepReg}</div>
+          <div className="sky-breakdown">
+            {REG_CHANNELS.map(c => {
+              const cur = regulation[c.k] || 0
+              const underTended = (c.cap - cur) > 2
+              return (
+                <div key={c.k} className={`sky-breakdown-row${underTended ? ' highlight-teal' : ''}`}>
+                  <span className="sky-bd-name">{c.name}</span>
+                  <span className="sky-bd-sep">·</span>
+                  <span className="sky-bd-val">{cur}/{c.cap}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -482,7 +510,6 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const [warning, setWarning] = useState({ skin: false, vision: false, thought: false, other: false })
   const [goodSigns, setGoodSigns] = useState({ flow: false, crisis: false })
   const [meltdown, setMeltdown] = useState(false)
-  const [siFlow, setSiFlow] = useState({ active: false, duration: null, intensity: null, credit: null })
   const [openingBalance, setOpeningBalance] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -500,7 +527,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
               const d = yest.entry_data
               const closing = d.closingBalance ?? 0
               const sleep = d.sleepReset ?? 0
-              setOpeningBalance(Math.max(0, closing - sleep))
+              const carryover = d.carryoverBonus ?? 0
+              setOpeningBalance(Math.max(0, closing - sleep + carryover))
               setYesterdayClosing(closing)
             }
           } else {
@@ -513,15 +541,14 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
-          setSiFlow(state.siFlow)
         } else if (isToday) {
           const yest = await loadEntry(yesterdayDateStr(), session.user.id)
           if (yest) {
             const d = yest.entry_data
             const closing = d.closingBalance ?? 0
             const sleep = d.sleepReset ?? 0
-            const ob = Math.max(0, closing - sleep)
-            setOpeningBalance(ob)
+            const carryover = d.carryoverBonus ?? 0
+            setOpeningBalance(Math.max(0, closing - sleep + carryover))
             setYesterdayClosing(closing)
           }
         }
@@ -556,7 +583,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
     try {
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents, regulation,
-        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown, siFlow,
+        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown,
       })
       await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
       setSaveStatus('saved')
@@ -620,8 +647,6 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
 
       <MeltdownSection active={meltdown} onToggle={() => setMeltdown(v => !v)} />
 
-      <SIFlowSection data={siFlow} onChange={setSiFlow} />
-
       <div className="save-bar">
         <span className="save-bar-status">{saveStatus}</span>
         <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
@@ -636,6 +661,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
 function ThresholdSettings({ settings, onThresholdsChange }) {
   const [yellow, setYellow] = useState(settings.thresholds.yellow)
   const [critical, setCritical] = useState(settings.thresholds.critical)
+  const [leYellow, setLeYellow] = useState(settings.livedExperienceThresholds?.yellow ?? 12)
+  const [leCritical, setLeCritical] = useState(settings.livedExperienceThresholds?.critical ?? 22)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
 
@@ -643,7 +670,10 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
     setSaving(true)
     setStatus('')
     try {
-      const updated = { yellow: Number(yellow), critical: Number(critical) }
+      const updated = {
+        yellow: Number(yellow), critical: Number(critical),
+        leYellow: Number(leYellow), leCritical: Number(leCritical),
+      }
       await saveThresholds(updated)
       onThresholdsChange(updated)
       setStatus('saved')
@@ -665,27 +695,35 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
           <label>yellow threshold</label>
           <div className="settings-field-desc">day reads as overcast above this</div>
         </div>
-        <input
-          type="number"
-          className="settings-number-input"
-          value={yellow}
-          min={1}
-          onChange={e => setYellow(e.target.value)}
-        />
+        <input type="number" className="settings-number-input" value={yellow} min={1} onChange={e => setYellow(e.target.value)} />
       </div>
       <div className="settings-field-row">
         <div>
           <label>critical threshold</label>
           <div className="settings-field-desc">eclipse triggers at or above this</div>
         </div>
-        <input
-          type="number"
-          className="settings-number-input"
-          value={critical}
-          min={1}
-          onChange={e => setCritical(e.target.value)}
-        />
+        <input type="number" className="settings-number-input" value={critical} min={1} onChange={e => setCritical(e.target.value)} />
       </div>
+
+      <div className="settings-divider" />
+      <div className="ledger-head" style={{ marginTop: '20px' }}>
+        <div className="ledger-title">lived experience thresholds</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>lived experience yellow threshold</label>
+          <div className="settings-field-desc">day reads as caution above this</div>
+        </div>
+        <input type="number" className="settings-number-input" value={leYellow} min={1} onChange={e => setLeYellow(e.target.value)} />
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>lived experience critical threshold</label>
+          <div className="settings-field-desc">day reads as critical above this</div>
+        </div>
+        <input type="number" className="settings-number-input" value={leCritical} min={1} onChange={e => setLeCritical(e.target.value)} />
+      </div>
+
       <div className="save-bar">
         <span className="save-bar-status">{status}</span>
         <button className="save-bar-btn" onClick={handleSave} disabled={saving}>

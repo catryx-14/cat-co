@@ -5,9 +5,11 @@ export async function loadSettings() {
   if (error) throw error
   const s = {}
   for (const row of data) s[row.key] = row.value
+  const stored = s.thresholds ?? {}
   return {
     taxValue: s.autistic_tax?.value ?? 3,
-    thresholds: s.thresholds ?? { yellow: 15, critical: 30 },
+    thresholds: { yellow: stored.yellow ?? 15, critical: stored.critical ?? 30 },
+    livedExperienceThresholds: { yellow: stored.leYellow ?? 12, critical: stored.leCritical ?? 22 },
     taxStartDate: s.tax_start_date?.date ?? '2000-01-01',
   }
 }
@@ -75,6 +77,7 @@ export function dbToInternal(row) {
       delayed: e.delayed ?? false,
       flow: e.flow ?? false,
       cancelled: false,
+      siFlow: e.siFlow ?? null,
     })),
     regulation: {
       sensory: d.regulation?.sensoryComfort ?? 0,
@@ -95,12 +98,6 @@ export function dbToInternal(row) {
       crisis: d.warningSign?.crisisResponse ?? false,
     },
     meltdown: d.meltdown ?? false,
-    siFlow: {
-      active: d.siFlowActive ?? false,
-      duration: d.siFlowDuration ?? null,
-      intensity: d.siFlowIntensity ?? null,
-      credit: d.siFlowCredit ?? null,
-    },
     closingBalance: d.closingBalance ?? 0,
     peakDebit: d.peakDebit ?? 0,
   }
@@ -108,7 +105,7 @@ export function dbToInternal(row) {
 
 // Internal UI state → DB entry_data blob + computed peak
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
-                                warning, goodSigns, settings, yesterdayClosing, meltdown, siFlow }) {
+                                warning, goodSigns, settings, yesterdayClosing, meltdown }) {
   const { taxValue, thresholds, taxStartDate } = settings
   const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
   const taxApplies = dateStr >= taxStartDate && !anyFlow
@@ -124,6 +121,29 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
                       (regulation.env || 0) + (regulation.body || 0)
   const closingBalance = Math.max(0, peakDebit - nonSleepReg)
 
+  const events = userEvents.map(e => {
+    const cost = (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.3 * 100) / 100 : null
+    return {
+      summary: e.text,
+      emotional: e.E || 0,
+      sensory: e.S || 0,
+      veracity: e.V || 0,
+      ef: e.X || 0,
+      delayed: e.delayed || false,
+      flow: e.flow || false,
+      realizedOn: '',
+      bucket: e.bucket || 'morning',
+      siFlow: e.siFlow || null,
+      siFlowCredit,
+    }
+  })
+
+  const totalSICredit = events.reduce((sum, e) => sum + (e.siFlowCredit ?? 0), 0)
+  const livedExperience = Math.max(0, peakDebit - nonSleepReg - totalSICredit)
+  const carryoverBonus = Math.round(totalSICredit * 0.5 * 100) / 100
+  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
+
   const entryData = {
     date: dateStr,
     openingBalance,
@@ -137,17 +157,10 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     yesterdayClosing: yesterdayClosing ?? 0,
     delayedReactionSource: false,
     delayedReactionRealized: false,
-    events: userEvents.map(e => ({
-      summary: e.text,
-      emotional: e.E || 0,
-      sensory: e.S || 0,
-      veracity: e.V || 0,
-      ef: e.X || 0,
-      delayed: e.delayed || false,
-      flow: e.flow || false,
-      realizedOn: '',
-      bucket: e.bucket || 'morning',
-    })),
+    totalSICredit,
+    livedExperience,
+    carryoverBonus,
+    events,
     regulation: {
       sensoryComfort: regulation.sensory || 0,
       audioVisual: regulation.av || 0,
@@ -163,10 +176,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
       crisisResponse: goodSigns.crisis || false,
     },
     meltdown: meltdown || false,
-    siFlowActive: siFlow?.active || false,
-    siFlowDuration: siFlow?.active ? (siFlow.duration ?? null) : null,
-    siFlowIntensity: siFlow?.active ? (siFlow.intensity ?? null) : null,
-    siFlowCredit: siFlow?.active ? (siFlow.credit ?? null) : null,
+    siFlowActive,
   }
 
   return { entryData, peakDebit }

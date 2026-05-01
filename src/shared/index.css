@@ -801,54 +801,101 @@ body {
   border: none;
 }
 .sky::before { display: none; }
-.sky-row {
-  display: flex;
-  align-items: center;
-  gap: 36px;
+
+/* ── Three-column sky layout ── */
+.sky-three-col {
+  display: grid;
+  grid-template-columns: 10fr 1px 14fr 1px 10fr;
+  align-items: start;
 }
-.sky-metric { flex: 1; }
-.sky-metric .label {
+.sky-col {
+  padding: 0 20px;
+}
+.sky-col:first-child { padding-left: 0; }
+.sky-col:last-child { padding-right: 0; }
+.sky-col-centre { text-align: center; }
+.sky-vert-divider {
+  background: linear-gradient(180deg, transparent, rgba(232,201,140,0.2), transparent);
+  align-self: stretch;
+}
+.sky-col-label {
   font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
-.sky-metric .value {
+.sky-col-value {
   font-family: "Cagliostro", serif;
-  font-size: 44px;
   line-height: 1;
-  color: var(--ink);
+  margin-bottom: 10px;
 }
-.sky-metric .value .of {
-  font-size: 18px;
+.sky-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sky-breakdown-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
   color: var(--ink-faint);
-  margin-left: 4px;
 }
-.sky-metric .caption {
+.sky-breakdown-row.highlight-amber .sky-bd-name,
+.sky-breakdown-row.highlight-amber .sky-bd-val {
+  color: #c9a84c;
+  font-weight: 500;
+}
+.sky-breakdown-row.highlight-teal .sky-bd-name,
+.sky-breakdown-row.highlight-teal .sky-bd-val {
+  color: #3ec6c6;
+  font-weight: 500;
+}
+.sky-breakdown-row.dimmer { opacity: 0.55; }
+.sky-bd-name { flex: 1; }
+.sky-bd-sep { opacity: 0.45; }
+.sky-bd-val { text-align: right; min-width: 28px; }
+.sky-bd-divider {
+  height: 1px;
+  background: rgba(232,201,140,0.10);
+  margin: 4px 0;
+}
+.sky-carry-in {
+  margin-top: 10px;
   font-family: "Crimson Pro", serif;
   font-style: italic;
-  font-size: 13px;
-  color: var(--ink-soft);
-  margin-top: 4px;
-}
-.sky-metric .carry-note {
-  font-family: "Crimson Pro", serif;
   font-size: 11px;
   color: var(--ink-faint);
-  margin-top: 6px;
-  letter-spacing: 0.04em;
   opacity: 0.75;
 }
-.sky-metric .carry-note .carry-detail {
+.sky-le-caption {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
   color: var(--ink-faint);
-  opacity: 0.7;
+  margin-top: 8px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  letter-spacing: 0.02em;
 }
-.sky-divider {
-  width: 1px;
-  align-self: stretch;
-  background: linear-gradient(180deg, transparent, rgba(232,201,140,0.25), transparent);
+.sky-le-sep { opacity: 0.45; }
+
+@media (max-width: 540px) {
+  .sky-three-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .sky-vert-divider {
+    display: none;
+  }
+  .sky-col { padding: 0; }
+  .sky-col-centre { text-align: left; }
 }
 
 .ledger-head {
@@ -2074,4 +2121,49 @@ body {
 .settings-number-input:focus {
   outline: none;
   border-color: rgba(232,201,140,0.5);
+}
+
+/* SI flow per-event toggles */
+.event-tag.si-flow { color: var(--teal); }
+.event-si-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.event-si-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.event-si-btns { display: inline-flex; gap: 4px; }
+.event-si-btn {
+  font-family: "Cagliostro", serif;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 3px;
+  border: 1px solid rgba(110,192,191,0.2);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+  font-style: normal;
+}
+.event-si-btn:hover {
+  border-color: rgba(110,192,191,0.5);
+  color: var(--teal);
+}
+.event-si-btn.active {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(110,192,191,0.08);
+}
+
+/* Settings divider between threshold sections */
+.settings-divider {
+  height: 1px;
+  background: rgba(232,201,140,0.10);
+  margin: 18px 0 0;
 }

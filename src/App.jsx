@@ -222,12 +222,16 @@ export default function App({ session }) {
       .then(setSettings)
       .catch(err => {
         console.error('failed to load settings', err)
-        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
+        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 12, critical: 22 }, taxStartDate: '2000-01-01' })
       })
   }, [])
 
-  const updateThresholds = (thresholds) => {
-    setSettings(prev => ({ ...prev, thresholds }))
+  const updateThresholds = ({ yellow, critical, leYellow, leCritical }) => {
+    setSettings(prev => ({
+      ...prev,
+      thresholds: { yellow, critical },
+      livedExperienceThresholds: { yellow: leYellow ?? 12, critical: leCritical ?? 22 },
+    }))
   }
 
   // Sync atmosphere tweaks to CSS + bokeh (hidden on hub)

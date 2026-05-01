@@ -58,3 +58,24 @@ export function computeTomorrowOpening(closingBalance, sleepReset) {
 export function taxActive(dateStr, taxStartDate, userEvents) {
   return dateStr >= taxStartDate && !anyFlowEvent(userEvents)
 }
+
+// SI flow credit for a single event (30% of event cost if siFlow is set)
+export function computeEventSICredit(event) {
+  if (!event.siFlow || event.cancelled) return 0
+  return ((event.E || 0) + (event.S || 0) + (event.V || 0) + (event.X || 0)) * 0.3
+}
+
+// Total SI credit across all events
+export function computeTotalSICredit(userEvents) {
+  return userEvents.reduce((sum, e) => sum + computeEventSICredit(e), 0)
+}
+
+// Lived experience = peakDebit − nonSleepReg − totalSICredit
+export function computeLivedExperience(peakDebit, nonSleepReg, totalSICredit) {
+  return Math.max(0, peakDebit - nonSleepReg - totalSICredit)
+}
+
+// Carryover bonus added to tomorrow's opening balance
+export function computeCarryoverBonus(totalSICredit) {
+  return totalSICredit * 0.5
+}
