@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
-import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, recalculateFromDate, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
@@ -538,7 +538,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
               const closing = d.closingBalance ?? 0
               const sleep = d.sleepReset ?? 0
               const carryover = d.siFlowCarryoverBonus ?? d.carryoverBonus ?? 0
-              setOpeningBalance(Math.max(0, closing - sleep + carryover))
+              setOpeningBalance(Math.round(Math.max(0, closing - sleep + carryover)))
               setSiCarryIn(carryover)
               setYesterdayClosing(closing)
             }
@@ -598,6 +598,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
         recovery, warning, goodSigns, settings, yesterdayClosing, meltdown,
       })
       await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
+      if (!isToday) await recalculateFromDate(session.user.id, dateStr)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 3000)
     } catch (err) {
