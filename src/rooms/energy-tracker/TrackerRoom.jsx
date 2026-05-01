@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
-import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
@@ -48,6 +48,12 @@ function todayDisplayStr() {
   const d = new Date()
   const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
   return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}
+
+function formatDateStr(dateStr) {
+  const [y, mo, day] = dateStr.split('-').map(Number)
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][mo - 1]
+  return `${y} · ${m} · ${String(day).padStart(2, '0')}`
 }
 
 // ─── AxisLabel ───
@@ -391,7 +397,7 @@ function MeltdownSection({ active, onToggle }) {
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr }) {
+function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, flowOverride = false, dateStr }) {
   const { taxValue, thresholds, taxStartDate, livedExperienceThresholds } = settings
   const leThr = livedExperienceThresholds || { yellow: 12, critical: 22 }
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
@@ -454,6 +460,9 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
           {openingBalance > 0 && (
             <div className="sky-carry-in">opening carry-in: {Math.round(openingBalance)}</div>
           )}
+          {siCarryIn > 0 && (
+            <div className="sky-carry-in sky-si-carry">SI carry: +{Math.round(siCarryIn)}</div>
+          )}
         </div>
 
         <div className="sky-vert-divider" />
@@ -511,6 +520,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const [goodSigns, setGoodSigns] = useState({ flow: false, crisis: false })
   const [meltdown, setMeltdown] = useState(false)
   const [openingBalance, setOpeningBalance] = useState(0)
+  const [siCarryIn, setSiCarryIn] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
@@ -527,8 +537,9 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
               const d = yest.entry_data
               const closing = d.closingBalance ?? 0
               const sleep = d.sleepReset ?? 0
-              const carryover = d.carryoverBonus ?? 0
+              const carryover = d.siFlowCarryoverBonus ?? d.carryoverBonus ?? 0
               setOpeningBalance(Math.max(0, closing - sleep + carryover))
+              setSiCarryIn(carryover)
               setYesterdayClosing(closing)
             }
           } else {
@@ -547,8 +558,9 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
             const d = yest.entry_data
             const closing = d.closingBalance ?? 0
             const sleep = d.sleepReset ?? 0
-            const carryover = d.carryoverBonus ?? 0
+            const carryover = d.siFlowCarryoverBonus ?? d.carryoverBonus ?? 0
             setOpeningBalance(Math.max(0, closing - sleep + carryover))
+            setSiCarryIn(carryover)
             setYesterdayClosing(closing)
           }
         }
@@ -610,12 +622,16 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   return (
     <>
       {onBack && (
-        <button className="back-link" onClick={onBack}>← back to history</button>
+        <>
+          <button className="back-link" onClick={onBack}>← back to history</button>
+          <div className="history-edit-date">{formatDateStr(dateStr)}</div>
+        </>
       )}
       <Sky
         userEvents={userEvents}
         regulation={regulation}
         openingBalance={openingBalance}
+        siCarryIn={siCarryIn}
         settings={settings}
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
@@ -734,6 +750,47 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
   )
 }
 
+// ─── RecalculateSection ───
+function RecalculateSection({ session }) {
+  const [running, setRunning] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function handleRecalculate() {
+    if (!window.confirm('Recalculate all history entries in chronological order? This will update opening balances and closing balances throughout your history.')) return
+    setRunning(true)
+    setStatus('')
+    try {
+      const count = await recalculateAllEntries(session.user.id)
+      setStatus(`done — ${count} ${count === 1 ? 'entry' : 'entries'} updated`)
+      setTimeout(() => setStatus(''), 6000)
+    } catch (err) {
+      console.error('recalculate failed', err)
+      setStatus('something went wrong')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="settings-section" style={{ marginTop: '8px' }}>
+      <div className="settings-divider" />
+      <div className="ledger-head" style={{ marginTop: '20px' }}>
+        <div className="ledger-title">history</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>recalculate history</label>
+          <div className="settings-field-desc">recompute all past balances in sequence, oldest first</div>
+        </div>
+        <button className="save-bar-btn" onClick={handleRecalculate} disabled={running} style={{ whiteSpace: 'nowrap' }}>
+          {running ? 'running…' : 'recalculate'}
+        </button>
+      </div>
+      {status && <div className="settings-recalc-status">{status}</div>}
+    </div>
+  )
+}
+
 // ─── TrackerRoom shell ───
 export default function TrackerRoom({ onHome, session, settings, onThresholdsChange }) {
   const [tab, setTab] = useState('today')
@@ -779,6 +836,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
       {tab === 'settings' && (
         <>
           <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          <RecalculateSection session={session} />
           <div className="settings-signout">
             <button className="settings-signout-btn" onClick={() => supabase.auth.signOut()}>
               sign out

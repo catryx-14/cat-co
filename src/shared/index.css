@@ -2167,3 +2167,26 @@ body {
   background: rgba(232,201,140,0.10);
   margin: 18px 0 0;
 }
+
+/* SI carry line on peak card */
+.sky-si-carry { color: #5abf7a !important; }
+
+/* Date header when editing a historical entry */
+.history-edit-date {
+  font-family: "Crimson Pro", serif;
+  font-style: italic;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  margin: -8px 0 20px;
+}
+
+/* Recalculate status line */
+.settings-recalc-status {
+  font-family: "Crimson Pro", serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+  padding: 8px 0 4px;
+}

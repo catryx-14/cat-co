@@ -119,8 +119,6 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
   const peakDebit = openingBalance + evPoints + taxPoints
   const nonSleepReg = (regulation.sensory || 0) + (regulation.av || 0) +
                       (regulation.env || 0) + (regulation.body || 0)
-  const closingBalance = Math.max(0, peakDebit - nonSleepReg)
-
   const events = userEvents.map(e => {
     const cost = (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
     const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.3 * 100) / 100 : null
@@ -140,8 +138,9 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
   })
 
   const totalSICredit = events.reduce((sum, e) => sum + (e.siFlowCredit ?? 0), 0)
-  const livedExperience = Math.max(0, peakDebit - nonSleepReg - totalSICredit)
-  const carryoverBonus = Math.round(totalSICredit * 0.5 * 100) / 100
+  const closingBalance = Math.max(0, peakDebit - nonSleepReg - totalSICredit)
+  const livedExperience = closingBalance
+  const siFlowCarryoverBonus = Math.round(totalSICredit * 0.5)
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
 
   const entryData = {
@@ -159,7 +158,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     delayedReactionRealized: false,
     totalSICredit,
     livedExperience,
-    carryoverBonus,
+    siFlowCarryoverBonus,
     events,
     regulation: {
       sensoryComfort: regulation.sensory || 0,
@@ -197,4 +196,56 @@ export function yesterdayDateStr() {
   const d = new Date()
   d.setDate(d.getDate() - 1)
   return localDateStr(d)
+}
+
+// Recalculate all entries in chronological order, cascading closing→opening chain.
+export async function recalculateAllEntries(userId) {
+  const entries = await loadAllEntries(userId)
+  const sorted = [...entries].sort((a, b) =>
+    a.entry_data.date.localeCompare(b.entry_data.date)
+  )
+
+  let prevClosing = null
+  let prevSleepReset = 0
+  let prevCarryoverBonus = 0
+
+  for (const entry of sorted) {
+    const d = entry.entry_data
+
+    const openingBalance = prevClosing !== null
+      ? Math.max(0, prevClosing - prevSleepReset + prevCarryoverBonus)
+      : (d.openingBalance ?? 0)
+
+    let evPoints = 0
+    let totalSICredit = 0
+    for (const e of d.events ?? []) {
+      evPoints += (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
+      totalSICredit += e.siFlowCredit ?? 0
+    }
+
+    const autisticTax = d.autisticTax ?? 0
+    const peakDebit = openingBalance + evPoints + autisticTax
+    const nonSleepReg = (d.regulation?.sensoryComfort || 0) + (d.regulation?.audioVisual || 0) +
+                        (d.regulation?.environment || 0) + (d.regulation?.bodyRest || 0)
+    const closingBalance = Math.max(0, peakDebit - nonSleepReg - totalSICredit)
+    const siFlowCarryoverBonus = Math.round(totalSICredit * 0.5)
+
+    const updated = {
+      ...d,
+      openingBalance,
+      peakDebit,
+      closingBalance,
+      livedExperience: closingBalance,
+      totalSICredit,
+      siFlowCarryoverBonus,
+    }
+
+    await saveEntry({ dateStr: d.date, entryData: updated, peakDebit, userId })
+
+    prevClosing = closingBalance
+    prevSleepReset = d.sleepReset ?? 0
+    prevCarryoverBonus = siFlowCarryoverBonus
+  }
+
+  return sorted.length
 }
