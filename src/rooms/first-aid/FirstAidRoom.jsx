@@ -147,13 +147,14 @@ export default function FirstAidRoom({ onHome }) {
             display: "block",
             textAlign: "center",
             userSelect: "none",
-            // FULL: animation running — 120px→64px, opacity 1→0.35, 11s cycle
+            // FULL: animation running — scale 1→0.533, opacity 1→0.35, 11s cycle
             ...(isFull ? {
+              willChange: "transform, opacity",
               animation: "breathePulse 11s cubic-bezier(0.45, 0, 0.55, 1) infinite",
             } : {}),
             // HOLDING: locked at exhale bottom, no transition
             ...(isHolding ? {
-              fontSize: "clamp(30px, 8vw, 64px)",
+              transform: "scale(0.533)",
               opacity: 0.35,
               letterSpacing: "0.20em",
               color: "#7a6aa0",
@@ -161,7 +162,7 @@ export default function FirstAidRoom({ onHome }) {
             } : {}),
             // FADING: stays tiny, opacity fades to 0 over 2s
             ...(isFading ? {
-              fontSize: "clamp(30px, 8vw, 64px)",
+              transform: "scale(0.533)",
               opacity: 0,
               letterSpacing: "0.20em",
               color: "#7a6aa0",
@@ -268,28 +269,26 @@ export default function FirstAidRoom({ onHome }) {
       </div>
 
       {/* breathePulse keyframes — locked values, do not change independently:
-          all colour/size/opacity values also appear in the holding/fading inline
-          styles above and in the header text. Change all together or never. */}
+          all colour/scale/opacity values also appear in the holding/fading inline
+          styles above and in the header text. Change all together or never.
+          scale(0.533) ≈ 64/120 (desktop) ≈ 30/56 (mobile) — compositor-only, no reflow. */}
       <style>{`
+        .fa-breathe-word { font-size: 120px; }
         @keyframes breathePulse {
-          0%   { font-size: 120px; opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
-          40%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
-          55%  { font-size: 64px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
-          100% { font-size: 120px; opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+          0%   { transform: scale(1);     opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
+          40%  { transform: scale(0.533); opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
+          55%  { transform: scale(0.533); opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
+          100% { transform: scale(1);     opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
         }
         @media (max-width: 720px) {
-          @keyframes breathePulse {
-            0%   { font-size: 56px;  opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
-            40%  { font-size: 30px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
-            55%  { font-size: 30px;  opacity: 0.35; letter-spacing: 0.20em; color: #7a6aa0; }
-            100% { font-size: 56px;  opacity: 1;    letter-spacing: 0.06em; color: #e8e0ff; }
-          }
           .fa-breathe-word {
+            font-size: 56px;
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            inset: 0;
+            width: fit-content;
+            height: fit-content;
             max-width: 90vw;
+            margin: auto;
             text-align: center;
           }
           .fa-title    { font-size: 48px !important; }

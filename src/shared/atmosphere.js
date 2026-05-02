@@ -14,15 +14,32 @@ function initStars() {
   function resize() {
     W = canvas.width = window.innerWidth * devicePixelRatio;
     H = canvas.height = window.innerHeight * devicePixelRatio;
-    const N = Math.round((W * H) / 12000);
-    stars = Array.from({ length: N }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      r: 0.4 + Math.random() * 1.4,
-      base: 0.25 + Math.random() * 0.55,
-      tw: Math.random() * Math.PI * 2,
-      spd: 0.6 + Math.random() * 1.4,
-      warmRoll: Math.random(),
-    }));
+    const N = Math.min(150, Math.round((W * H) / 12000));
+
+    function makeGrad(x, y, orbR, cr, cg, cb) {
+      const g = ctx.createRadialGradient(x - orbR * 0.22, y - orbR * 0.22, 0, x, y, orbR);
+      g.addColorStop(0,    'rgba(255,255,255,0.92)');
+      g.addColorStop(0.13, `rgba(${cr},${cg},${cb},1)`);
+      g.addColorStop(0.42, `rgba(${cr},${cg},${cb},0.32)`);
+      g.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
+      return g;
+    }
+
+    stars = Array.from({ length: N }, () => {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const r = 0.4 + Math.random() * 1.4;
+      const orbR = r * devicePixelRatio * 3.5;
+      return {
+        x, y, orbR,
+        base: 0.25 + Math.random() * 0.55,
+        tw: Math.random() * Math.PI * 2,
+        spd: 0.6 + Math.random() * 1.4,
+        warmRoll: Math.random(),
+        gradWarm: makeGrad(x, y, orbR, 232, 201, 140),
+        gradCool: makeGrad(x, y, orbR, 200, 210, 240),
+      };
+    });
   }
 
   function tick(t) {
@@ -31,22 +48,13 @@ function initStars() {
     const warmThresh = 0.05 + Math.min(1.5, w) * 0.17;
     for (const s of stars) {
       const a = s.base + Math.sin(t * 0.001 * s.spd + s.tw) * 0.25;
-      const isWarm = s.warmRoll < warmThresh;
-      const [cr, cg, cb] = isWarm ? [232, 201, 140] : [200, 210, 240];
-      const orbR = s.r * devicePixelRatio * 3.5;
-      const grad = ctx.createRadialGradient(
-        s.x - orbR * 0.22, s.y - orbR * 0.22, 0,
-        s.x, s.y, orbR
-      );
-      grad.addColorStop(0,    `rgba(255,255,255,${(a * 0.92).toFixed(3)})`);
-      grad.addColorStop(0.13, `rgba(${cr},${cg},${cb},${a.toFixed(3)})`);
-      grad.addColorStop(0.42, `rgba(${cr},${cg},${cb},${(a * 0.32).toFixed(3)})`);
-      grad.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
-      ctx.fillStyle = grad;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = s.warmRoll < warmThresh ? s.gradWarm : s.gradCool;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, orbR, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, s.orbR, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
     if (!window.__shootingStars) window.__shootingStars = [];
     if (!window.__nextShoot) window.__nextShoot = t + 4000 + Math.random() * 8000;
@@ -125,7 +133,8 @@ export function buildBokeh(_warmth) {
     [200, 40,  120],  // ruby
   ];
 
-  for (let i = 0; i < 32; i++) {
+  const count = window.innerWidth >= 768 ? 16 : 32;
+  for (let i = 0; i < count; i++) {
     const d = document.createElement('div');
     d.className = 'bokeh-dot';
     const sz = 55 + Math.random() * 45; // 55–100 px diameter (~half original size)
