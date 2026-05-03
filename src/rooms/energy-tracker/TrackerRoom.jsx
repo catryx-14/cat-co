@@ -1488,8 +1488,8 @@ function RecalculateSection({ session }) {
 }
 
 // ─── TrackerRoom shell ───
-export default function TrackerRoom({ onHome, session, settings, onThresholdsChange }) {
-  const [tab, setTab] = useState('today')
+export default function TrackerRoom({ onHome, session, settings, onThresholdsChange, initialTab }) {
+  const [tab, setTab] = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey, setTodayResetKey] = useState(0)
 
@@ -1502,18 +1502,18 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
   return (
     <>
       <div className="room-head">
-        <h2 className="room-title">Energy Tracker</h2>
-        <RoomMark date={todayDisplayStr()} onHome={onHome} />
+        <h2 className="room-title">{tab === 'settings' ? 'settings' : 'Energy Tracker'}</h2>
+        <RoomMark date={todayDisplayStr()} onSettings={() => setTab('settings')} />
       </div>
-      <div className="room-tabs">
-        {['today', 'horizon', 'history', 'settings'].map(t => (
+      {tab !== 'settings' && <div className="room-tabs">
+        {['today', 'horizon', 'history'].map(t => (
           <div key={t}
                className={`room-tab ${tab === t ? 'active' : ''}`}
                onClick={() => handleTabChange(t)}>
             {t}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Today stays mounted so unsaved state survives tab switches */}
       <div style={{ display: tab === 'today' ? '' : 'none' }}>

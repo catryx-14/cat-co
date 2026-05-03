@@ -1,12 +1,12 @@
-export default function RoomMark({ date, onHome }) {
+export default function RoomMark({ date, onSettings }) {
   return (
     <div className="room-mark-stack">
       <button
         type="button"
         className="room-mark-amp"
-        onClick={onHome}
-        aria-label="return to threshold"
-        title="return to threshold"
+        onClick={onSettings}
+        aria-label="open settings"
+        title="settings"
       >
         <svg viewBox="0 0 229 329" aria-hidden="true">
           <defs>

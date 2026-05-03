@@ -521,7 +521,7 @@ function ViewToggle({ value, onChange }) {
 }
 
 // ─── main Sparks room ──────────────────────────────────────────────────
-export default function SparksRoom({ onHome }) {
+export default function SparksRoom({ onSettings }) {
   const [sparks, setSparks] = useState([])
   const [draft, setDraft] = useState('')
   const [draftTag, setDraftTag] = useState('general')
@@ -601,7 +601,7 @@ export default function SparksRoom({ onHome }) {
     <>
       <div className="room-head">
         <h2 className="room-title">Sparks</h2>
-        <RoomMark date={todayStr()} onHome={onHome} />
+        <RoomMark date={todayStr()} onSettings={onSettings} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0' }}>
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
@@ -627,7 +627,7 @@ export default function SparksRoom({ onHome }) {
       {/* room header */}
       <div className="room-head">
         <h2 className="room-title">Sparks</h2>
-        <RoomMark date={todayStr()} onHome={onHome} />
+        <RoomMark date={todayStr()} onSettings={onSettings} />
       </div>
 
       {/* capture box */}

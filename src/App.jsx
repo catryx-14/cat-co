@@ -161,7 +161,6 @@ function HubView({ tweaks, onPick }) {
 function Rail({ inRoom, current, onPick, onHome }) {
   return (
     <div className={`rail ${inRoom ? 'expanded' : ''}`} aria-label="navigation">
-      <div className="rail-mark" title="home" onClick={inRoom ? onHome : undefined} />
       <nav className="rail-nav" aria-hidden={!inRoom}>
         {ROOMS.map(r => (
           <a key={r.key}
@@ -181,16 +180,16 @@ function Rail({ inRoom, current, onPick, onHome }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, session, settings, onThresholdsChange }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} />
+    return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
-    return <SparksRoom onHome={onHome} session={session} />
+    return <SparksRoom onSettings={onSettings} session={session} />
   }
   if (roomKey === 'engine-room') {
-    return <EngineRoom onHome={onHome} />
+    return <EngineRoom onSettings={onSettings} />
   }
   if (roomKey === 'physio') {
     return <FirstAidRoom onHome={onHome} />
@@ -257,8 +256,11 @@ export default function App({ session }) {
     }, isFast ? 350 : 900)
   }
 
-  const goRoom = (key) => navigate(key, 'slow')
+  const [trackerInitTab, setTrackerInitTab] = useState(null)
+
+  const goRoom = (key) => { if (key === 'tracker') setTrackerInitTab(null); navigate(key, 'slow') }
   const goHome = () => navigate('hub', 'fast')
+  const goSettings = () => { setTrackerInitTab('settings'); navigate('tracker', 'slow') }
 
   const fadeClass = [
     'view-fade',
@@ -278,7 +280,7 @@ export default function App({ session }) {
           <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
             {view === 'hub'
               ? <HubView tweaks={tweaks} onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} session={session} settings={settings} onThresholdsChange={updateThresholds} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} />}
           </div>
         </main>
       </div>
