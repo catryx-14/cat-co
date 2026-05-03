@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
-import { loadEntry, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, recalculateFromDate, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { loadEntry, loadAllEntries, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, recalculateFromDate, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
@@ -554,7 +554,7 @@ const REG_MOB_STARS = [
 ]
 
 // ─── SkyOrb ───
-function SkyOrb({ size, colors, numStr, label, stars, detailNode }) {
+function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animClass }) {
   const [hov, setHov] = useState(false)
   const [vis, setVis] = useState(false)
 
@@ -573,8 +573,9 @@ function SkyOrb({ size, colors, numStr, label, stars, detailNode }) {
   const innerR = size * 0.395
 
   return (
-    <div className="sky-orb-wrap"
-         style={{ height: size }}
+    <div className={`sky-orb-wrap${animClass ? ' ' + animClass : ''}`}
+         style={{ height: size, cursor: onClick ? 'pointer' : undefined }}
+         onClick={onClick}
          onMouseEnter={() => setHov(true)}
          onMouseLeave={() => setHov(false)}>
       <div className="sky-orb" style={{ width: size, height: size }}>
@@ -661,13 +662,58 @@ function SkyOrb({ size, colors, numStr, label, stars, detailNode }) {
   )
 }
 
+// ─── SkyNavOrb ───
+function SkyNavOrb({ colors, numStr, active, onClick }) {
+  const size = 48
+  const pad = 10
+  const svgSize = size + pad * 2
+  const cx = svgSize / 2
+  const cy = svgSize / 2
+  const outerR = size * 0.455
+
+  return (
+    <button className={`sky-nav-orb${active ? ' sky-nav-orb--active' : ''}`} onClick={onClick}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg
+          width={svgSize} height={svgSize}
+          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}
+        >
+          <defs>
+            <linearGradient id={`${colors.id}-nav-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+              {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
+            </linearGradient>
+            <filter id={`${colors.id}-nav-glow`} x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx={cx} cy={cy} r={outerR}
+            fill="none"
+            stroke={`url(#${colors.id}-nav-grad)`}
+            strokeWidth="1.5"
+            filter={`url(#${colors.id}-nav-glow)`}
+          />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: '"Cagliostro", serif', fontSize: '15px', lineHeight: 1, color: colors.number }}>
+            {numStr}
+          </span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 // ─── SkyMobileRow ───
-function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars }) {
+function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick }) {
   const BAR_H = 92
   const SVG_W = 34
 
   return (
-    <div className="sky-mob-row">
+    <div className="sky-mob-row" onClick={onClick} style={{ cursor: onClick ? 'pointer' : undefined }}>
       <div className="sky-mob-bar-col">
         <svg width={SVG_W} height={BAR_H} style={{ overflow: 'visible' }}>
           <defs>
@@ -698,7 +744,17 @@ function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars }) {
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, flowOverride = false, dateStr }) {
+function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus }) {
+  const [expanding, setExpanding] = useState(null)
+
+  function handleOrbClick(key) {
+    if (!onOrb) return
+    setExpanding(key)
+    setTimeout(() => {
+      setExpanding(null)
+      onOrb(key)
+    }, 380)
+  }
   const { taxValue, taxStartDate } = settings
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
@@ -767,25 +823,57 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
     </div>
   )
 
+  const peakStr = String(Math.round(peak))
+  const leStr   = String(Math.round(livedExperience))
+  const regStr  = String(Math.round(nonSleepReg))
+
+  if (drillThrough) {
+    return (
+      <div className="sky sky--drill">
+        <div className="sky-nav">
+          <SkyNavOrb colors={SKY_COLORS.peak} numStr={peakStr}
+            active={drillThrough === 'peak'}
+            onClick={() => drillThrough === 'peak' ? onClose?.() : onOrb?.('peak')} />
+          <SkyNavOrb colors={SKY_COLORS.le} numStr={leStr}
+            active={drillThrough === 'le'}
+            onClick={() => drillThrough === 'le' ? onClose?.() : onOrb?.('le')} />
+          <SkyNavOrb colors={SKY_COLORS.reg} numStr={regStr}
+            active={drillThrough === 'reg'}
+            onClick={() => drillThrough === 'reg' ? onClose?.() : onOrb?.('reg')} />
+          {saveStatus && <span className="sky-nav-status">{saveStatus}</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="sky">
       <div className="sky-desk">
-        <SkyOrb size={200} colors={SKY_COLORS.peak} numStr={String(Math.round(peak))}
-          label="today's peak" stars={PEAK_STARS} detailNode={peakDetail} />
-        <SkyOrb size={260} colors={SKY_COLORS.le} numStr={String(Math.round(livedExperience))}
-          label="lived experience" stars={LE_STARS} detailNode={leDetail} />
-        <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={String(Math.round(nonSleepReg))}
-          label="regulation" stars={REG_STARS} detailNode={regDetail} />
+        <SkyOrb size={200} colors={SKY_COLORS.peak} numStr={peakStr}
+          label="today's peak" stars={PEAK_STARS} detailNode={peakDetail}
+          onClick={() => handleOrbClick('peak')}
+          animClass={expanding === 'peak' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
+        <SkyOrb size={260} colors={SKY_COLORS.le} numStr={leStr}
+          label="lived experience" stars={LE_STARS} detailNode={leDetail}
+          onClick={() => handleOrbClick('le')}
+          animClass={expanding === 'le' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
+        <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={regStr}
+          label="regulation" stars={REG_STARS} detailNode={regDetail}
+          onClick={() => handleOrbClick('reg')}
+          animClass={expanding === 'reg' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
       </div>
       <div className="sky-mob">
-        <SkyMobileRow colors={SKY_COLORS.peak} numStr={String(Math.round(peak))}
-          label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS} />
+        <SkyMobileRow colors={SKY_COLORS.peak} numStr={peakStr}
+          label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS}
+          onClick={() => onOrb?.('peak')} />
         <div className="sky-mob-div" />
-        <SkyMobileRow colors={SKY_COLORS.le} numStr={String(Math.round(livedExperience))}
-          label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS} />
+        <SkyMobileRow colors={SKY_COLORS.le} numStr={leStr}
+          label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS}
+          onClick={() => onOrb?.('le')} />
         <div className="sky-mob-div" />
-        <SkyMobileRow colors={SKY_COLORS.reg} numStr={String(Math.round(nonSleepReg))}
-          label="regulation" detailNode={regDetail} mobileStars={REG_MOB_STARS} />
+        <SkyMobileRow colors={SKY_COLORS.reg} numStr={regStr}
+          label="regulation" detailNode={regDetail} mobileStars={REG_MOB_STARS}
+          onClick={() => onOrb?.('reg')} />
       </div>
     </div>
   )
@@ -805,8 +893,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const [openingBalance, setOpeningBalance] = useState(0)
   const [siCarryIn, setSiCarryIn] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
-  const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
+  const [drillThrough, setDrillThrough] = useState(null)
 
   useEffect(() => {
     async function init() {
@@ -872,36 +960,22 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
     })()),
   ]
 
-  async function handleSave() {
-    setSaving(true)
-    setSaveStatus('saving…')
-    try {
-      const { entryData, peakDebit } = internalToDb({
-        dateStr, openingBalance, userEvents, regulation,
-        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown,
-      })
-      await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
-      if (!isToday) await recalculateFromDate(session.user.id, dateStr)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus(''), 3000)
-    } catch (err) {
-      console.error('save failed', err)
-      setSaveStatus('something went wrong')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   if (loading) {
     return <div className="history-loading">opening the almanac…</div>
   }
 
-  async function autoSaveEntry(eventsToSave) {
+  async function autoSave(patch = {}) {
+    const evts = patch.userEvents ?? userEvents
+    const reg  = patch.regulation ?? regulation
+    const rec  = patch.recovery   ?? recovery
+    const warn = patch.warning    ?? warning
+    const gs   = patch.goodSigns  ?? goodSigns
+    const melt = patch.meltdown   ?? meltdown
     setSaveStatus('saving…')
     try {
       const { entryData, peakDebit } = internalToDb({
-        dateStr, openingBalance, userEvents: eventsToSave, regulation,
-        recovery, warning, goodSigns, settings, yesterdayClosing, meltdown,
+        dateStr, openingBalance, userEvents: evts, regulation: reg,
+        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
       })
       await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
       await recalculateFromDate(session.user.id, dateStr)
@@ -917,21 +991,42 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const onAdd = (ev) => {
     const next = [...userEvents, ev]
     setUserEvents(next)
-    autoSaveEntry(next)
+    autoSave({ userEvents: next })
   }
   const onUpdate = (ev) => {
     const next = userEvents.map(x => x.id === ev.id ? ev : x)
     setUserEvents(next)
-    autoSaveEntry(next)
+    autoSave({ userEvents: next })
   }
   const onDelete = (id) => {
     const next = userEvents.filter(x => x.id !== id)
     setUserEvents(next)
-    autoSaveEntry(next)
+    autoSave({ userEvents: next })
   }
-  const onRegChange = (k, v) => setRegulation(r => ({ ...r, [k]: v }))
-  const onWarning = (k) => setWarning(s => ({ ...s, [k]: !s[k] }))
-  const onGood = (k) => setGoodSigns(s => ({ ...s, [k]: !s[k] }))
+  const onRegChange = (k, v) => {
+    const next = { ...regulation, [k]: v }
+    setRegulation(next)
+    autoSave({ regulation: next })
+  }
+  const onWarning = (k) => {
+    const next = { ...warning, [k]: !warning[k] }
+    setWarning(next)
+    autoSave({ warning: next })
+  }
+  const onGood = (k) => {
+    const next = { ...goodSigns, [k]: !goodSigns[k] }
+    setGoodSigns(next)
+    autoSave({ goodSigns: next })
+  }
+  const onRecovery = (v) => {
+    setRecovery(v)
+    autoSave({ recovery: v })
+  }
+  const onMeltdown = () => {
+    const next = !meltdown
+    setMeltdown(next)
+    autoSave({ meltdown: next })
+  }
 
   return (
     <>
@@ -949,8 +1044,326 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
         settings={settings}
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
+        drillThrough={drillThrough}
+        onOrb={setDrillThrough}
+        onClose={() => setDrillThrough(null)}
+        saveStatus={saveStatus}
       />
+      {drillThrough && (
+        <div className="sky-drill" key={drillThrough}>
+          {(drillThrough === 'peak' || drillThrough === 'le') && (
+            <>
+              <section className="events-section">
+                <div className="ledger-head">
+                  <div className="ledger-title">events · today</div>
+                  <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
+                </div>
+                <div className="events">
+                  {allEvents.map(e => (
+                    <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                  ))}
+                </div>
+                <Composer onAdd={onAdd} />
+              </section>
+              <WarningSigns flags={warning} onToggle={onWarning} />
+              <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+            </>
+          )}
+          {(drillThrough === 'reg' || drillThrough === 'le') && (
+            <Regulation
+              values={regulation}
+              onChange={onRegChange}
+              recovery={recovery}
+              onRecovery={onRecovery}
+              goodSigns={goodSigns}
+              onGood={onGood}
+            />
+          )}
+        </div>
+      )}
     </>
+  )
+}
+
+// ─── HistoryDateEditor helpers ───
+function hedParseDate(s) { return new Date(s + 'T12:00:00') }
+function hedToDateStr(d) {
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-')
+}
+function hedAddDays(date, n) {
+  const d = new Date(date); d.setDate(d.getDate() + n); return d
+}
+function hedWeekMonday(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  d.setHours(12, 0, 0, 0)
+  return d
+}
+function hedPeakColor(peak, thr) {
+  if (peak >= thr.critical) return '#e84040'
+  if (peak >= thr.yellow)   return '#f0b825'
+  return '#2ed468'
+}
+function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr) {
+  const { taxValue, taxStartDate } = settings
+  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !goodSigns.flow
+  const taxPoints = taxApplies ? taxValue : 0
+  const axisSums = { E: 0, S: 0, V: 0, X: 0 }
+  for (const e of userEvents) {
+    if (e.cancelled) continue
+    axisSums.E += e.E||0; axisSums.S += e.S||0; axisSums.V += e.V||0; axisSums.X += e.X||0
+  }
+  const peak = openingBalance + axisSums.E + axisSums.S + axisSums.V + axisSums.X + taxPoints
+  const reg  = nonSleepRegTotal(regulation)
+  const siCredit = userEvents.reduce((sum, e) => {
+    if (!e.siFlow || e.cancelled) return sum
+    return sum + ((e.E||0)+(e.S||0)+(e.V||0)+(e.X||0)) * 0.3
+  }, 0)
+  return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siCredit)), reg: Math.round(reg) }
+}
+
+const HED_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+const HED_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+// ─── WeekStrip ───
+function WeekStrip({ weekStart, selectedDate, entryMap, thresholds, todayStr, onSelect, onPrev, onNext }) {
+  const days = Array.from({ length: 7 }, (_, i) => hedAddDays(weekStart, i))
+  const monthLabel = `${HED_MON[weekStart.getMonth()]} ${weekStart.getFullYear()}`
+
+  return (
+    <div className="hed-week-strip">
+      <div className="hed-week-head">
+        <button className="hed-week-arrow" onClick={onPrev} aria-label="previous week">‹</button>
+        <span className="hed-week-month">{monthLabel}</span>
+        <button className="hed-week-arrow" onClick={onNext} aria-label="next week">›</button>
+      </div>
+      <div className="hed-week-days">
+        {days.map((day, i) => {
+          const ds = hedToDateStr(day)
+          const entry = entryMap[ds]
+          const peak  = entry?.entry_data?.peakDebit ?? 0
+          const isSelected = ds === selectedDate
+          const isToday    = ds === todayStr
+          const isFuture   = ds > todayStr
+          const color = entry ? hedPeakColor(peak, thresholds) : undefined
+
+          return (
+            <button
+              key={ds}
+              className={[
+                'hed-day',
+                entry      ? 'hed-day--logged'   : '',
+                isSelected ? 'hed-day--selected'  : '',
+                isToday    ? 'hed-day--today'     : '',
+                isFuture   ? 'hed-day--future'    : '',
+              ].filter(Boolean).join(' ')}
+              onClick={!isFuture ? () => onSelect(ds) : undefined}
+              disabled={isFuture}
+              style={color ? { '--hed-day-color': color } : undefined}
+            >
+              <span className="hed-dow">{HED_DOW[i]}</span>
+              <span className="hed-day-num">{day.getDate()}</span>
+              {entry && <span className="hed-day-dot" />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── HistoryDateEditor ───
+function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack }) {
+  const [dateStr, setDateStr]       = useState(initialDateStr)
+  const [weekStart, setWeekStart]   = useState(() => hedWeekMonday(hedParseDate(initialDateStr)))
+  const [allEntries, setAllEntries] = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [userEvents, setUserEvents] = useState([])
+  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
+  const [recovery, setRecovery]     = useState(false)
+  const [warning, setWarning]       = useState({ skin: false, vision: false, thought: false, other: false })
+  const [goodSigns, setGoodSigns]   = useState({ flow: false, crisis: false })
+  const [meltdown, setMeltdown]     = useState(false)
+  const [openingBalance, setOpeningBalance] = useState(0)
+  const [yesterdayClosing, setYesterdayClosing] = useState(0)
+  const [saveStatus, setSaveStatus] = useState('')
+  const todayStr = todayDateStr()
+
+  useEffect(() => {
+    loadAllEntries(session.user.id)
+      .then(rows => setAllEntries(rows))
+      .catch(() => setAllEntries([]))
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    setSaveStatus('')
+    async function init() {
+      try {
+        const existing = await loadEntry(dateStr, session.user.id)
+        if (existing) {
+          const state = dbToInternal(existing)
+          setOpeningBalance(state.openingBalance)
+          setYesterdayClosing(existing.entry_data.yesterdayClosing ?? state.openingBalance)
+          setUserEvents(state.userEvents)
+          setRegulation(state.regulation)
+          setRecovery(state.recovery)
+          setWarning(state.warning)
+          setGoodSigns(state.goodSigns)
+          setMeltdown(state.meltdown)
+        } else {
+          setOpeningBalance(0); setYesterdayClosing(0)
+          setUserEvents([])
+          setRegulation({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
+          setRecovery(false)
+          setWarning({ skin: false, vision: false, thought: false, other: false })
+          setGoodSigns({ flow: false, crisis: false })
+          setMeltdown(false)
+        }
+      } catch (err) { console.error('failed to load entry', err) }
+      finally { setLoading(false) }
+    }
+    init()
+  }, [dateStr])
+
+  const entryMap = useMemo(() => {
+    if (!allEntries) return {}
+    const m = {}
+    for (const e of allEntries) m[e.date] = e
+    return m
+  }, [allEntries])
+
+  const allEventsWithTax = [
+    ...userEvents,
+    ...(() => {
+      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
+      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
+      return [{ id: 'autistic-tax', bucket: 'evening',
+        text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
+        E: 0, S: applies ? settings.taxValue : 0, V: 0, X: 0,
+        delayed: false, flow: false, cancelled: !applies, system: true }]
+    })(),
+  ]
+
+  async function autoSave(patch = {}) {
+    const evts = patch.userEvents ?? userEvents
+    const reg  = patch.regulation ?? regulation
+    const rec  = patch.recovery   ?? recovery
+    const warn = patch.warning    ?? warning
+    const gs   = patch.goodSigns  ?? goodSigns
+    const melt = patch.meltdown   ?? meltdown
+    setSaveStatus('saving…')
+    try {
+      const { entryData, peakDebit } = internalToDb({
+        dateStr, openingBalance, userEvents: evts, regulation: reg,
+        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
+      })
+      await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
+      await recalculateFromDate(session.user.id, dateStr)
+      loadAllEntries(session.user.id).then(rows => setAllEntries(rows)).catch(() => {})
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2000)
+    } catch (err) {
+      console.error('auto-save failed', err)
+      setSaveStatus('auto-save failed')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }
+
+  const onAdd    = (ev) => { const n=[...userEvents,ev];        setUserEvents(n); autoSave({ userEvents: n }) }
+  const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
+  const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);     setUserEvents(n); autoSave({ userEvents: n }) }
+  const onRegChange = (k, v) => { const n={...regulation,[k]:v};      setRegulation(n); autoSave({ regulation: n }) }
+  const onWarning   = (k)    => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
+  const onGood      = (k)    => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
+  const onRecovery  = (v)    => { setRecovery(v); autoSave({ recovery: v }) }
+  const onMeltdown  = ()     => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+
+  function handleSelectDate(ds) {
+    setDateStr(ds)
+    const d = hedParseDate(ds)
+    if (d < weekStart || d > hedAddDays(weekStart, 6)) {
+      setWeekStart(hedWeekMonday(d))
+    }
+  }
+
+  const skyNums = calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr)
+  const [y, mo, da] = dateStr.split('-').map(Number)
+  const dateLabel = `${HED_MON[mo-1]} ${da} · ${y}`
+
+  return (
+    <div className="hed">
+      <div className="hed-head">
+        <button className="hed-back" onClick={onBack}>←</button>
+        <span className="hed-date-label">{dateLabel}</span>
+        {saveStatus && <span className="hed-status">{saveStatus}</span>}
+      </div>
+
+      <WeekStrip
+        weekStart={weekStart}
+        selectedDate={dateStr}
+        entryMap={entryMap}
+        thresholds={settings.thresholds}
+        todayStr={todayStr}
+        onSelect={handleSelectDate}
+        onPrev={() => setWeekStart(d => hedAddDays(d, -7))}
+        onNext={() => setWeekStart(d => hedAddDays(d, 7))}
+      />
+
+      <div className="hed-sky-nums">
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.peak.number }}>
+            {loading ? '·' : skyNums.peak}
+          </span>
+          <span className="hed-sky-lbl">peak</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.le.number }}>
+            {loading ? '·' : skyNums.le}
+          </span>
+          <span className="hed-sky-lbl">lived exp</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.reg.number }}>
+            {loading ? '·' : skyNums.reg}
+          </span>
+          <span className="hed-sky-lbl">regulation</span>
+        </div>
+      </div>
+
+      {loading
+        ? <div className="history-loading">opening the almanac…</div>
+        : (
+          <>
+            <section className="events-section">
+              <div className="ledger-head">
+                <div className="ledger-title">events</div>
+                <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
+              </div>
+              <div className="events">
+                {allEventsWithTax.map(e => (
+                  <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                ))}
+              </div>
+              <Composer onAdd={onAdd} />
+            </section>
+            <Regulation
+              values={regulation}
+              onChange={onRegChange}
+              recovery={recovery}
+              onRecovery={onRecovery}
+              goodSigns={goodSigns}
+              onGood={onGood}
+            />
+            <WarningSigns flags={warning} onToggle={onWarning} />
+            <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+          </>
+        )
+      }
+    </div>
   )
 }
 
@@ -1107,7 +1520,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
         <TrackerHistory settings={settings} session={session} onEditDate={date => setEditDate(date)} />
       )}
       {tab === 'history' && editDate && (
-        <TrackerDayEditor
+        <HistoryDateEditor
           session={session}
           settings={settings}
           dateStr={editDate}

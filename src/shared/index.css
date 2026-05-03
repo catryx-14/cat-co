@@ -832,6 +832,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.32s ease, transform 0.38s ease-in-out;
+}
+.sky-orb-wrap--expanding {
+  transform: scale(7);
+  opacity: 0;
+}
+.sky-orb-wrap--fading {
+  opacity: 0;
+  transform: scale(0.95);
 }
 .sky-orb {
   position: relative;
@@ -909,6 +918,62 @@ body {
   white-space: nowrap;
 }
 .sky-det-sep { opacity: 0.35; }
+
+/* ── Drill nav bar ── */
+.sky--drill {
+  padding: 6px 8px 2px;
+  margin-bottom: 0;
+}
+@keyframes sky-nav-appear {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sky-nav {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  padding: 12px 16px 18px;
+  animation: sky-nav-appear 0.3s ease both;
+}
+.sky-nav-orb {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  display: block;
+}
+.sky-nav-orb--active {
+  opacity: 1;
+}
+.sky-nav-orb:not(.sky-nav-orb--active):hover {
+  opacity: 0.65;
+  transform: scale(1.08);
+}
+.sky-nav-status {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.3);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── Drill content ── */
+@keyframes sky-drill-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sky-drill {
+  animation: sky-drill-appear 0.3s ease 0.1s both;
+}
 
 /* ── Mobile: stacked rows with vertical bar ── */
 @media (max-width: 440px) {
@@ -2184,6 +2249,158 @@ body {
   color: var(--ink-soft);
   opacity: 0.85;
   margin: -8px 0 20px;
+}
+
+/* ── HistoryDateEditor ─────────────────────────────────────────────────────── */
+.hed {
+  padding-bottom: 48px;
+}
+.hed-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+}
+.hed-back {
+  background: none;
+  border: none;
+  color: var(--candle);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 10px 2px 0;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.hed-back:hover { color: var(--candle-soft); }
+.hed-date-label {
+  font-family: "Crimson Pro", serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-soft);
+  flex: 1;
+}
+.hed-status {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.3);
+}
+
+/* Week strip */
+.hed-week-strip {
+  background: rgba(255,255,255,0.028);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 8px 4px 10px;
+  margin-bottom: 20px;
+}
+.hed-week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 6px;
+}
+.hed-week-arrow {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 10px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.hed-week-arrow:hover { color: rgba(255,255,255,0.72); }
+.hed-week-month {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+}
+.hed-week-days {
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  padding: 0 2px;
+}
+.hed-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 2px 7px;
+  min-width: 0;
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.hed-day:disabled { cursor: default; opacity: 0.4; }
+.hed-dow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.hed-day-num {
+  font-family: "Cagliostro", serif;
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(255,255,255,0.2);
+}
+.hed-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--hed-day-color, rgba(255,255,255,0.25));
+}
+.hed-day--logged .hed-day-num { color: var(--hed-day-color, rgba(255,255,255,0.8)); }
+.hed-day--future .hed-day-num,
+.hed-day--future .hed-dow     { color: rgba(255,255,255,0.1); }
+.hed-day--today               { border-color: rgba(255,255,255,0.15); }
+.hed-day--today .hed-day-num  { color: rgba(255,255,255,0.65); }
+.hed-day--selected            { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.28); }
+.hed-day--selected.hed-day--logged { border-color: var(--hed-day-color, rgba(255,255,255,0.4)); }
+.hed-day:not(.hed-day--selected):not(.hed-day--future):hover { background: rgba(255,255,255,0.04); }
+
+/* Sky numbers row */
+.hed-sky-nums {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 4px 0 28px;
+}
+.hed-sky-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.hed-sky-val {
+  font-family: "Cagliostro", serif;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.hed-sky-lbl {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.hed-sky-sep {
+  font-family: "Crimson Pro", serif;
+  font-size: 30px;
+  color: rgba(255,255,255,0.1);
+  margin-top: -10px;
+  user-select: none;
 }
 
 /* Recalculate status line */
