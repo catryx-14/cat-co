@@ -1463,368 +1463,323 @@ body {
   color: var(--ink-faint);
 }
 
-.history-tab {
+/* ── Celestial Calendar (History tab) ──────────────────────────────────────── */
+
+.celestial-cal {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-.almanac {
-  margin-bottom: 24px;
-  padding: 14px 16px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-}
-.almanac:focus-within {
-  background: transparent;
-  border: none;
-}
-.almanac-input {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: var(--ink);
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 16px;
-  padding: 4px 0;
-}
-.almanac-input::placeholder { color: var(--ink-faint); }
-.almanac-results {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed rgba(232,201,140,0.12);
-}
-.almanac-count {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: 10px;
-}
-.almanac-match {
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background .25s ease;
-}
-.almanac-match:hover { background: rgba(232,201,140,0.06); }
-.almanac-match-date {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--candle-soft);
-  margin-bottom: 2px;
-}
-.almanac-match-date .muted { color: var(--ink-faint); font-style: normal; }
-.almanac-match-text {
-  font-family: "Architects Daughter", cursive;
-  font-size: 15px;
-  color: var(--ink);
-}
-.almanac-empty {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  color: var(--ink-faint);
-  padding: 8px;
+  gap: 0;
 }
 
-.history-stream {
+.cal-scroll-wrap {
+  width: 100%;
+}
+
+/* DOW header */
+.cal-dow-header {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 2px;
+}
+
+.cal-dow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(232,201,140,0.25);
+  text-align: center;
+  padding: 0 0 6px;
+}
+
+/* Week row */
+.cal-week {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
-.moon-row {
-  padding: 18px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background .35s ease, border-color .35s ease;
-  border: 1px solid transparent;
+
+.cal-week-label {
+  font-family: "Crimson Pro", serif;
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: rgba(232,201,140,0.80);
+  padding: 8px 4px 2px;
+  text-shadow: 0 0 12px rgba(232,201,140,0.30);
 }
-.moon-row:hover {
-  background: transparent;
-  border-color: transparent;
-}
-.moon-row.expanded {
-  background: transparent;
-  border-color: transparent;
-  cursor: default;
-}
-.moon-row-main {
+
+.cal-week-days {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 24px;
-  align-items: center;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
-.moon-col {
-  display: flex; align-items: center; justify-content: center;
-  width: 110px;
-}
-.moon-wrap {
+
+/* Week separator */
+.week-sep {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  margin: 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  overflow: visible;
+}
+
+/* Light trail — radial bleed from the star, fades before the edges */
+.week-sep-trail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 8px;
+  transform: translateY(-50%);
+  background: radial-gradient(
+    ellipse 62% 100% at center,
+    rgba(248,228,140,0.38) 0%,
+    rgba(232,201,140,0.12) 40%,
+    transparent 68%
+  );
+}
+
+.week-sep-ornament {
+  position: relative;
+  z-index: 1;
+  line-height: 0;
+}
+
+/* Arc star glow — CSS drop-shadow on the SVG element */
+.arc-glow--green {
+  filter:
+    drop-shadow(0 0 2px rgba(46,212,104,1.00))
+    drop-shadow(0 0 5px rgba(46,212,104,0.65))
+    drop-shadow(0 0 10px rgba(46,212,104,0.28));
+}
+.arc-glow--amber {
+  filter:
+    drop-shadow(0 0 2px rgba(240,184,37,1.00))
+    drop-shadow(0 0 5px rgba(240,184,37,0.65))
+    drop-shadow(0 0 10px rgba(240,184,37,0.28));
+}
+.arc-glow--red {
+  filter:
+    drop-shadow(0 0 2px rgba(232,64,64,1.00))
+    drop-shadow(0 0 5px rgba(232,64,64,0.65))
+    drop-shadow(0 0 10px rgba(232,64,64,0.28));
+}
+
+/* Separator star pulse */
+.week-sep-star {
+  animation: sep-star-pulse 3.2s ease-in-out infinite;
+}
+@keyframes sep-star-pulse {
+  0%, 100% { opacity: 0.60; }
+  50%       { opacity: 1.00; }
+}
+
+/* Day cell */
+.cal-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px 8px;
+  cursor: default;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.cal-cell--logged {
+  cursor: pointer;
+}
+
+.cal-cell--logged:hover {
+  background: rgba(232,201,140,0.04);
+}
+
+.cal-cell--today .cal-arc {
+  filter: drop-shadow(0 0 5px rgba(232,201,140,0.25));
+}
+
+.cal-arc {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 88px;
+}
+
+/* Inner content overlaid on the arc */
+.cal-inner {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 1px;
+  padding: 0 2px;
+}
+
+.cal-date {
+  font-family: Georgia, serif;
+  font-size: clamp(11px, 1.9vw, 16px);
+  line-height: 1;
+  color: #fdf6e3;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(255,245,210,0.40);
+}
+
+.cal-date--future {
+  color: rgba(201,164,96,0.40);
+}
+
+.cal-weather {
+  font-size: clamp(10px, 1.7vw, 14px);
+  line-height: 1;
+  text-align: center;
+}
+
+.cal-icons {
+  display: flex;
+  gap: 0;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.cal-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(16px, 2.8vw, 22px);
+  height: clamp(16px, 2.8vw, 22px);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #080c1a;
   flex-shrink: 0;
 }
-.moon-emoji {
-  font-size: 44px;
-  line-height: 1;
-  user-select: none;
+
+/* Glow via box-shadow so it sits outside the overflow:hidden clip */
+.cal-icon-wrap--meltdown {
+  box-shadow: 0 0 7px rgba(220,60,180,0.55);
 }
-.moon-meta { min-width: 0; }
-.moon-date {
-  font-family: "Cagliostro", serif;
-  font-size: 17px;
-  letter-spacing: 0.06em;
-  color: var(--ink);
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
+.cal-icon-wrap--siflow {
+  box-shadow: 0 0 7px rgba(60,200,200,0.55);
 }
-.moon-carry {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: rgba(201,138,160,0.55);
-  padding: 1px 6px;
-  border: 1px solid rgba(201,138,160,0.18);
-  border-radius: 2px;
-  cursor: help;
+
+/* Figure-8 overlap when both icons present */
+.cal-icons--pair .cal-icon-wrap--meltdown {
+  transform: translateX(4px);
+  z-index: 2;
+}
+.cal-icons--pair .cal-icon-wrap--siflow {
+  transform: translateX(-4px);
+  z-index: 1;
+}
+
+.cal-icon {
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+  display: block;
+  object-fit: cover;
+}
+
+/* ── Day tooltip ─────────────────────────────────────────────────────────── */
+
+.cal-cell {
+  position: relative;
+}
+
+.cal-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 140px;
+  max-width: 180px;
+  padding: 8px 10px;
+  background: rgba(10, 8, 22, 0.92);
+  border: 1px solid rgba(220, 190, 110, 0.28);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55),
+              0 0 10px rgba(220, 190, 110, 0.08);
+  pointer-events: none;
   white-space: nowrap;
-  display: inline-block;
 }
-.moon-rel {
+
+.cal-tooltip--edge-left {
+  left: 0;
+  transform: none;
+}
+
+.cal-tooltip--edge-right {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.cal-tip-date {
   font-family: "Crimson Pro", serif;
   font-style: italic;
   font-size: 12px;
-  color: var(--ink-faint);
-  margin-bottom: 8px;
+  color: rgba(232, 201, 140, 0.90);
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
 }
-.moon-readout {
-  font-family: "Crimson Pro", serif;
-  font-size: 13px;
-  color: var(--ink-soft);
+
+.cal-tip-row {
   display: flex;
-  gap: 4px 14px;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: rgba(220, 215, 200, 0.80);
 }
-.moon-readout-group {
-  display: inline-flex;
-  align-items: baseline;
+
+.cal-tip-row b {
+  color: #fdf6e3;
+  font-weight: 600;
+}
+
+.cal-tip-dot {
+  color: rgba(220, 190, 110, 0.40);
+}
+
+.cal-tip-events {
+  margin-top: 4px;
+  color: rgba(200, 195, 180, 0.65);
+  font-size: 10.5px;
+}
+
+.cal-tip-icons {
+  display: flex;
   gap: 4px;
-  white-space: nowrap;
-  position: relative;
-}
-.moon-readout-group + .moon-readout-group::before {
-  content: "·";
-  color: var(--ink-faint);
-  margin-right: 10px;
-  margin-left: -10px;
-}
-.moon-readout b {
-  font-weight: normal;
-  color: var(--candle-soft);
-  font-family: "Cagliostro", serif;
-  font-size: 14px;
-}
-.moon-readout i { color: var(--ink); margin-right: 3px; }
-.moon-readout-group.endload { color: var(--ink-faint); opacity: 0.7; }
-.moon-marks {
-  margin-top: 6px;
-  display: flex;
-  gap: 8px;
+  margin-top: 5px;
   flex-wrap: wrap;
-  max-width: 100%;
 }
-.mark {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-  padding: 2px 8px;
-  border-radius: 3px;
-  border: 1px solid rgba(232,201,140,0.10);
-  white-space: nowrap;
-}
-.mark.good { color: var(--sage); border-color: rgba(163,201,168,0.25); }
-.mark.warn { color: var(--rose); border-color: rgba(201,138,160,0.25); }
-.moon-chevron {
-  font-family: "Cagliostro", serif;
-  font-size: 24px;
-  color: var(--ink-faint);
-  width: 24px;
-  text-align: center;
-  transition: color .25s ease, transform .35s ease;
-}
-.moon-row.expanded .moon-chevron { color: var(--candle-soft); }
 
-.moon-detail {
-  margin-top: 18px;
-  padding: 18px 6px 8px;
-  border-top: 1px dashed rgba(232,201,140,0.14);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.moon-detail-readonly {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-}
-@media (min-width: 760px) {
-  .moon-detail-readonly { grid-template-columns: 1.4fr 1fr; gap: 32px; }
-}
-.moon-detail-actionrow {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -8px;
-}
-.tend-this-day-btn {
-  background: transparent;
-  border: 1px solid rgba(232,201,140,0.20);
-  color: var(--candle-soft);
-  font-family: "Crimson Pro", serif;
-  font-size: 13px;
-  padding: 4px 14px;
-  border-radius: 3px;
-  cursor: pointer;
-  letter-spacing: 0.04em;
-  transition: all .25s ease;
-}
-.tend-this-day-btn:hover {
-  border-color: rgba(232,201,140,0.45);
-  color: var(--candle);
-  background: rgba(232,201,140,0.06);
-}
-.tend-this-day-btn.lit {
-  border-color: rgba(232,201,140,0.55);
-  color: var(--candle);
-  background: rgba(232,201,140,0.10);
-}
-.moon-detail-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.moon-detail-edit .composer,
-.moon-detail-edit .reg-section,
-.moon-detail-edit .signals-section {
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  padding: 14px 16px;
-}
-.moon-empty-events {
-  font-family: "Crimson Pro", serif;
-  color: var(--ink-faint);
-  font-size: 13px;
-  padding: 8px 4px;
-}
-.moon-detail-events { display: flex; flex-direction: column; gap: 8px; }
-.moon-event {
-  display: grid;
-  grid-template-columns: 80px 1fr auto;
-  gap: 10px;
-  align-items: baseline;
-  font-size: 13px;
-}
-.moon-event-bucket {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  color: var(--ink-faint);
-  letter-spacing: 0.04em;
-}
-.moon-event-text {
-  font-family: "Architects Daughter", cursive;
-  font-size: 14px;
-  color: var(--ink);
-  line-height: 1.4;
-}
-.moon-event.cancelled .moon-event-text {
-  color: var(--ink-faint);
-  text-decoration: line-through;
-  text-decoration-color: rgba(232,201,140,0.4);
-}
-.moon-event.system .moon-event-text { color: var(--ink-soft); }
-.moon-event-flow {
-  color: var(--soft-purple);
-  font-family: "Caveat", cursive;
-  font-style: normal;
-  font-size: 14px;
-  margin-left: 6px;
-}
-.moon-event-axes {
-  display: flex; gap: 6px;
-  font-family: "JetBrains Mono", monospace;
+.cal-tip-badge {
   font-size: 10px;
-  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
 }
-.moon-axis { padding: 2px 5px; border-radius: 2px; background: rgba(232,201,140,0.06); }
-.moon-axis.axis-E { color: #d97a6c; background: rgba(217,122,108,0.08); }
-.moon-axis.axis-S { color: #d9a86c; background: rgba(217,168,108,0.08); }
-.moon-axis.axis-V { color: #a890d4; background: rgba(168,144,212,0.08); }
-.moon-axis.axis-X { color: #6ec0bf; background: rgba(110,192,191,0.08); }
 
-.moon-detail-tend {
-  padding: 14px 14px 8px;
-  background: transparent;
-  border-radius: 6px;
-  border: none;
+.cal-tip-badge--si {
+  background: rgba(70, 100, 180, 0.35);
+  color: rgba(160, 190, 240, 0.90);
+  border: 1px solid rgba(100, 140, 220, 0.30);
 }
-.moon-detail-label {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: 10px;
+
+.cal-tip-badge--melt {
+  background: rgba(180, 50, 50, 0.35);
+  color: rgba(240, 160, 160, 0.90);
+  border: 1px solid rgba(220, 80, 80, 0.30);
 }
-.moon-tend-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 10px;
-}
-.moon-tend-channel { text-align: center; padding: 4px 0; }
-.moon-tend-name {
-  font-family: "Cagliostro", serif;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-  text-transform: lowercase;
-  margin-bottom: 2px;
-}
-.moon-tend-val {
-  font-family: "Cagliostro", serif;
-  font-size: 18px;
-  color: var(--reg-blue);
-}
-.moon-tend-val span { font-size: 11px; color: var(--ink-faint); margin-left: 1px; }
-.moon-tend-signals {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(232,201,140,0.10);
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-.moon-tend-sig {
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 3px;
-  border: 1px solid;
-}
-.moon-tend-sig.good { color: var(--sage); border-color: rgba(163,201,168,0.3); }
-.moon-tend-sig.warn { color: var(--rose); border-color: rgba(201,138,160,0.3); }
+
+/* ── History footnote ────────────────────────────────────────────────────── */
 
 .history-footnote {
   margin-top: 32px;
@@ -1835,6 +1790,23 @@ body {
   font-size: 12px;
   color: var(--ink-faint);
   letter-spacing: 0.04em;
+}
+
+/* Mobile: allow horizontal scroll so cells don't get crushed below 7×80px */
+@media (max-width: 620px) {
+  .cal-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cal-dow-header,
+  .cal-week-days {
+    grid-template-columns: repeat(7, 60px);
+    min-width: 420px;
+  }
+  .cal-arc {
+    width: 60px;
+    height: auto;
+  }
 }
 
 /* auth gate */
@@ -2010,42 +1982,6 @@ body {
   color: var(--ink-faint);
 }
 
-/* history entry actions */
-.moon-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-left: auto;
-  padding-left: 10px;
-  opacity: 0;
-  transition: opacity .2s ease;
-}
-.moon-row-main:hover .moon-actions {
-  opacity: 1;
-}
-.moon-action-btn {
-  appearance: none;
-  background: transparent;
-  border: 0.5px solid rgba(232,201,140,0.25);
-  border-radius: 3px;
-  color: var(--ink-faint);
-  font-family: "Crimson Pro", serif;
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  padding: 3px 9px;
-  cursor: pointer;
-  transition: color .2s, border-color .2s, background .2s;
-}
-.moon-action-btn:hover {
-  color: var(--candle-soft);
-  border-color: rgba(232,201,140,0.5);
-  background: rgba(232,201,140,0.06);
-}
-.moon-action-btn.delete:hover {
-  color: var(--rose, #c87070);
-  border-color: rgba(200,112,112,0.4);
-  background: rgba(200,112,112,0.06);
-}
 
 /* back-to-history link */
 .back-link {

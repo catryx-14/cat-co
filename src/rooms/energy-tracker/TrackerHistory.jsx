@@ -1,277 +1,404 @@
-import { useState, useEffect } from 'react'
-import { loadAllEntries, deleteEntry } from '../../shared/lib/db.js'
-import { weatherOf, regWordOf, fullRegTotal, REG_FULL_AT } from '../../shared/lib/math.js'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { loadAllEntries } from '../../shared/lib/db.js'
+import meltdownIcon from '../../assets/icons/Aris Shutdown.png'
+import siFlowIcon   from '../../assets/icons/Aris Flow.jpg'
 
-const REG_CHANNELS = [
-  { k: 'sensory', name: 'sensory comfort', cap: 4 },
-  { k: 'av',      name: 'audio / visual',  cap: 5 },
-  { k: 'env',     name: 'environment',     cap: 6 },
-  { k: 'body',    name: 'body / rest',     cap: 5 },
-  { k: 'sleep',   name: 'sleep reset',     cap: 5 },
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
+function parseDate(s) { return new Date(s + 'T12:00:00') }
+
+function toDateStr(d) {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function addDays(date, n) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n)
+  return d
+}
+
+function weekMonday(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  d.setHours(12, 0, 0, 0)
+  return d
+}
+
+function monthName(d) {
+  return ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+}
+
+// ── Colour / display helpers ──────────────────────────────────────────────────
+
+function peakColor(peak, thr) {
+  if (peak >= thr.critical) return '#e84040'
+  if (peak >= thr.yellow)   return '#f0b825'
+  return '#2ed468'
+}
+
+function peakGlowClass(peak, thr) {
+  if (peak >= thr.critical) return 'arc-glow--red'
+  if (peak >= thr.yellow)   return 'arc-glow--amber'
+  return 'arc-glow--green'
+}
+
+// Blend a hex colour toward white by `factor` (0–1)
+function lighten(hex, factor) {
+  const r = parseInt(hex.slice(1,3), 16)
+  const g = parseInt(hex.slice(3,5), 16)
+  const b = parseInt(hex.slice(5,7), 16)
+  return `rgb(${Math.round(r+(255-r)*factor)},${Math.round(g+(255-g)*factor)},${Math.round(b+(255-b)*factor)})`
+}
+
+// ── Arc star geometry ─────────────────────────────────────────────────────────
+
+// Arc: 210° clockwise from 210° (upper-left) → 60° (lower-right)
+const CX = 44, CY = 46, R = 33
+const START_DEG = 210, ARC_DEG = 210
+
+function ptAt(t) {
+  const rad = (START_DEG + t * ARC_DEG) * Math.PI / 180
+  return [CX + R * Math.cos(rad), CY + R * Math.sin(rad)]
+}
+
+// 4-point sparkle: tips at N/E/S/W, pinch points at diagonals
+function sparkle(outer, inner) {
+  const i = +(inner / Math.SQRT2).toFixed(3)
+  const o = +outer.toFixed(3)
+  return `M${o},0 L${i},${-i} L0,${-o} L${-i},${-i} L${-o},0 L${-i},${i} L0,${o} L${i},${i} Z`
+}
+
+const DIMS = {
+  large:  [7.0, 1.5],
+  medium: [4.2, 1.0],
+  small:  [2.6, 0.65],
+}
+
+// Stars for a logged day — dense centre, dot trails at both ends
+const ARC_STARS = [
+  { t:0.00, type:'dot',    op:0.18, r:1.0 },
+  { t:0.06, type:'dot',    op:0.30, r:1.3 },
+  { t:0.13, type:'small',  op:0.52 },
+  { t:0.22, type:'medium', op:0.72 },
+  { t:0.31, type:'large',  op:0.90 },
+  { t:0.41, type:'large',  op:1.00 },
+  { t:0.50, type:'large',  op:1.00 },
+  { t:0.59, type:'large',  op:1.00 },
+  { t:0.69, type:'large',  op:0.90 },
+  { t:0.78, type:'medium', op:0.72 },
+  { t:0.87, type:'small',  op:0.52 },
+  { t:0.94, type:'dot',    op:0.30, r:1.3 },
+  { t:1.00, type:'dot',    op:0.18, r:1.0 },
 ]
 
-function parseDate(dateStr) {
-  return new Date(dateStr + 'T12:00:00')
+// Future day — gold ghost dots only, opacity peaks at centre
+const FUTURE_DOTS = [0, 0.13, 0.25, 0.38, 0.50, 0.62, 0.75, 0.87, 1.0].map(t => ({
+  t, op: +(0.10 + 0.14 * Math.sin(Math.PI * t)).toFixed(3),
+}))
+
+// Past empty day — very dim grey dots
+const PAST_DOTS = FUTURE_DOTS.map(s => ({ t: s.t, op: +(s.op * 0.4).toFixed(3) }))
+
+function ArcStars({ stars, color, live = false }) {
+  return stars.map((s, i) => {
+    const [x, y] = ptAt(s.t)
+    if (s.type === 'dot' || !s.type) {
+      return <circle key={i} cx={x} cy={y} r={s.r ?? 1.2} fill={color} opacity={s.op} />
+    }
+    const [outer, inner] = DIMS[s.type]
+    // Centre stars lighten toward warm cream; ends stay base colour
+    const centreFactor = live ? Math.pow(Math.sin(Math.PI * s.t), 2) * 0.45 : 0
+    const fill = live ? lighten(color, centreFactor) : color
+    // Small fixed-seed brightness nudge so adjacent stars aren't identical
+    const nudge = live ? 0.78 + ((i * 13) % 7) * 0.032 : 1
+    return (
+      <g key={i} transform={`translate(${x},${y})`} opacity={+(s.op * nudge).toFixed(3)}>
+        <path d={sparkle(outer, inner)} fill={fill} />
+        {/* Hot white core on large/medium — sells the "real point of light" */}
+        {live && s.type !== 'small' && (
+          <circle cx={0} cy={0} r={s.type === 'large' ? 1.5 : 0.9}
+            fill="rgba(255,252,220,0.82)" />
+        )}
+      </g>
+    )
+  })
 }
 
-function fmtDate(d) {
-  const dow = ['sun','mon','tue','wed','thu','fri','sat'][d.getDay()]
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-  return `${dow} · ${d.getDate().toString().padStart(2,'0')} ${m}`
-}
+// ── Week separator ────────────────────────────────────────────────────────────
 
-function fmtRel(d) {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const target = new Date(d); target.setHours(0, 0, 0, 0)
-  const days = Math.round((today - target) / 86400000)
-  if (days === 0) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 7)  return `${days} days ago`
-  if (days < 14) return 'last week'
-  if (days < 30) return `${Math.floor(days / 7)} weeks ago`
-  return `${Math.floor(days / 30)} months ago`
-}
+// Tick x-positions at each column centre, within a 0–100 viewBox
+const TICK_X = [1,3,5,7,9,11,13].map(n => +((n / 14) * 100).toFixed(2))
 
-const SKY_EMOJI = ['☀️', '⛅', '🌑']
-
-function Moon({ state }) {
+function WeekSep() {
   return (
-    <div className="moon-wrap">
-      <span className="moon-emoji">{SKY_EMOJI[state]}</span>
+    <div className="week-sep" aria-hidden="true">
+      {/* Light trail — barely-there radial bleed from the star outward */}
+      <div className="week-sep-trail" />
+      {/* Star — the main event */}
+      <div className="week-sep-ornament">
+        <svg viewBox="-22 -22 44 44" width="44" height="44">
+          <defs>
+            <filter id="ws-star-glow" x="-300%" y="-300%" width="700%" height="700%">
+              <feGaussianBlur stdDeviation="4.2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <g filter="url(#ws-star-glow)" className="week-sep-star">
+            <path d={sparkle(9.0, 2.0)}  fill="rgba(222,194,90,0.72)" />
+            <path d={sparkle(6.2, 1.4)}  fill="rgba(244,228,148,0.90)" />
+            <path d={sparkle(3.8, 0.88)} fill="rgba(255,248,200,0.98)" />
+            <circle cx="0" cy="0" r="1.6" fill="rgba(255,255,252,1.0)" />
+          </g>
+        </svg>
+      </div>
     </div>
   )
 }
 
-// ─── MoonRow ───
-function MoonRow({ entry, expanded, onToggle, thresholds, onEdit, onDelete }) {
+// ── Day tooltip ───────────────────────────────────────────────────────────────
+
+const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+const FULL_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function DayTooltip({ entry, date, col }) {
   const d = entry.entry_data
-  const dateObj = parseDate(entry.date)
-  const peak = d.peakDebit ?? entry.peak_debit ?? 0
-  const openingBalance = d.openingBalance ?? 0
-  const { word: weatherWord } = weatherOf(peak, thresholds.yellow, thresholds.critical)
-  const skyState = peak >= thresholds.critical ? 2 : peak >= thresholds.yellow ? 1 : 0
+  const peak      = d.peakDebit      ?? 0
+  const closing   = d.closingBalance ?? 0
+  const events    = d.events         ?? []
+  const hasMelt   = d.meltdown       ?? false
+  const hasSI     = d.siFlowActive   ?? false
+  const fullDate  = `${FULL_DOW[date.getDay()]} ${date.getDate()} ${FULL_MON[date.getMonth()]}`
 
-  const reg = {
-    sensory: d.regulation?.sensoryComfort ?? 0,
-    av: d.regulation?.audioVisual ?? 0,
-    env: d.regulation?.environment ?? 0,
-    body: d.regulation?.bodyRest ?? 0,
-    sleep: d.sleepReset ?? 0,
-  }
-  const regT = fullRegTotal(reg)
-  const regPct = Math.min(1, regT / REG_FULL_AT)
-  const rWord = regWordOf(regPct)
-  const closingBalance = d.closingBalance ?? 0
-
-  const warning = d.warningSign ?? {}
-  const warnCount = Object.values(warning).filter(Boolean).length
-  const goodCount = (d.flowActivity ? 1 : 0) + (warning.crisisResponse ? 1 : 0)
-
-  const events = d.events ?? []
+  // Nudge tooltip inward on edge columns so it doesn't bleed off-screen
+  const edgeClass = col <= 1 ? 'cal-tooltip--edge-left'
+                  : col >= 5 ? 'cal-tooltip--edge-right'
+                  : ''
 
   return (
-    <div className={`moon-row ${expanded ? 'expanded' : ''}`} onClick={onToggle}>
-      <div className="moon-row-main">
-        <div className="moon-col">
-          <Moon regPct={regPct} state={skyState} />
-        </div>
-        <div className="moon-meta">
-          <div className="moon-date">
-            {fmtDate(dateObj)}
-            {openingBalance > 0 && (
-              <span className="moon-carry" title={`woke carrying ${openingBalance}`}>← {openingBalance}</span>
-            )}
-          </div>
-          <div className="moon-rel">{fmtRel(dateObj)}</div>
-          <div className="moon-readout">
-            <span className="moon-readout-group">peak <b>{peak}</b></span>
-            <span className="moon-readout-group"><i>{weatherWord}</i></span>
-            <span className="moon-readout-group"><i>{rWord}</i>{' at '}{Math.round(regPct * 100)}%</span>
-            {closingBalance > 0 && <span className="moon-readout-group endload"><i>ends at {closingBalance}</i></span>}
-          </div>
-          <div className="moon-marks">
-            {goodCount > 0 && <span className="mark good">{goodCount} good {goodCount === 1 ? 'sign' : 'signs'}</span>}
-            {warnCount > 0 && <span className="mark warn">{warnCount} warning {warnCount === 1 ? 'sign' : 'signs'}</span>}
-            {goodCount === 0 && warnCount === 0 && <span className="mark quiet">quiet day</span>}
-          </div>
-        </div>
-        <div className="moon-actions" onClick={e => e.stopPropagation()}>
-          <button className="moon-action-btn" onClick={() => onEdit(entry.date)}>edit</button>
-          <button className="moon-action-btn delete" onClick={() => onDelete(entry.date)}>delete</button>
-        </div>
-        <div className="moon-chevron">{expanded ? '−' : '+'}</div>
+    <div className={`cal-tooltip ${edgeClass}`.trim()}>
+      <div className="cal-tip-date">{fullDate}</div>
+      <div className="cal-tip-row">
+        <span>peak <b>{peak}</b></span>
+        <span className="cal-tip-dot">·</span>
+        <span>closes <b>{closing}</b></span>
       </div>
-
-      {expanded && (
-        <div className="moon-detail" onClick={ev => ev.stopPropagation()}>
-          <div className="moon-detail-readonly">
-            <div className="moon-detail-events">
-              {events.map((e, i) => (
-                <div key={i} className="moon-event">
-                  <span className="moon-event-bucket">{e.bucket || ''}</span>
-                  <span className="moon-event-text">
-                    {e.summary}
-                    {e.flow && <i className="moon-event-flow"> ~ flow</i>}
-                  </span>
-                  {(e.emotional + e.sensory + e.veracity + e.ef) > 0 && (
-                    <span className="moon-event-axes">
-                      {e.emotional > 0 && <span className="moon-axis axis-E">E{e.emotional}</span>}
-                      {e.sensory > 0   && <span className="moon-axis axis-S">S{e.sensory}</span>}
-                      {e.veracity > 0  && <span className="moon-axis axis-V">V{e.veracity}</span>}
-                      {e.ef > 0        && <span className="moon-axis axis-X">X{e.ef}</span>}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {events.length === 0 && (
-                <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', color: 'var(--ink-faint)', fontSize: 13 }}>
-                  no events recorded
-                </div>
-              )}
-            </div>
-            <div className="moon-detail-tend">
-              <div className="moon-detail-label">tending</div>
-              <div className="moon-tend-row">
-                {REG_CHANNELS.map(c => (
-                  <div key={c.k} className="moon-tend-channel">
-                    <div className="moon-tend-name">{c.name}</div>
-                    <div className="moon-tend-val">{reg[c.k] || 0}<span>/{c.cap}</span></div>
-                  </div>
-                ))}
-              </div>
-              {(warnCount > 0 || goodCount > 0) && (
-                <div className="moon-tend-signals">
-                  {d.flowActivity && <span className="moon-tend-sig good">flow activity</span>}
-                  {warning.crisisResponse && <span className="moon-tend-sig good">crisis recovery</span>}
-                  {warning.skin    && <span className="moon-tend-sig warn">skin</span>}
-                  {warning.vision  && <span className="moon-tend-sig warn">vision</span>}
-                  {warning.thought && <span className="moon-tend-sig warn">thought</span>}
-                  {warning.sunny   && <span className="moon-tend-sig warn">other</span>}
-                </div>
-              )}
-            </div>
-          </div>
+      {events.length > 0 && (
+        <div className="cal-tip-row cal-tip-events">
+          {events.length} {events.length === 1 ? 'event' : 'events'}
+        </div>
+      )}
+      {(hasSI || hasMelt) && (
+        <div className="cal-tip-icons">
+          {hasSI   && <span className="cal-tip-badge cal-tip-badge--si">SI flow</span>}
+          {hasMelt && <span className="cal-tip-badge cal-tip-badge--melt">shutdown</span>}
         </div>
       )}
     </div>
   )
 }
 
-// ─── Almanac search ───
-function Almanac({ entries, onPick }) {
-  const [q, setQ] = useState('')
-  if (!q.trim()) return (
-    <div className="almanac">
-      <input
-        className="almanac-input"
-        placeholder="ask the almanac… (e.g. dentist, flow, fireplace)"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-      />
-    </div>
-  )
+// ── Day cell ──────────────────────────────────────────────────────────────────
 
-  const ql = q.trim().toLowerCase()
-  const matches = []
-  for (const row of entries) {
-    for (const ev of (row.entry_data.events ?? [])) {
-      if ((ev.summary ?? '').toLowerCase().includes(ql)) {
-        matches.push({ row, ev })
-      }
-    }
+function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, col }) {
+  const [showTip, setShowTip] = useState(false)
+  const tipTimer = useRef(null)
+
+  function handleMouseEnter() {
+    if (!entry) return
+    tipTimer.current = setTimeout(() => setShowTip(true), 600)
+  }
+  function handleMouseLeave() {
+    clearTimeout(tipTimer.current)
+    setShowTip(false)
+  }
+  useEffect(() => () => clearTimeout(tipTimer.current), [])
+
+  const d = entry?.entry_data
+  const peak = d?.peakDebit ?? 0
+  const isPastEmpty = !isFuture && !entry
+
+  let stars, starColor, glowClass = ''
+  if (entry) {
+    stars = ARC_STARS
+    starColor = peakColor(peak, thresholds)
+    glowClass = peakGlowClass(peak, thresholds)
+  } else if (isFuture) {
+    stars = FUTURE_DOTS
+    starColor = '#c9a460'
+  } else {
+    stars = PAST_DOTS
+    starColor = '#707085'
   }
 
-  const dateObj = (row) => parseDate(row.date)
+  const hasMelt = d?.meltdown     ?? false
+  const hasSI   = d?.siFlowActive ?? false
 
   return (
-    <div className="almanac">
-      <input
-        className="almanac-input"
-        placeholder="ask the almanac…"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        autoFocus
-      />
-      <div className="almanac-results">
-        <div className="almanac-count">{matches.length} {matches.length === 1 ? 'echo' : 'echoes'} found</div>
-        {matches.map((m, i) => (
-          <div key={i} className="almanac-match" onClick={() => onPick(m.row.date)}>
-            <div className="almanac-match-date">
-              {fmtDate(dateObj(m.row))} <span className="muted">· {fmtRel(dateObj(m.row))}</span>
-            </div>
-            <div className="almanac-match-text">{m.ev.summary}</div>
+    <div
+      className={[
+        'cal-cell',
+        entry       ? 'cal-cell--logged' : '',
+        isFuture    ? 'cal-cell--future' : '',
+        isPastEmpty ? 'cal-cell--empty'  : '',
+        isToday     ? 'cal-cell--today'  : '',
+      ].join(' ').trim()}
+      onClick={entry ? () => onClick(toDateStr(date)) : undefined}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <svg className={`cal-arc${glowClass ? ` ${glowClass}` : ''}`} viewBox="0 0 88 96">
+        <ArcStars stars={stars} color={starColor} live={!!entry} />
+      </svg>
+
+      <div className="cal-inner">
+        <div className={`cal-date${isFuture ? ' cal-date--future' : ''}`}>
+          {date.getDate()}
+        </div>
+        {(hasMelt || hasSI) && (
+          <div className={`cal-icons${hasMelt && hasSI ? ' cal-icons--pair' : ''}`}>
+            {hasMelt && (
+              <span className="cal-icon-wrap cal-icon-wrap--meltdown">
+                <img src={meltdownIcon} className="cal-icon" alt="meltdown" />
+              </span>
+            )}
+            {hasSI && (
+              <span className="cal-icon-wrap cal-icon-wrap--siflow">
+                <img src={siFlowIcon} className="cal-icon" alt="SI flow" />
+              </span>
+            )}
           </div>
-        ))}
-        {matches.length === 0 && <div className="almanac-empty">no echoes — try another word</div>}
+        )}
+      </div>
+
+      {showTip && entry && <DayTooltip entry={entry} date={date} col={col} />}
+    </div>
+  )
+}
+
+// ── Week row ──────────────────────────────────────────────────────────────────
+
+function WeekRow({ week, entryMap, thresholds, todayStr, onEdit }) {
+  const label = `${monthName(week.days[0])} ${week.days[0].getFullYear()}`
+  return (
+    <div className="cal-week">
+      <div className="cal-week-label">{label}</div>
+      <div className="cal-week-days">
+        {week.days.map((day, i) => {
+          const ds = toDateStr(day)
+          return (
+            <DayCell
+              key={ds}
+              date={day}
+              entry={entryMap[ds] || null}
+              thresholds={thresholds}
+              onClick={onEdit}
+              isToday={ds === todayStr}
+              isFuture={ds > todayStr}
+              col={i}
+            />
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ─── TrackerHistory ───
+// ── Build week list ───────────────────────────────────────────────────────────
+
+function buildWeeks(entries) {
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+
+  let earliest = entries.length > 0
+    ? new Date(Math.min(...entries.map(e => parseDate(e.date))))
+    : today
+
+  const future2 = addDays(today, 14)
+  let cur = weekMonday(earliest)
+  const lastMon = weekMonday(future2)
+
+  const weeks = []
+  while (cur <= lastMon) {
+    weeks.push({ days: Array.from({ length: 7 }, (_, i) => addDays(cur, i)) })
+    cur = addDays(cur, 7)
+  }
+
+  return weeks // oldest at top, newest at bottom
+}
+
+// ── TrackerHistory ────────────────────────────────────────────────────────────
+
+const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 export default function TrackerHistory({ settings, session, onEditDate }) {
   const [entries, setEntries] = useState(null)
-  const [expanded, setExpanded] = useState(null)
   const { thresholds } = settings
+  const bottomRef = useRef(null)
 
   useEffect(() => {
     loadAllEntries(session.user.id)
       .then(rows => setEntries(rows))
-      .catch(err => { console.error('history load failed', err); setEntries([]) })
+      .catch(err => { console.error(err); setEntries([]) })
   }, [])
 
-  function toggle(date) {
-    setExpanded(e => e === date ? null : date)
-  }
+  // Dim bokeh while history is visible — data is the visual here
+  useEffect(() => {
+    const bokeh = document.getElementById('bokeh-layer')
+    const prev = bokeh?.style.opacity ?? ''
+    if (bokeh) bokeh.style.opacity = '0.10'
+    return () => { if (bokeh) bokeh.style.opacity = prev }
+  }, [])
 
-  async function handleDelete(date) {
-    if (!window.confirm(`Delete the entry for ${date}? This cannot be undone.`)) return
-    try {
-      await deleteEntry(date, session.user.id)
-      setEntries(es => es.filter(e => e.date !== date))
-      if (expanded === date) setExpanded(null)
-    } catch (err) {
-      console.error('delete failed', err)
-      alert('Failed to delete entry.')
+  useEffect(() => {
+    if (entries !== null) {
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' })
     }
-  }
+  }, [entries])
+
+  const { entryMap, weeks, todayStr } = useMemo(() => {
+    const todayStr = toDateStr(new Date())
+    if (!entries) return { entryMap: {}, weeks: [], todayStr }
+    const entryMap = {}
+    for (const e of entries) entryMap[e.date] = e
+    return { entryMap, weeks: buildWeeks(entries), todayStr }
+  }, [entries])
 
   if (entries === null) {
     return <div className="history-loading">opening the almanac…</div>
   }
 
   return (
-    <div className="history-tab">
-      <Almanac entries={entries} onPick={date => {
-        setExpanded(date)
-        setTimeout(() => {
-          const el = document.querySelector(`[data-history-date="${date}"]`)
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }, 100)
-      }} />
+    <div className="celestial-cal">
+      <div className="cal-scroll-wrap">
+        <div className="cal-dow-header">
+          {DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
+        </div>
 
-      <div className="history-stream">
-        {entries.map(row => (
-          <div key={row.date} data-history-date={row.date}>
-            <MoonRow
-              entry={row}
-              expanded={expanded === row.date}
-              onToggle={() => toggle(row.date)}
+        {weeks.map((week, wi) => (
+          <div key={toDateStr(week.days[0])}>
+            {wi > 0 && <WeekSep />}
+            <WeekRow
+              week={week}
+              entryMap={entryMap}
               thresholds={thresholds}
+              todayStr={todayStr}
               onEdit={onEditDate}
-              onDelete={handleDelete}
             />
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
-      {entries.length > 0 && (
-        <div className="history-footnote">
-          the almanac remembers {entries.length} {entries.length === 1 ? 'day' : 'days'} — older entries fade into the dark
-        </div>
-      )}
       {entries.length === 0 && (
-        <div className="history-footnote">no past entries yet</div>
+        <div className="history-footnote">no past entries yet — begin and the stars will gather</div>
       )}
     </div>
   )
