@@ -880,7 +880,7 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
 }
 
 // ─── TrackerDayEditor ───
-function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
+function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey }) {
   const dateStr = dateProp || todayDateStr()
   const isToday = dateStr === todayDateStr()
   const [loading, setLoading] = useState(true)
@@ -895,6 +895,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
   const [drillThrough, setDrillThrough] = useState(null)
+
+  useEffect(() => { setDrillThrough(null) }, [resetKey])
 
   useEffect(() => {
     async function init() {
@@ -1489,8 +1491,10 @@ function RecalculateSection({ session }) {
 export default function TrackerRoom({ onHome, session, settings, onThresholdsChange }) {
   const [tab, setTab] = useState('today')
   const [editDate, setEditDate] = useState(null)
+  const [todayResetKey, setTodayResetKey] = useState(0)
 
   function handleTabChange(t) {
+    if (t === 'today') setTodayResetKey(k => k + 1)
     setTab(t)
     if (t !== 'history') setEditDate(null)
   }
@@ -1513,7 +1517,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
 
       {/* Today stays mounted so unsaved state survives tab switches */}
       <div style={{ display: tab === 'today' ? '' : 'none' }}>
-        <TrackerDayEditor session={session} settings={settings} />
+        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} />
       </div>
       {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
       {tab === 'history' && !editDate && (
