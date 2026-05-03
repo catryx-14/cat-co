@@ -191,9 +191,9 @@ function DayTooltip({ entry, date, col }) {
       <div className="cal-tip-row">
         <span>peak <b>{peak}</b></span>
         <span className="cal-tip-dot">·</span>
-        <span>regulation <b>{Math.round(reg)}</b></span>
-        <span className="cal-tip-dot">·</span>
         <span>lived experience <b>{le}</b></span>
+        <span className="cal-tip-dot">·</span>
+        <span>regulation <b>{Math.round(reg)}</b></span>
       </div>
       {events.length > 0 && (
         <div className="cal-tip-row cal-tip-events">
