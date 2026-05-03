@@ -1698,8 +1698,8 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  min-width: 140px;
-  max-width: 180px;
+  min-width: 180px;
+  max-width: 240px;
   padding: 8px 10px;
   background: rgba(10, 8, 22, 0.92);
   border: 1px solid rgba(220, 190, 110, 0.28);

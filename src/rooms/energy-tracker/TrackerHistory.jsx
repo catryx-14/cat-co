@@ -170,14 +170,17 @@ const FULL_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 
 function DayTooltip({ entry, date, col }) {
   const d = entry.entry_data
-  const peak      = d.peakDebit      ?? 0
-  const closing   = d.closingBalance ?? 0
-  const events    = d.events         ?? []
-  const hasMelt   = d.meltdown       ?? false
-  const hasSI     = d.siFlowActive   ?? false
-  const fullDate  = `${FULL_DOW[date.getDay()]} ${date.getDate()} ${FULL_MON[date.getMonth()]}`
+  const peak    = d.peakDebit       ?? 0
+  const le      = d.livedExperience ?? d.closingBalance ?? 0
+  const reg     = d.regulation
+    ? (d.regulation.sensoryComfort ?? 0) + (d.regulation.audioVisual ?? 0) +
+      (d.regulation.environment    ?? 0) + (d.regulation.bodyRest    ?? 0)
+    : 0
+  const events  = d.events   ?? []
+  const hasMelt = d.meltdown  ?? false
+  const hasSI   = d.siFlowActive ?? false
+  const fullDate = `${FULL_DOW[date.getDay()]} ${date.getDate()} ${FULL_MON[date.getMonth()]}`
 
-  // Nudge tooltip inward on edge columns so it doesn't bleed off-screen
   const edgeClass = col <= 1 ? 'cal-tooltip--edge-left'
                   : col >= 5 ? 'cal-tooltip--edge-right'
                   : ''
@@ -188,7 +191,9 @@ function DayTooltip({ entry, date, col }) {
       <div className="cal-tip-row">
         <span>peak <b>{peak}</b></span>
         <span className="cal-tip-dot">·</span>
-        <span>closes <b>{closing}</b></span>
+        <span>regulation <b>{Math.round(reg)}</b></span>
+        <span className="cal-tip-dot">·</span>
+        <span>lived experience <b>{le}</b></span>
       </div>
       {events.length > 0 && (
         <div className="cal-tip-row cal-tip-events">
