@@ -794,109 +794,178 @@ body {
 
 .sky {
   position: relative;
-  padding: 26px 28px 30px;
+  padding: 20px 8px 36px;
   margin-bottom: 30px;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
 }
-.sky::before { display: none; }
 
-/* ── Three-column sky layout ── */
-.sky-three-col {
-  display: grid;
-  grid-template-columns: 10fr 1px 14fr 1px 10fr;
-  align-items: start;
-}
-.sky-col {
-  padding: 0 20px;
-}
-.sky-col:first-child { padding-left: 0; }
-.sky-col:last-child { padding-right: 0; }
-.sky-col-centre { text-align: center; }
-.sky-vert-divider {
-  background: linear-gradient(180deg, transparent, rgba(232,201,140,0.2), transparent);
-  align-self: stretch;
-}
-.sky-col-label {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: 8px;
-}
-.sky-col-value {
-  font-family: "Cagliostro", serif;
-  line-height: 1;
-  margin-bottom: 10px;
-}
-.sky-breakdown {
+/* ── Desktop: three metallic circles ── */
+.sky-desk {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
 }
-.sky-breakdown-row {
+.sky-mob { display: none; }
+
+@keyframes sky-twinkle {
+  0%, 100% { opacity: 0.72; transform: scale(1); }
+  50%       { opacity: 0.06; transform: scale(0.32); }
+}
+.sky-star {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-twinkle ease-in-out infinite;
+}
+
+@keyframes sky-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.sky-ring-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-ring-spin linear infinite;
+}
+
+.sky-orb-wrap {
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  color: var(--ink-faint);
-}
-.sky-breakdown-row.highlight-amber .sky-bd-name,
-.sky-breakdown-row.highlight-amber .sky-bd-val {
-  color: #c9a84c;
-  font-weight: 500;
-}
-.sky-breakdown-row.highlight-teal .sky-bd-name,
-.sky-breakdown-row.highlight-teal .sky-bd-val {
-  color: #3ec6c6;
-  font-weight: 500;
-}
-.sky-breakdown-row.dimmer { opacity: 0.55; }
-.sky-bd-name { flex: 1; }
-.sky-bd-sep { opacity: 0.45; }
-.sky-bd-val { text-align: right; min-width: 28px; }
-.sky-bd-divider {
-  height: 1px;
-  background: rgba(232,201,140,0.10);
-  margin: 4px 0;
-}
-.sky-carry-in {
-  margin-top: 10px;
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  color: var(--ink-faint);
-  opacity: 0.75;
-}
-.sky-le-caption {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  color: var(--ink-faint);
-  margin-top: 8px;
-  display: flex;
-  gap: 5px;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  letter-spacing: 0.02em;
 }
-.sky-le-sep { opacity: 0.45; }
+.sky-orb {
+  position: relative;
+  flex-shrink: 0;
+}
+.sky-orb-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.sky-orb-num {
+  font-family: "Cagliostro", serif;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.sky-orb-lbl {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+}
 
-@media (max-width: 540px) {
-  .sky-three-col {
+/* Hover detail panel — floats below each circle */
+.sky-orb-detail {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  z-index: 10;
+  white-space: nowrap;
+}
+.sky-orb-detail--show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Detail content (shared desktop + mobile) ── */
+.sky-detail {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  line-height: 1.25;
+  color: rgba(255,255,255,0.48);
+  text-align: center;
+}
+.sky-detail--grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  text-align: left;
+  min-width: 110px;
+}
+.sky-det-cell {
+  display: contents;
+}
+.sky-det-cell span:last-child {
+  text-align: right;
+  opacity: 0.8;
+}
+.sky-det-amber span { color: #c9a84c; font-weight: 500; }
+.sky-det-teal span  { color: #3ec6c6; font-weight: 500; }
+.sky-detail--le {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.sky-det-sep { opacity: 0.35; }
+
+/* ── Mobile: stacked rows with vertical bar ── */
+@media (max-width: 440px) {
+  .sky-desk { display: none; }
+  .sky-mob {
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    align-items: stretch;
   }
-  .sky-vert-divider {
-    display: none;
+  .sky-mob-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 4px;
   }
-  .sky-col { padding: 0; }
-  .sky-col-centre { text-align: left; }
+  .sky-mob-bar-col { flex-shrink: 0; }
+  .sky-mob-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+  }
+  .sky-mob-num-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .sky-mob-num {
+    font-family: "Cagliostro", serif;
+    font-size: 46px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .sky-mob-detail {
+    flex: 1;
+    min-width: 0;
+  }
+  .sky-mob-detail .sky-detail {
+    text-align: left;
+    font-size: 9px;
+  }
+  .sky-mob-detail .sky-det-row { justify-content: flex-start; }
+  .sky-mob-detail .sky-det-nm { text-align: left; }
+  .sky-mob-detail .sky-detail--le {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 4px;
+  }
+  .sky-mob-div {
+    height: 1px;
+    margin: 2px 4px;
+    background: linear-gradient(90deg, transparent, rgba(212,160,32,0.18) 30%, rgba(212,160,32,0.18) 70%, transparent);
+  }
 }
 
 .ledger-head {
@@ -2105,8 +2174,6 @@ body {
   margin: 18px 0 0;
 }
 
-/* SI carry line on peak card */
-.sky-si-carry { color: #5abf7a !important; }
 
 /* Date header when editing a historical entry */
 .history-edit-date {

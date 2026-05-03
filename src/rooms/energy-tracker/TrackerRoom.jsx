@@ -396,10 +396,310 @@ function MeltdownSection({ active, onToggle }) {
   )
 }
 
+// ─── Sky helpers ───────────────────────────────────────────────────────────────
+
+function polarXY(cx, cy, angleDeg, r) {
+  const rad = (angleDeg - 90) * Math.PI / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function sparklePath(cx, cy, outer, inner) {
+  const pts = []
+  for (let i = 0; i < 8; i++) {
+    const rad = (i * 45 - 90) * Math.PI / 180
+    const r = i % 2 === 0 ? outer : inner
+    pts.push(`${(cx + r * Math.cos(rad)).toFixed(2)},${(cy + r * Math.sin(rad)).toFixed(2)}`)
+  }
+  return `M ${pts[0]} ` + pts.slice(1).map(p => `L ${p}`).join(' ') + ' Z'
+}
+
+const SKY_COLORS = {
+  peak: {
+    id: 'sky-gold',
+    // Gold leaf: deep shadow → warm body → bright → near-white sheen → back down
+    ringStops: [
+      { o: '0%',   c: '#1c0e00' },
+      { o: '14%',  c: '#6a3e04' },
+      { o: '30%',  c: '#a8680e' },
+      { o: '48%',  c: '#d4901a' },
+      { o: '60%',  c: '#f4cc3a' },
+      { o: '67%',  c: '#fff8a0' },
+      { o: '76%',  c: '#e0b028' },
+      { o: '89%',  c: '#7a4a08' },
+      { o: '100%', c: '#1c0e00' },
+    ],
+    glowColor: '#fffce8',
+    glowDuration: 28,
+    barMid: '#d4a020',
+    number: '#d4a020',
+    star: '#e8c040',
+  },
+  le: {
+    id: 'sky-silver',
+    // Polished silver: dark steel → cool grey → bright → near-white → grey → shadow
+    ringStops: [
+      { o: '0%',   c: '#18182a' },
+      { o: '14%',  c: '#50506a' },
+      { o: '30%',  c: '#9898b0' },
+      { o: '48%',  c: '#c8c8dc' },
+      { o: '60%',  c: '#e8e8f4' },
+      { o: '67%',  c: '#ffffff' },
+      { o: '76%',  c: '#cccce0' },
+      { o: '89%',  c: '#606078' },
+      { o: '100%', c: '#1c1c2c' },
+    ],
+    glowColor: '#ffffff',
+    glowDuration: 38,
+    barMid: '#c8c8d8',
+    number: '#e0e0f0',
+    star: '#d8d8ec',
+  },
+  reg: {
+    id: 'sky-teal',
+    // Patinated teal metal: deep verdigris → teal body → bright aqua → near-white mint → shadow
+    ringStops: [
+      { o: '0%',   c: '#061e1a' },
+      { o: '14%',  c: '#1a5e52' },
+      { o: '30%',  c: '#228878' },
+      { o: '48%',  c: '#30aa92' },
+      { o: '60%',  c: '#50d0b0' },
+      { o: '67%',  c: '#a8fff0' },
+      { o: '76%',  c: '#3ab898' },
+      { o: '89%',  c: '#1a6055' },
+      { o: '100%', c: '#061e1a' },
+    ],
+    glowColor: '#c8fff4',
+    glowDuration: 50,
+    barMid: '#2a9d8f',
+    number: '#4ab8a0',
+    star: '#40c8a8',
+  },
+}
+
+// Stars: { a: angle from top clockwise °, r: radius from centre, sz: outer half-size, t: 's'|'d' }
+// Radii scaled for 200px (Peak/Reg) and 260px (LE) circles
+const PEAK_STARS = [
+  { a: 18,  r: 106, sz: 7,   t: 's' }, { a: 52,  r: 98,  sz: 5,   t: 's' },
+  { a: 138, r: 104, sz: 6.5, t: 's' }, { a: 195, r: 109, sz: 5.5, t: 's' },
+  { a: 262, r: 96,  sz: 7.5, t: 's' }, { a: 305, r: 104, sz: 4.5, t: 's' },
+  { a: 344, r: 108, sz: 6,   t: 's' },
+  { a: 5,   r: 95,  sz: 2,   t: 'd' }, { a: 35,  r: 113, sz: 1.5, t: 'd' },
+  { a: 72,  r: 103, sz: 2,   t: 'd' }, { a: 112, r: 99,  sz: 1.5, t: 'd' },
+  { a: 163, r: 115, sz: 2,   t: 'd' }, { a: 228, r: 106, sz: 1.5, t: 'd' },
+  { a: 282, r: 113, sz: 2,   t: 'd' }, { a: 332, r: 98,  sz: 1.5, t: 'd' },
+]
+const LE_STARS = [
+  { a: 12,  r: 137, sz: 8.5, t: 's' }, { a: 45,  r: 126, sz: 6,   t: 's' },
+  { a: 82,  r: 140, sz: 7.5, t: 's' }, { a: 118, r: 130, sz: 5.5, t: 's' },
+  { a: 158, r: 141, sz: 7,   t: 's' }, { a: 205, r: 132, sz: 5,   t: 's' },
+  { a: 248, r: 136, sz: 8,   t: 's' }, { a: 292, r: 129, sz: 6,   t: 's' },
+  { a: 328, r: 134, sz: 6.5, t: 's' },
+  { a: 3,   r: 124, sz: 2,   t: 'd' }, { a: 28,  r: 142, sz: 1.5, t: 'd' },
+  { a: 63,  r: 132, sz: 2,   t: 'd' }, { a: 100, r: 146, sz: 1.5, t: 'd' },
+  { a: 138, r: 126, sz: 2,   t: 'd' }, { a: 180, r: 136, sz: 1.5, t: 'd' },
+  { a: 222, r: 144, sz: 2,   t: 'd' }, { a: 268, r: 124, sz: 1.5, t: 'd' },
+  { a: 310, r: 139, sz: 2,   t: 'd' }, { a: 350, r: 131, sz: 1.5, t: 'd' },
+]
+const REG_STARS = [
+  { a: 32,  r: 105, sz: 6.5, t: 's' }, { a: 78,  r: 99,  sz: 5,   t: 's' },
+  { a: 122, r: 109, sz: 7.5, t: 's' }, { a: 172, r: 103, sz: 5.5, t: 's' },
+  { a: 218, r: 111, sz: 7,   t: 's' }, { a: 268, r: 95,  sz: 4.5, t: 's' },
+  { a: 315, r: 106, sz: 6,   t: 's' },
+  { a: 15,  r: 99,  sz: 2,   t: 'd' }, { a: 55,  r: 115, sz: 1.5, t: 'd' },
+  { a: 100, r: 104, sz: 2,   t: 'd' }, { a: 148, r: 96,  sz: 1.5, t: 'd' },
+  { a: 195, r: 114, sz: 2,   t: 'd' }, { a: 245, r: 105, sz: 1.5, t: 'd' },
+  { a: 292, r: 111, sz: 2,   t: 'd' }, { a: 340, r: 101, sz: 1.5, t: 'd' },
+]
+
+// Mobile stars: { x, y: px in bar SVG coord space, sz, t, op }
+// Each constellation designed to feel scattered and organic — no repeating x/y rhythm
+const PEAK_MOB_STARS = [
+  { x: 9,  y: 6,  sz: 5,   t: 's', op: 0.72 },
+  { x: 26, y: 11, sz: 3,   t: 's', op: 0.58 },
+  { x: 18, y: 15, sz: 1.8, t: 'd', op: 0.40 },
+  { x: 31, y: 29, sz: 4.5, t: 's', op: 0.65 },
+  { x: 12, y: 38, sz: 1.5, t: 'd', op: 0.32 },
+  { x: 7,  y: 47, sz: 6,   t: 's', op: 0.75 },
+  { x: 28, y: 53, sz: 2,   t: 'd', op: 0.50 },
+  { x: 20, y: 61, sz: 3.5, t: 's', op: 0.60 },
+  { x: 9,  y: 72, sz: 1.5, t: 'd', op: 0.38 },
+  { x: 25, y: 80, sz: 4,   t: 's', op: 0.68 },
+  { x: 15, y: 87, sz: 1.5, t: 'd', op: 0.42 },
+]
+const LE_MOB_STARS = [
+  { x: 22, y: 4,  sz: 4,   t: 's', op: 0.60 },
+  { x: 9,  y: 13, sz: 1.5, t: 'd', op: 0.38 },
+  { x: 29, y: 20, sz: 5.5, t: 's', op: 0.70 },
+  { x: 14, y: 25, sz: 3,   t: 's', op: 0.52 },
+  { x: 31, y: 35, sz: 1.8, t: 'd', op: 0.44 },
+  { x: 8,  y: 49, sz: 5,   t: 's', op: 0.78 },
+  { x: 24, y: 58, sz: 2,   t: 'd', op: 0.36 },
+  { x: 17, y: 65, sz: 4.5, t: 's', op: 0.63 },
+  { x: 7,  y: 74, sz: 1.5, t: 'd', op: 0.45 },
+  { x: 27, y: 80, sz: 3.5, t: 's', op: 0.55 },
+  { x: 13, y: 88, sz: 2,   t: 'd', op: 0.40 },
+]
+const REG_MOB_STARS = [
+  { x: 17, y: 3,  sz: 3.5, t: 's', op: 0.65 },
+  { x: 28, y: 12, sz: 5,   t: 's', op: 0.72 },
+  { x: 8,  y: 18, sz: 1.8, t: 'd', op: 0.40 },
+  { x: 23, y: 23, sz: 4,   t: 's', op: 0.55 },
+  { x: 11, y: 37, sz: 1.5, t: 'd', op: 0.35 },
+  { x: 30, y: 44, sz: 5.5, t: 's', op: 0.75 },
+  { x: 16, y: 54, sz: 2,   t: 'd', op: 0.48 },
+  { x: 7,  y: 62, sz: 3,   t: 's', op: 0.58 },
+  { x: 26, y: 69, sz: 1.5, t: 'd', op: 0.38 },
+  { x: 19, y: 77, sz: 4.5, t: 's', op: 0.68 },
+  { x: 29, y: 86, sz: 1.8, t: 'd', op: 0.42 },
+]
+
+// ─── SkyOrb ───
+function SkyOrb({ size, colors, numStr, label, stars, detailNode }) {
+  const [hov, setHov] = useState(false)
+  const [vis, setVis] = useState(false)
+
+  useEffect(() => {
+    let t
+    if (hov) { t = setTimeout(() => setVis(true), 600) }
+    else { setVis(false) }
+    return () => clearTimeout(t)
+  }, [hov])
+
+  const pad = 30
+  const svgSize = size + pad * 2
+  const cx = svgSize / 2
+  const cy = svgSize / 2
+  const outerR = size * 0.455
+  const innerR = size * 0.395
+
+  return (
+    <div className="sky-orb-wrap"
+         style={{ height: size }}
+         onMouseEnter={() => setHov(true)}
+         onMouseLeave={() => setHov(false)}>
+      <div className="sky-orb" style={{ width: size, height: size }}>
+        <svg
+          width={svgSize}
+          height={svgSize}
+          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}
+        >
+          <defs>
+            <linearGradient id={`${colors.id}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+              {colors.ringStops.map((s, i) => (
+                <stop key={i} offset={s.o} stopColor={s.c} />
+              ))}
+            </linearGradient>
+            <filter id={`${colors.id}-glow`} x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            {/* Pure glow — no SourceGraphic merge, so output is only the blurred bloom */}
+            <filter id={`${colors.id}-travel`} x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="wide" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4"  result="tight" />
+              <feMerge>
+                <feMergeNode in="wide" />
+                <feMergeNode in="tight" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <circle cx={cx} cy={cy} r={outerR}
+            fill="none"
+            stroke={`url(#${colors.id}-grad)`}
+            strokeWidth="2"
+            filter={`url(#${colors.id}-glow)`}
+          />
+          <circle cx={cx} cy={cy} r={innerR}
+            fill="none"
+            stroke={`url(#${colors.id}-grad)`}
+            strokeWidth="1"
+            opacity="0.5"
+          />
+          {/* Travelling bead — 3px point stroke, all shape dissolved by blur into a soft bloom */}
+          <circle cx={cx} cy={cy} r={outerR}
+            fill="none"
+            stroke={colors.glowColor}
+            strokeWidth="6"
+            strokeDasharray={`3 ${(2 * Math.PI * outerR - 3).toFixed(1)}`}
+            strokeLinecap="round"
+            filter={`url(#${colors.id}-travel)`}
+            opacity="0.58"
+            className="sky-ring-glow"
+            style={{ animationDuration: `${colors.glowDuration}s` }}
+          />
+
+          {stars.map((s, i) => {
+            const { x, y } = polarXY(cx, cy, s.a, s.r)
+            const delay = `-${((i * 1.13 + s.a * 0.041) % 5.7).toFixed(2)}s`
+            const dur   = `${(1.6 + ((i * 0.67 + s.sz * 0.55) % 3.2)).toFixed(2)}s`
+            return s.t === 'd'
+              ? <circle key={i} className="sky-star" cx={x} cy={y} r={s.sz}
+                  fill={colors.star}
+                  style={{ animationDelay: delay, animationDuration: dur }} />
+              : <path key={i} className="sky-star" d={sparklePath(x, y, s.sz, s.sz * 0.18)}
+                  fill={colors.star}
+                  style={{ animationDelay: delay, animationDuration: dur }} />
+          })}
+        </svg>
+
+        <div className="sky-orb-inner">
+          <div className="sky-orb-num" style={{ fontSize: size > 230 ? '68px' : '50px', color: colors.number }}>
+            {numStr}
+          </div>
+          <div className="sky-orb-lbl">{label}</div>
+        </div>
+      </div>
+
+      <div className={`sky-orb-detail${vis ? ' sky-orb-detail--show' : ''}`}>
+        {detailNode}
+      </div>
+    </div>
+  )
+}
+
+// ─── SkyMobileRow ───
+function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars }) {
+  const BAR_H = 92
+  const SVG_W = 34
+
+  return (
+    <div className="sky-mob-row">
+      <div className="sky-mob-bar-col">
+        <svg width={SVG_W} height={BAR_H} style={{ overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={`${colors.id}-vbar`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor={colors.barMid} stopOpacity="0" />
+              <stop offset="22%"  stopColor={colors.barMid} stopOpacity="1" />
+              <stop offset="78%"  stopColor={colors.barMid} stopOpacity="1" />
+              <stop offset="100%" stopColor={colors.barMid} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="5" height={BAR_H} fill={`url(#${colors.id}-vbar)`} rx="2" />
+          {mobileStars.map((s, i) =>
+            s.t === 'd'
+              ? <circle key={i} cx={s.x} cy={s.y} r={s.sz} fill={colors.star} opacity={s.op} />
+              : <path key={i} d={sparklePath(s.x, s.y, s.sz, s.sz * 0.18)} fill={colors.star} opacity={s.op} />
+          )}
+        </svg>
+      </div>
+      <div className="sky-mob-content">
+        <div className="sky-mob-num-wrap">
+          <div className="sky-orb-lbl sky-mob-lbl" style={{ color: colors.number, opacity: 0.75 }}>{label}</div>
+          <div className="sky-mob-num" style={{ color: colors.number }}>{numStr}</div>
+        </div>
+        <div className="sky-mob-detail">{detailNode}</div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Sky ───
 function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, flowOverride = false, dateStr }) {
-  const { taxValue, thresholds, taxStartDate, livedExperienceThresholds } = settings
-  const leThr = livedExperienceThresholds || { yellow: 12, critical: 22 }
+  const { taxValue, taxStartDate } = settings
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
@@ -424,10 +724,6 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
 
   const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
 
-  let leColor = '#5abf7a'
-  if (livedExperience >= leThr.critical) leColor = '#c94a4a'
-  else if (livedExperience >= leThr.yellow) leColor = '#c9a84c'
-
   const PEAK_BREAKDOWN = [
     { k: 'E', name: 'emotional' },
     { k: 'S', name: 'sensory' },
@@ -435,74 +731,61 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
     { k: 'V', name: 'veracity' },
   ]
 
+  const peakDetail = (
+    <div className="sky-detail sky-detail--grid">
+      {PEAK_BREAKDOWN.map(({ k, name }) => (
+        <div key={k} className={`sky-det-cell${highestAxis[0] === k && highestAxis[1] > 0 ? ' sky-det-amber' : ''}`}>
+          <span>{name}</span><span>{Math.round(axisSums[k])}</span>
+        </div>
+      ))}
+    </div>
+  )
+
+  const leDetail = (
+    <div className="sky-detail sky-detail--le">
+      <span>{Math.round(peak)} peak</span>
+      <span className="sky-det-sep">·</span>
+      <span>{Math.round(nonSleepReg)} reg</span>
+      {siFlowActive && <>
+        <span className="sky-det-sep">·</span>
+        <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit)} SI</span>
+      </>}
+    </div>
+  )
+
+  const regDetail = (
+    <div className="sky-detail sky-detail--grid">
+      {REG_CHANNELS.map(c => {
+        const cur = regulation[c.k] || 0
+        const under = (c.cap - cur) > 2
+        return (
+          <div key={c.k} className={`sky-det-cell${under ? ' sky-det-teal' : ''}`}>
+            <span>{c.name}</span><span>{Math.round(cur)}/{c.cap}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div className="sky">
-      <div className="sky-three-col">
-        {/* Left: Today's Peak */}
-        <div className="sky-col">
-          <div className="sky-col-label">today's peak</div>
-          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{Math.round(peak)}</div>
-          <div className="sky-breakdown">
-            {PEAK_BREAKDOWN.map(({ k, name }) => (
-              <div key={k} className={`sky-breakdown-row${highestAxis[0] === k && highestAxis[1] > 0 ? ' highlight-amber' : ''}`}>
-                <span className="sky-bd-name">{name}</span>
-                <span className="sky-bd-sep">·</span>
-                <span className="sky-bd-val">{Math.round(axisSums[k])}</span>
-              </div>
-            ))}
-            <div className="sky-bd-divider" />
-            <div className="sky-breakdown-row dimmer">
-              <span className="sky-bd-name">autistic tax</span>
-              <span className="sky-bd-sep">·</span>
-              <span className="sky-bd-val">+{Math.round(taxPoints)}</span>
-            </div>
-          </div>
-          {openingBalance > 0 && (
-            <div className="sky-carry-in">opening carry-in: {Math.round(openingBalance)}</div>
-          )}
-          {siCarryIn > 0 && (
-            <div className="sky-carry-in sky-si-carry">SI carry: +{Math.round(siCarryIn)}</div>
-          )}
-        </div>
-
-        <div className="sky-vert-divider" />
-
-        {/* Centre: Lived Experience */}
-        <div className="sky-col sky-col-centre">
-          <div className="sky-col-label">lived experience</div>
-          <div className="sky-col-value" style={{ fontSize: '72px', color: leColor }}>{Math.round(livedExperience)}</div>
-          <div className="sky-le-caption">
-            <span>{Math.round(peak)} peak</span>
-            <span className="sky-le-sep">·</span>
-            <span>−{Math.round(nonSleepReg)} reg</span>
-            <span className="sky-le-sep">·</span>
-            {siFlowActive
-              ? <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit)} SI</span>
-              : <span style={{ color: 'var(--ink-faint)' }}>no SI</span>
-            }
-          </div>
-        </div>
-
-        <div className="sky-vert-divider" />
-
-        {/* Right: Regulation */}
-        <div className="sky-col">
-          <div className="sky-col-label">regulation</div>
-          <div className="sky-col-value" style={{ fontSize: '52px', color: '#e8dfc0' }}>{Math.round(nonSleepReg)}</div>
-          <div className="sky-breakdown">
-            {REG_CHANNELS.map(c => {
-              const cur = regulation[c.k] || 0
-              const underTended = (c.cap - cur) > 2
-              return (
-                <div key={c.k} className={`sky-breakdown-row${underTended ? ' highlight-teal' : ''}`}>
-                  <span className="sky-bd-name">{c.name}</span>
-                  <span className="sky-bd-sep">·</span>
-                  <span className="sky-bd-val">{Math.round(cur)}/{Math.round(c.cap)}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      <div className="sky-desk">
+        <SkyOrb size={200} colors={SKY_COLORS.peak} numStr={String(Math.round(peak))}
+          label="today's peak" stars={PEAK_STARS} detailNode={peakDetail} />
+        <SkyOrb size={260} colors={SKY_COLORS.le} numStr={String(Math.round(livedExperience))}
+          label="lived experience" stars={LE_STARS} detailNode={leDetail} />
+        <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={String(Math.round(nonSleepReg))}
+          label="regulation" stars={REG_STARS} detailNode={regDetail} />
+      </div>
+      <div className="sky-mob">
+        <SkyMobileRow colors={SKY_COLORS.peak} numStr={String(Math.round(peak))}
+          label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS} />
+        <div className="sky-mob-div" />
+        <SkyMobileRow colors={SKY_COLORS.le} numStr={String(Math.round(livedExperience))}
+          label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS} />
+        <div className="sky-mob-div" />
+        <SkyMobileRow colors={SKY_COLORS.reg} numStr={String(Math.round(nonSleepReg))}
+          label="regulation" detailNode={regDetail} mobileStars={REG_MOB_STARS} />
       </div>
     </div>
   )
@@ -667,39 +950,6 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack }) {
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
       />
-
-      <div className="ledger-head">
-        <div className="ledger-title">events</div>
-        <div className="ledger-count">{userEvents.length} so far</div>
-      </div>
-
-      <div className="events">
-        {allEvents.map(e => (
-          <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
-        ))}
-      </div>
-
-      <Composer onAdd={onAdd} />
-
-      <Regulation
-        values={regulation}
-        onChange={onRegChange}
-        recovery={recovery}
-        onRecovery={setRecovery}
-        goodSigns={goodSigns}
-        onGood={onGood}
-      />
-
-      <WarningSigns flags={warning} onToggle={onWarning} />
-
-      <MeltdownSection active={meltdown} onToggle={() => setMeltdown(v => !v)} />
-
-      <div className="save-bar">
-        <span className="save-bar-status">{saveStatus}</span>
-        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
-          {saving ? 'saving…' : isToday ? 'save today' : 'save entry'}
-        </button>
-      </div>
     </>
   )
 }
