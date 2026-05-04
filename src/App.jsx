@@ -34,11 +34,11 @@ function lanternLayout(isMobile) {
     ]
   }
   return [
-    { id: 'almanac', xPct: 12, chainVh: 6,  size: 100, sway: 1.4, delay: 0.0 },
-    { id: 'sparks',  xPct: 30, chainVh: 12, size: 92,  sway: 0.9, delay: 1.6 },
-    { id: 'neural',  xPct: 54, chainVh: 9,  size: 96,  sway: 1.7, delay: 0.6 },
-    { id: 'games',   xPct: 71, chainVh: 11, size: 94,  sway: 1.0, delay: 2.4 },
-    { id: 'threads', xPct: 88, chainVh: 5,  size: 90,  sway: 1.3, delay: 3.1 },
+    { id: 'almanac', xPct: 16, chainVh: 5,  size: 100, sway: 1.4, delay: 0.0 },
+    { id: 'sparks',  xPct: 33, chainVh: 10, size: 92,  sway: 0.9, delay: 1.6 },
+    { id: 'neural',  xPct: 54, chainVh: 8,  size: 96,  sway: 1.7, delay: 0.6 },
+    { id: 'games',   xPct: 72, chainVh: 10, size: 94,  sway: 1.0, delay: 2.4 },
+    { id: 'threads', xPct: 88, chainVh: 4,  size: 90,  sway: 1.3, delay: 3.1 },
   ]
 }
 
@@ -58,13 +58,14 @@ function ThresholdMoon() {
   return (
     <div style={{
       position: 'fixed',
-      top: 'clamp(340px, 52vh, 660px)',
+      top: 'clamp(60px, 10vh, 160px)',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: 'clamp(280px, 34vw, 500px)',
-      height: 'clamp(280px, 34vw, 500px)',
+      width: 'clamp(340px, 46vw, 640px)',
+      height: 'clamp(340px, 46vw, 640px)',
       pointerEvents: 'none',
       zIndex: 0,
+      opacity: 0.52,
     }}>
       <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ overflow: 'visible' }}>
         <defs>
@@ -183,9 +184,9 @@ function ThresholdForestFrame() {
           <stop offset="100%" stopColor="rgba(8,12,28,0)" />
         </radialGradient>
         <linearGradient id="t-groundFog" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%"   stopColor="rgba(140,170,200,0.35)" />
-          <stop offset="40%"  stopColor="rgba(150,175,205,0.18)" />
-          <stop offset="100%" stopColor="rgba(150,175,205,0)" />
+          <stop offset="0%"   stopColor="rgba(8,14,36,0.75)" />
+          <stop offset="45%"  stopColor="rgba(12,20,48,0.35)" />
+          <stop offset="100%" stopColor="rgba(12,20,48,0)" />
         </linearGradient>
         <linearGradient id="t-floorFade" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%"   stopColor="rgba(10,15,32,0)" />
@@ -225,12 +226,7 @@ function ThresholdForestFrame() {
           </g>
         ))}
       </g>
-      <rect x="0" y="640" width="1600" height="360" fill="url(#t-groundFog)" opacity="0.85" />
-      <g filter="url(#t-softblur)" opacity="0.45">
-        <ellipse cx="350"  cy="820" rx="280" ry="40" fill="rgba(180,200,220,0.5)" />
-        <ellipse cx="1150" cy="850" rx="320" ry="42" fill="rgba(180,200,220,0.5)" />
-        <ellipse cx="780"  cy="880" rx="380" ry="40" fill="rgba(180,200,220,0.5)" />
-      </g>
+      <rect x="0" y="640" width="1600" height="360" fill="url(#t-groundFog)" opacity="1" />
     </svg>
   )
 }
@@ -505,28 +501,47 @@ function ThresholdCatsOnFence() {
     <div style={{
       position: 'fixed',
       left: 0, right: 0, bottom: 0,
-      height: '18vh',
+      height: '22vh',
       overflow: 'hidden',
       pointerEvents: 'none',
       zIndex: 5,
-      display: 'flex',
-      justifyContent: 'flex-start',
-      alignItems: 'flex-end',
-      paddingLeft: '8vw',
     }}>
-      <img src="/assets/cats-on-fence.png" alt=""
-        draggable={false}
-        style={{
-          height: '26vh',
-          width: 'auto',
-          maxWidth: '80vw',
-          objectFit: 'contain',
-          objectPosition: 'center bottom',
-          mixBlendMode: 'screen',
-          filter: 'brightness(0.88) contrast(1.05) saturate(0.9)',
-          marginBottom: -4,
-          userSelect: 'none',
-        }} />
+      {/* mist wisps at fence base */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        background: [
+          'radial-gradient(ellipse 55% 35% at 28% 100%, rgba(120,145,200,0.22) 0%, transparent 70%)',
+          'radial-gradient(ellipse 38% 22% at 55% 100%, rgba(100,130,190,0.14) 0%, transparent 65%)',
+          'radial-gradient(ellipse 65% 28% at 12% 100%, rgba(110,140,195,0.18) 0%, transparent 68%)',
+          'radial-gradient(ellipse 45% 20% at 70% 100%, rgba(90,120,180,0.12) 0%, transparent 60%)',
+          'linear-gradient(0deg, rgba(6,12,32,0.55) 0%, rgba(8,16,40,0.15) 45%, transparent 100%)',
+        ].join(', '),
+      }} />
+      {/* cats image — offset left of centre */}
+      <div style={{
+        position: 'absolute',
+        left: 0, right: 0, bottom: 0,
+        display: 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-end',
+        paddingLeft: '6vw',
+      }}>
+        <img src="/assets/cats-on-fence.png" alt=""
+          draggable={false}
+          style={{
+            height: '30vh',
+            width: 'auto',
+            maxWidth: '82vw',
+            objectFit: 'contain',
+            objectPosition: 'center bottom',
+            mixBlendMode: 'screen',
+            filter: 'brightness(0.90) contrast(1.05) saturate(0.9)',
+            marginBottom: -4,
+            userSelect: 'none',
+          }} />
+      </div>
     </div>
   )
 }
@@ -660,7 +675,7 @@ function HubView({ onPick }) {
       <div style={{
         position: 'fixed',
         left: 0, right: 0,
-        bottom: isMobile ? 20 : 28,
+        bottom: isMobile ? 6 : 8,
         textAlign: 'center',
         zIndex: 7,
         pointerEvents: 'none',
