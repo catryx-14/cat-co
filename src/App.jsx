@@ -36,8 +36,8 @@ function lanternLayout(isMobile) {
   return [
     { id: 'almanac', xPct: 12, chainVh: 6,  size: 100, sway: 1.4, delay: 0.0 },
     { id: 'sparks',  xPct: 30, chainVh: 12, size: 92,  sway: 0.9, delay: 1.6 },
-    { id: 'neural',  xPct: 50, chainVh: 9,  size: 96,  sway: 1.7, delay: 0.6 },
-    { id: 'games',   xPct: 70, chainVh: 11, size: 94,  sway: 1.0, delay: 2.4 },
+    { id: 'neural',  xPct: 54, chainVh: 9,  size: 96,  sway: 1.7, delay: 0.6 },
+    { id: 'games',   xPct: 71, chainVh: 11, size: 94,  sway: 1.0, delay: 2.4 },
     { id: 'threads', xPct: 88, chainVh: 5,  size: 90,  sway: 1.3, delay: 3.1 },
   ]
 }
@@ -58,11 +58,11 @@ function ThresholdMoon() {
   return (
     <div style={{
       position: 'fixed',
-      top: 'clamp(380px, 56vh, 720px)',
+      top: 'clamp(340px, 52vh, 660px)',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: 'clamp(360px, 42vw, 620px)',
-      height: 'clamp(360px, 42vw, 620px)',
+      width: 'clamp(280px, 34vw, 500px)',
+      height: 'clamp(280px, 34vw, 500px)',
       pointerEvents: 'none',
       zIndex: 0,
     }}>
@@ -464,33 +464,36 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
           }} />
       </div>
 
-      {/* hover tooltip */}
+      {/* label — always visible, brightens on hover */}
       <div style={{
         position: 'absolute',
         left: '50%',
-        top: `calc(${chainVh}vh + ${size * 1.3 + 14}px)`,
-        transform: `translate(-50%, ${hover ? '0' : '-4px'})`,
-        opacity: hover ? 1 : 0,
-        transition: 'opacity 280ms, transform 280ms',
+        top: `calc(${chainVh}vh + ${size * 1.3 + 10}px)`,
+        transform: 'translate(-50%, 0)',
         pointerEvents: 'none',
         textAlign: 'center',
         whiteSpace: 'nowrap',
+        transition: 'opacity 280ms',
       }}>
         <div style={{
           fontFamily: 'Italiana, serif',
-          fontSize: 22,
-          color: '#fff8e8',
-          letterSpacing: 2,
-          textShadow: `0 0 16px ${room.glow}, 0 0 30px ${room.glow}aa, 0 1px 2px rgba(0,0,0,0.7)`,
+          fontSize: 20,
+          color: hover ? '#fff4d0' : '#e8dfc0',
+          letterSpacing: 1.5,
+          textShadow: hover
+            ? `0 0 18px ${room.glow}, 0 0 32px ${room.glow}88, 0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)`
+            : '0 1px 6px rgba(0,0,0,0.9), 0 0 14px rgba(0,0,0,0.7)',
+          transition: 'color 280ms, text-shadow 280ms',
         }}>{room.name}</div>
         <div style={{
           fontFamily: "'Cormorant Garamond', Georgia, serif",
           fontStyle: 'italic',
-          fontSize: 14,
-          color: '#d6c8b5',
-          marginTop: 4,
+          fontSize: 13,
+          color: hover ? '#d6c8b5' : '#c4b89a',
+          marginTop: 2,
           letterSpacing: 0.3,
-          textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+          textShadow: '0 1px 5px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.6)',
+          transition: 'color 280ms',
         }}>{room.sub}</div>
       </div>
     </div>
@@ -502,24 +505,25 @@ function ThresholdCatsOnFence() {
     <div style={{
       position: 'fixed',
       left: 0, right: 0, bottom: 0,
-      height: '20vh',
+      height: '18vh',
       overflow: 'hidden',
       pointerEvents: 'none',
       zIndex: 5,
       display: 'flex',
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       alignItems: 'flex-end',
+      paddingLeft: '8vw',
     }}>
       <img src="/assets/cats-on-fence.png" alt=""
         draggable={false}
         style={{
-          height: '32vh',
+          height: '26vh',
           width: 'auto',
-          maxWidth: '96vw',
+          maxWidth: '80vw',
           objectFit: 'contain',
           objectPosition: 'center bottom',
           mixBlendMode: 'screen',
-          filter: 'brightness(0.92) contrast(1.05) saturate(0.9)',
+          filter: 'brightness(0.88) contrast(1.05) saturate(0.9)',
           marginBottom: -4,
           userSelect: 'none',
         }} />
@@ -656,7 +660,7 @@ function HubView({ onPick }) {
       <div style={{
         position: 'fixed',
         left: 0, right: 0,
-        bottom: isMobile ? 14 : 22,
+        bottom: isMobile ? 20 : 28,
         textAlign: 'center',
         zIndex: 7,
         pointerEvents: 'none',
