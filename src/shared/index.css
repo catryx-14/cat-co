@@ -29,7 +29,7 @@ html, body {
   overflow-x: hidden;
 }
 body {
-  background: linear-gradient(160deg, #0b1020 0%, #111a33 50%, #1a2547 100%) fixed;
+  background: linear-gradient(180deg, #08102a 0%, #0f1a3a 20%, #16204a 45%, #14233f 70%, #0a1530 100%) fixed;
 }
 
 .stars, .bokeh, .haze {
@@ -291,7 +291,7 @@ body {
 }
 .view-fade.is-hub {
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .gloaming {
@@ -2410,4 +2410,70 @@ body {
   font-size: 13px;
   color: var(--ink-faint);
   padding: 8px 0 4px;
+}
+
+/* ── Threshold (Enchanted Garden) ─────────────────────────────────────────── */
+
+/* Twinkling stars in SVG */
+.threshold-star {
+  opacity: var(--op-max, 0.6);
+  animation: thresholdTwinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite alternate;
+}
+@keyframes thresholdTwinkle {
+  from { opacity: var(--op-max, 0.6); }
+  to   { opacity: var(--op-min, 0.1); }
+}
+
+/* Floating bokeh orbs */
+.threshold-orb {
+  animation: thresholdOrbFloat var(--dur, 12s) ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes thresholdOrbFloat {
+  0%, 100% { transform: translate(-50%, -50%); }
+  33%       { transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))); }
+  66%       { transform: translate(calc(-50% - var(--dx, 0px) * 0.5), calc(-50% - var(--dy, 0px) * 0.3)); }
+}
+
+/* Fireflies */
+.threshold-firefly {
+  animation: thresholdFirefly var(--dur, 10s) linear var(--delay, 0s) infinite;
+}
+@keyframes thresholdFirefly {
+  0%   { transform: translate(0, 0);                        opacity: 0;   }
+  10%  { opacity: 1;                                                       }
+  90%  { opacity: 0.8;                                                     }
+  100% { transform: translate(var(--fx, 0px), var(--fy, 0px)); opacity: 0; }
+}
+
+/* Lantern sway — translateX(-50%) must be included since it overrides element transform */
+@keyframes thresholdLanternSway {
+  0%, 100% { transform: translateX(-50%) rotate(-1.4deg); }
+  50%       { transform: translateX(-50%) rotate(1.4deg);  }
+}
+
+/* Lantern glow breathe */
+@keyframes thresholdLanternBreathe {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 1;    }
+}
+
+/* Candle flicker */
+@keyframes thresholdLanternFlicker {
+  0%   { transform: translate(-50%, -50%) scale(1);    opacity: 1;    }
+  24%  { transform: translate(-50%, -50%) scale(1.05); opacity: 0.92; }
+  47%  { transform: translate(-50%, -50%) scale(0.97); opacity: 1;    }
+  71%  { transform: translate(-50%, -50%) scale(1.03); opacity: 0.96; }
+  100% { transform: translate(-50%, -50%) scale(1);    opacity: 1;    }
+}
+
+/* Reduced motion overrides for threshold */
+@media (prefers-reduced-motion: reduce) {
+  .threshold-star,
+  .threshold-orb,
+  .threshold-firefly {
+    animation: none !important;
+  }
+  .threshold-lantern-wrap {
+    animation: none !important;
+  }
 }
