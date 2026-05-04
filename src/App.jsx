@@ -4,6 +4,7 @@ import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import { loadSettings } from './shared/lib/db.js'
+import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
 // ── Room registry (nav + routing) ───────────────────────────────────────────
 const ROOMS = [
@@ -11,7 +12,8 @@ const ROOMS = [
   { key: 'sparks',      name: 'Sparks',          sub: 'hold them gently',          tone: 'rose'   },
   { key: 'physio',      name: 'First Aid',        sub: 'gentle attention',          tone: 'teal'   },
   { key: 'games',       name: 'Games',            sub: 'a soft place to drift',     tone: 'purple' },
-  { key: 'more-lights', name: 'More Lights',      sub: 'more rooms this way',       tone: 'purple' },
+  { key: 'library',     name: 'Library',          sub: 'stories · collected things', tone: 'purple' },
+  { key: 'more-lights', name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple' },
 ]
 
 // ── Lantern config (Threshold hub) ───────────────────────────────────────────
@@ -20,36 +22,51 @@ const LANTERN_ROOMS = [
   { id: 'sparks',  name: 'Sparks',          sub: 'hold them gently',          glow: '#e35a4a', glow2: '#ffb098', svg: '/assets/lantern-07.svg', roomKey: 'sparks'      },
   { id: 'neural',  name: 'First Aid',        sub: 'gentle attention',          glow: '#a8132a', glow2: '#ff7888', svg: '/assets/lantern-02.svg', roomKey: 'physio'      },
   { id: 'games',   name: 'Games',            sub: 'a soft place to drift',     glow: '#2a8a5a', glow2: '#88e2b4', svg: '/assets/lantern-04.svg', roomKey: 'games'       },
-  { id: 'threads', name: 'More Lights',      sub: 'more rooms this way',       glow: '#7a4ad8', glow2: '#c8a8ff', svg: '/assets/lantern-03.svg', roomKey: 'more-lights' },
+  { id: 'threads', name: 'Library',          sub: 'stories · collected things', glow: '#7a4ad8', glow2: '#c8a8ff', svg: '/assets/lantern-03.svg', roomKey: 'library'     },
 ]
 
-function lanternLayout(isMobile) {
+function lanternLayout(isMobile, isShort) {
+  // topStyle: CSS `top` for the wrap. chain: CSS length for chain height (string).
+  // Body top = topStyle + chain. Body bottom = body top + size*1.3px.
   if (isMobile) {
     return [
-      { id: 'almanac', xPct: 14, chainVh: 4,  size: 60, sway: 1.2, delay: 0.0 },
-      { id: 'sparks',  xPct: 36, chainVh: 12, size: 64, sway: 0.8, delay: 1.4 },
-      { id: 'neural',  xPct: 58, chainVh: 8,  size: 60, sway: 1.6, delay: 0.7 },
-      { id: 'games',   xPct: 80, chainVh: 14, size: 62, sway: 1.0, delay: 2.1 },
-      { id: 'threads', xPct: 26, chainVh: 18, size: 56, sway: 1.4, delay: 2.8 },
+      { id: 'almanac', xPct: 10, topStyle: '-8vh',  chain: '27vh', size: 60, sway: 1.2, delay: 0.0 },
+      { id: 'sparks',  xPct: 30, topStyle: '-2vh',  chain: '27vh', size: 64, sway: 0.8, delay: 1.4 },
+      { id: 'neural',  xPct: 52, topStyle: '0',     chain: '39vh', size: 60, sway: 1.6, delay: 0.7 },
+      { id: 'games',   xPct: 74, topStyle: '-2vh',  chain: '27vh', size: 62, sway: 1.0, delay: 2.1 },
+      { id: 'threads', xPct: 88, topStyle: '-8vh',  chain: '25vh', size: 56, sway: 1.4, delay: 2.8 },
     ]
   }
+  if (isShort) {
+    return [
+      { id: 'almanac', xPct: 8,  topStyle: '-10vh', chain: '33vh',               size: 80, sway: 1.4, delay: 0.0 },
+      { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 74, sway: 0.9, delay: 1.6 },
+      { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(23vh + 180px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 78, sway: 1.7, delay: 0.6 },
+      { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 76, sway: 1.0, delay: 2.4 },
+      { id: 'threads', xPct: 92, topStyle: '-10vh', chain: '31vh',               size: 72, sway: 1.3, delay: 3.1 },
+    ]
+  }
+  // arc: sides off-screen, sparks/games drop ~5vh lower, neural deepest for dramatic arc
   return [
-    { id: 'almanac', xPct: 16, chainVh: 5,  size: 100, sway: 1.4, delay: 0.0 },
-    { id: 'sparks',  xPct: 33, chainVh: 10, size: 92,  sway: 0.9, delay: 1.6 },
-    { id: 'neural',  xPct: 54, chainVh: 8,  size: 96,  sway: 1.7, delay: 0.6 },
-    { id: 'games',   xPct: 72, chainVh: 10, size: 94,  sway: 1.0, delay: 2.4 },
-    { id: 'threads', xPct: 88, chainVh: 4,  size: 90,  sway: 1.3, delay: 3.1 },
+    { id: 'almanac', xPct: 8,  topStyle: '-15vh', chain: '42vh',                                                   size: 100, sway: 1.4, delay: 0.0 },
+    { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 92,  sway: 0.9, delay: 1.6 },
+    { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(27vh + 220px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 96, sway: 1.7, delay: 0.6 },
+    { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 94,  sway: 1.0, delay: 2.4 },
+    { id: 'threads', xPct: 92, topStyle: '-13vh', chain: '40vh',                                                   size: 90,  sway: 1.3, delay: 3.1 },
   ]
 }
 
-function useIsMobile() {
-  const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+function useViewport() {
+  const [vp, setVp] = useState(() => {
+    if (typeof window === 'undefined') return { mobile: false, short: false }
+    return { mobile: window.innerWidth < 768, short: window.innerHeight < 790 }
+  })
   useEffect(() => {
-    const on = () => setM(window.innerWidth < 768)
+    const on = () => setVp({ mobile: window.innerWidth < 768, short: window.innerHeight < 790 })
     window.addEventListener('resize', on)
     return () => window.removeEventListener('resize', on)
   }, [])
-  return m
+  return vp
 }
 
 // ── Threshold atmosphere ─────────────────────────────────────────────────────
@@ -58,11 +75,11 @@ function ThresholdMoon() {
   return (
     <div style={{
       position: 'fixed',
-      top: 'clamp(60px, 10vh, 160px)',
+      top: 'clamp(130px, calc(7.5vw + 46px), 152px)',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: 'clamp(340px, 46vw, 640px)',
-      height: 'clamp(340px, 46vw, 640px)',
+      width: 'clamp(196px, 26vw, 370px)',
+      height: 'clamp(196px, 26vw, 370px)',
       pointerEvents: 'none',
       zIndex: 0,
       opacity: 0.52,
@@ -321,7 +338,7 @@ function ThresholdDateBar() {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 'clamp(16px, 3vw, 36px)',
-      margin: '24px auto 0',
+      margin: 'clamp(28px, 4vw, 52px) auto 0',
       maxWidth: 760,
       padding: '0 24px',
     }}>
@@ -351,7 +368,7 @@ function ThresholdDateBar() {
   )
 }
 
-function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPick }) {
+function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, delay, chainClipTop, onPick }) {
   const [hover, setHover] = useState(false)
   return (
     <div
@@ -366,7 +383,7 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
       style={{
         position: 'absolute',
         left: `${xPct}%`,
-        top: 0,
+        top: topStyle || 0,
         transform: 'translateX(-50%)',
         width: size,
         pointerEvents: 'auto',
@@ -383,11 +400,13 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
         top: 0,
         transform: 'translateX(-50%)',
         width: 1.2,
-        height: `${chainVh}vh`,
+        height: chain,
         background: 'linear-gradient(180deg, rgba(244,212,158,0.95) 0%, rgba(244,212,158,0.85) 40%, rgba(232,184,124,0.7) 100%)',
         boxShadow: '0 0 4px rgba(244,212,158,0.5)',
+        clipPath: chainClipTop ? `inset(${chainClipTop} 0 0 0)` : undefined,
       }} />
-      {/* anchor ring at gold rule */}
+      {/* anchor ring at gold rule — hidden when chain is clipped */}
+      {!chainClipTop && (
       <div style={{
         position: 'absolute',
         left: '50%',
@@ -398,11 +417,12 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
         border: '1px solid rgba(244,212,158,0.95)',
         boxShadow: '0 0 6px rgba(244,212,158,0.7)',
       }} />
+      )}
       {/* chain-to-lantern link */}
       <div style={{
         position: 'absolute',
         left: '50%',
-        top: `calc(${chainVh}vh - 8px)`,
+        top: `calc(${chain} - 8px)`,
         transform: 'translateX(-50%)',
         width: 5, height: 10,
         background: 'linear-gradient(180deg, rgba(232,184,124,0.7), rgba(244,212,158,1))',
@@ -414,7 +434,7 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
       <div style={{
         position: 'absolute',
         left: '50%',
-        top: `${chainVh}vh`,
+        top: chain,
         transform: `translate(-50%, 0) scale(${hover ? 1.06 : 1})`,
         width: size,
         height: size * 1.3,
@@ -464,7 +484,7 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
       <div style={{
         position: 'absolute',
         left: '50%',
-        top: `calc(${chainVh}vh + ${size * 1.3 + 10}px)`,
+        top: `calc(${chain} + ${(size * 1.3 + 10).toFixed(1)}px)`,
         transform: 'translate(-50%, 0)',
         pointerEvents: 'none',
         textAlign: 'center',
@@ -496,51 +516,61 @@ function ThresholdHangingLantern({ room, xPct, chainVh, size, sway, delay, onPic
   )
 }
 
-function ThresholdCatsOnFence() {
+function ThresholdMoreLightsPortal({ isMobile, isShort, onPick }) {
+  const [hover, setHover] = useState(false)
+  const size = isMobile ? 64 : isShort ? 80 : 96
   return (
-    <div style={{
-      position: 'fixed',
-      left: 0, right: 0, bottom: 0,
-      height: '22vh',
-      overflow: 'hidden',
-      pointerEvents: 'none',
-      zIndex: 5,
-    }}>
-      {/* mist wisps at fence base */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        background: [
-          'radial-gradient(ellipse 55% 35% at 28% 100%, rgba(120,145,200,0.22) 0%, transparent 70%)',
-          'radial-gradient(ellipse 38% 22% at 55% 100%, rgba(100,130,190,0.14) 0%, transparent 65%)',
-          'radial-gradient(ellipse 65% 28% at 12% 100%, rgba(110,140,195,0.18) 0%, transparent 68%)',
-          'radial-gradient(ellipse 45% 20% at 70% 100%, rgba(90,120,180,0.12) 0%, transparent 60%)',
-          'linear-gradient(0deg, rgba(6,12,32,0.55) 0%, rgba(8,16,40,0.15) 45%, transparent 100%)',
-        ].join(', '),
-      }} />
-      {/* cats image — offset left of centre */}
-      <div style={{
-        position: 'absolute',
-        left: 0, right: 0, bottom: 0,
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label="More Lights — more rooms this way"
+      onClick={() => onPick('more-lights')}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick('more-lights') } }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'fixed',
+        right: isMobile ? 18 : 32,
+        bottom: isMobile ? 28 : isShort ? 36 : 44,
+        zIndex: 8,
+        cursor: 'pointer',
         display: 'flex',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-end',
-        paddingLeft: '6vw',
+        alignItems: 'center',
+        gap: 18,
+        flexDirection: 'row-reverse',
+        outline: 'none',
       }}>
-        <img src="/assets/cats-on-fence.png" alt=""
-          draggable={false}
-          style={{
-            height: '30vh',
-            width: 'auto',
-            maxWidth: '82vw',
-            objectFit: 'contain',
-            objectPosition: 'center bottom',
-            mixBlendMode: 'screen',
-            filter: 'brightness(0.90) contrast(1.05) saturate(0.9)',
-            marginBottom: -4,
-            userSelect: 'none',
-          }} />
+      <div style={{
+        width: size, height: size, flexShrink: 0,
+        filter: hover
+          ? 'drop-shadow(0 0 8px rgba(244,212,158,0.6)) drop-shadow(0 0 20px rgba(244,212,158,0.3))'
+          : 'drop-shadow(0 0 3px rgba(244,212,158,0.25))',
+        transition: 'filter 300ms',
+      }}>
+        <img src={circleFrameImg} alt="" draggable={false}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', userSelect: 'none' }} />
+      </div>
+      <div style={{ textAlign: 'right', pointerEvents: 'none' }}>
+        <div style={{
+          fontFamily: 'Italiana, serif',
+          fontSize: isMobile ? 15 : 18,
+          color: hover ? '#fff4d0' : '#e8dfc0',
+          letterSpacing: 1.5,
+          textShadow: hover
+            ? '0 0 18px rgba(244,212,158,0.8), 0 1px 6px rgba(0,0,0,0.9)'
+            : '0 1px 6px rgba(0,0,0,0.9), 0 0 14px rgba(0,0,0,0.7)',
+          transition: 'color 280ms, text-shadow 280ms',
+        }}>More Lights</div>
+        <div style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: 'italic',
+          fontSize: 12,
+          color: hover ? '#d6c8b5' : '#c4b89a',
+          letterSpacing: 0.3,
+          marginTop: 1,
+          textShadow: '0 1px 5px rgba(0,0,0,0.85)',
+          transition: 'color 280ms',
+        }}>more rooms this way</div>
       </div>
     </div>
   )
@@ -548,8 +578,8 @@ function ThresholdCatsOnFence() {
 
 // ── HubView — The Threshold landing page ─────────────────────────────────────
 function HubView({ onPick }) {
-  const isMobile = useIsMobile()
-  const layout = useMemo(() => lanternLayout(isMobile), [isMobile])
+  const { mobile: isMobile, short: isShort } = useViewport()
+  const layout = useMemo(() => lanternLayout(isMobile, isShort), [isMobile, isShort])
   const [, setHovered] = useState(null)
 
   return (
@@ -562,29 +592,39 @@ function HubView({ onPick }) {
       <ThresholdAmbientBokeh />
       <ThresholdFireflies />
 
-      {/* ── Hero block — top ~40vh ── */}
+      {/* · the threshold · — floats in open sky above the moon */}
+      <div style={{
+        position: 'fixed',
+        top: 20,
+        left: 0, right: 0,
+        textAlign: 'center',
+        zIndex: 6,
+        pointerEvents: 'none',
+        fontFamily: "'Cormorant Garamond', Georgia, serif",
+        fontStyle: 'italic',
+        fontSize: 'clamp(11px, 1.1vw, 13px)',
+        letterSpacing: 8,
+        textTransform: 'lowercase',
+        color: '#c9b48a',
+        textShadow: '0 0 14px rgba(232,184,124,0.35)',
+      }}>
+        · the threshold ·
+      </div>
+
+      {/* ── Hero block — title centred on moon face ── */}
+      {/* No z-index here so gold rules (inside) are in root stacking context at z:auto,
+          letting lanterns (z:5) layer in front of them */}
       <div style={{
         position: 'relative',
-        zIndex: 4,
         textAlign: 'center',
-        padding: isMobile ? '20px 18px 0' : '28px 24px 0',
+        padding: isMobile ? '22px 18px 0' : '84px 24px 0',
+        pointerEvents: 'none',
       }}>
-        {/* · the threshold · */}
-        <div style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontSize: 'clamp(11px, 1.1vw, 13px)',
-          letterSpacing: 6,
-          textTransform: 'lowercase',
-          color: '#c9b48a',
-          textShadow: '0 0 14px rgba(232,184,124,0.35)',
-          marginBottom: 0,
-        }}>
-          · the threshold ·
-        </div>
 
-        {/* Cat [logo] Co */}
+        {/* Cat [logo] Co. — own stacking context (z:6) keeps title above lanterns */}
         <div style={{
+          position: 'relative',
+          zIndex: 6,
           fontFamily: 'Italiana, serif',
           fontSize: 'clamp(52px, 7.5vw, 110px)',
           margin: '8px 0 2px',
@@ -614,84 +654,65 @@ function HubView({ onPick }) {
               filter: 'drop-shadow(0 0 18px rgba(242,205,140,0.45))',
               userSelect: 'none',
             }} />
-          <span>Co</span>
+          <span>Co.</span>
         </div>
 
-        {/* Hero text */}
+        {/* Date / time bar */}
+        <ThresholdDateBar />
+      </div>
+
+      {/* ── Hanging lanterns — fixed to viewport ceiling for varied organic heights ── */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 5,
+      }}>
+        {layout.map((L) => {
+          const room = LANTERN_ROOMS.find(r => r.id === L.id)
+          return (
+            <ThresholdHangingLantern
+              key={L.id}
+              room={room}
+              xPct={L.xPct}
+              topStyle={L.topStyle}
+              chain={L.chain}
+              chainClipTop={L.chainClipTop}
+              size={L.size}
+              sway={L.sway}
+              delay={L.delay}
+              onPick={(key) => { setHovered(key); onPick(key) }}
+            />
+          )
+        })}
+      </div>
+
+      {/* Hero text — fixed bottom-left */}
+      <div style={{
+        position: 'fixed',
+        left: isMobile ? 28 : 48,
+        bottom: isMobile ? 32 : isShort ? 42 : 52,
+        zIndex: 8,
+        pointerEvents: 'none',
+        maxWidth: isMobile ? 260 : 360,
+      }}>
         <div style={{
-          margin: '10px auto 0',
-          maxWidth: 580,
-          padding: '0 24px',
           fontFamily: "'Cormorant Garamond', Georgia, serif",
           fontStyle: 'italic',
-          fontSize: isMobile ? 17 : 21,
-          color: '#efe1cc',
-          lineHeight: 1.55,
-          textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 24px rgba(8,12,28,0.85), 0 0 48px rgba(8,12,28,0.6)',
-          position: 'relative',
-          zIndex: 1,
+          fontSize: isMobile ? 18 : 22,
+          color: '#e8dfc0',
+          lineHeight: 1.65,
+          textShadow: '0 0 40px rgba(0,0,20,1), 0 2px 4px rgba(0,0,0,0.9)',
         }}>
           This is a liminal space.<br />
           a soft place to set your day down,<br />
           and small lights for the way ahead.
         </div>
-
-        {/* Date / time bar */}
-        <ThresholdDateBar />
-
-        {/* ── Lantern hanging layer ── anchored at the date bar gold rule level */}
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 1280,
-          margin: '0 auto',
-          height: 0,
-          overflow: 'visible',
-          pointerEvents: 'none',
-          zIndex: 5,
-        }}>
-          {layout.map((L) => {
-            const room = LANTERN_ROOMS.find(r => r.id === L.id)
-            return (
-              <ThresholdHangingLantern
-                key={L.id}
-                room={room}
-                xPct={L.xPct}
-                chainVh={L.chainVh}
-                size={L.size}
-                sway={L.sway}
-                delay={L.delay}
-                onPick={(key) => { setHovered(key); onPick(key) }}
-              />
-            )
-          })}
-        </div>
       </div>
 
-      {/* Cats on fence */}
-      <ThresholdCatsOnFence />
+      {/* More Lights portal — fixed bottom-right */}
+      <ThresholdMoreLightsPortal isMobile={isMobile} isShort={isShort} onPick={(key) => { setHovered(key); onPick(key) }} />
 
-      {/* Take a breath */}
-      <div style={{
-        position: 'fixed',
-        left: 0, right: 0,
-        bottom: isMobile ? 6 : 8,
-        textAlign: 'center',
-        zIndex: 7,
-        pointerEvents: 'none',
-        padding: '0 24px',
-      }}>
-        <span style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontSize: isMobile ? 13 : 15,
-          letterSpacing: 1.2,
-          color: '#cdb89c',
-          textShadow: '0 1px 8px rgba(0,0,0,0.7), 0 0 14px rgba(232,184,124,0.18)',
-        }}>
-          Take a breath. Nothing here is urgent.
-        </span>
-      </div>
     </div>
   )
 }
