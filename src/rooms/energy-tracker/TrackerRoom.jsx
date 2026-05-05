@@ -1515,19 +1515,22 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
     if (t !== 'history') setEditDate(null)
   }
 
-  // Lock scroll on Today tab — measure actual header height for centering
+  // Lock scroll on Today tab — measure with window.innerHeight for iPad Safari reliability
   useEffect(() => {
     const vf = document.querySelector('.view-fade')
     if (!vf) return
     if (tab === 'today') {
       vf.style.overflowY = 'hidden'
       const hdr = vf.querySelector('.room-header-wrap')
-      if (hdr) vf.style.setProperty('--header-h', `${hdr.getBoundingClientRect().height}px`)
+      const hdrH = hdr ? hdr.getBoundingClientRect().height : 80
+      // window.innerHeight accounts for iPad Safari chrome; dvh/svh do not reliably
+      const availH = window.innerHeight - hdrH - 20
+      vf.style.setProperty('--today-h', `${availH}px`)
     } else {
       vf.style.overflowY = ''
-      vf.style.removeProperty('--header-h')
+      vf.style.removeProperty('--today-h')
     }
-    return () => { vf.style.overflowY = ''; vf.style.removeProperty('--header-h') }
+    return () => { vf.style.overflowY = ''; vf.style.removeProperty('--today-h') }
   }, [tab])
 
   const showHistoryNav = tab === 'history' && !editDate
@@ -1577,7 +1580,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
         display: tab === 'today' ? 'flex' : 'none',
         flexDirection: 'column',
         justifyContent: 'center',
-        minHeight: 'calc(100dvh - var(--header-h, 80px) - 20px)',
+        minHeight: 'var(--today-h, calc(100svh - 100px))',
       }}>
         <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} />
       </div>

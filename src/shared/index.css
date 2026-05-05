@@ -18,6 +18,17 @@
 }
 
 * { box-sizing: border-box; }
+
+/* iOS Safari: eliminate 300ms tap delay and ghost highlight on all interactive elements */
+button, a, [role="button"], select, input, textarea, label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Momentum scrolling on iOS for all scroll containers */
+.view-fade, .hed, .celestial-cal {
+  -webkit-overflow-scrolling: touch;
+}
 html, body {
   margin: 0; padding: 0;
   background: #0b1020;
@@ -2494,6 +2505,13 @@ body {
 @keyframes thresholdLanternBreathe {
   0%, 100% { opacity: 0.85; }
   50%       { opacity: 1;    }
+}
+
+/* PWA standalone: push header below iPad/iPhone status bar */
+@media (display-mode: standalone) {
+  .room-header-wrap {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
 }
 
 /* Candle flicker */
