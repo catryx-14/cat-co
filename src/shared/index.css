@@ -153,7 +153,8 @@ body {
 }
 .rail.expanded::before {
   left: auto; right: 0;
-  background: linear-gradient(180deg, rgba(232,201,140,0.28) 0%, rgba(232,201,140,0.45) 40%, transparent 100%);
+  top: var(--header-h, 78px);
+  background: linear-gradient(180deg, rgba(232,201,140,0.28) 0%, rgba(232,201,140,0.45) 35%, transparent 100%);
 }
 .rail.expanded .rail-mark {
   top: 48px;

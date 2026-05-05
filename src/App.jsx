@@ -796,6 +796,20 @@ export default function App({ session }) {
     }))
   }
 
+  // Sync sidebar border top to actual header height so they form a clean L-shape
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const rail = document.querySelector('.rail')
+      const hdr  = document.querySelector('.room-header-wrap')
+      if (rail && hdr) {
+        rail.style.setProperty('--header-h', `${hdr.getBoundingClientRect().height}px`)
+      } else if (rail) {
+        rail.style.removeProperty('--header-h')
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [view])
+
   // Manage old bokeh/haze layers
   useEffect(() => {
     const bokeh = document.getElementById('bokeh-layer')
