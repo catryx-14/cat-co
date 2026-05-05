@@ -2515,8 +2515,13 @@ body {
 
 /* PWA standalone: push header below iPad/iPhone status bar */
 @media (display-mode: standalone) {
+  /* Shift the entire app shell below the status bar */
+  .stage {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Room header gets extra breathing room (env() already handled by .stage) */
   .room-header-wrap {
-    padding-top: calc(32px + env(safe-area-inset-top));
+    padding-top: 32px;
   }
 }
 

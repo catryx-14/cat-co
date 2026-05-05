@@ -371,15 +371,13 @@ function ThresholdDateBar() {
 function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, delay, chainClipTop, onPick }) {
   const [hover, setHover] = useState(false)
   return (
-    <div
+    <button
+      type="button"
       className="threshold-lantern-wrap"
-      role="button"
-      tabIndex={0}
       aria-label={`Enter ${room.name} — ${room.sub}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => onPick(room.roomKey)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(room.roomKey) } }}
       style={{
         position: 'fixed',
         left: `${xPct}%`,
@@ -394,6 +392,12 @@ function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, dela
         transformOrigin: 'top center',
         outline: 'none',
         willChange: 'transform',
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        margin: 0,
+        WebkitAppearance: 'none',
+        appearance: 'none',
       }}>
       {/* fine gold chain */}
       <div style={{
@@ -514,7 +518,7 @@ function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, dela
           transition: 'color 280ms',
         }}>{room.sub}</div>
       </div>
-    </div>
+    </button>
   )
 }
 

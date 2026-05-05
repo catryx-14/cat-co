@@ -531,7 +531,7 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
   const [loading, setLoading] = useState(true)
 
   const fieldRef = useRef(null)
-  const [fieldSize, setFieldSize] = useState({ w: 900, h: 520 })
+  const [fieldSize, setFieldSize] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -543,6 +543,9 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
 
   useEffect(() => {
     if (!fieldRef.current) return
+    // measure immediately so first render uses real dimensions
+    const { width, height } = fieldRef.current.getBoundingClientRect()
+    if (width > 0) setFieldSize({ w: width, h: height })
     const ro = new ResizeObserver(([e]) => setFieldSize({ w: e.contentRect.width, h: e.contentRect.height }))
     ro.observe(fieldRef.current)
     return () => ro.disconnect()
@@ -679,7 +682,7 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
           }}
         >
           <FieldDots />
-          {sparks.map((s, i) => (
+          {fieldSize && sparks.map((s, i) => (
             <FireflySpark
               key={s.id}
               spark={s}
