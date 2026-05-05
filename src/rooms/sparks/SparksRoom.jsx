@@ -543,7 +543,6 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
 
   useEffect(() => {
     if (!fieldRef.current) return
-    // measure immediately so first render uses real dimensions
     const { width, height } = fieldRef.current.getBoundingClientRect()
     if (width > 0) setFieldSize({ w: width, h: height })
     const ro = new ResizeObserver(([e]) => setFieldSize({ w: e.contentRect.width, h: e.contentRect.height }))
