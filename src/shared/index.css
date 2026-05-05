@@ -2516,7 +2516,7 @@ body {
 /* PWA standalone: push header below iPad/iPhone status bar */
 @media (display-mode: standalone) {
   .room-header-wrap {
-    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-top: calc(32px + env(safe-area-inset-top));
   }
 }
 

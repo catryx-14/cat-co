@@ -381,17 +381,19 @@ function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, dela
       onClick={() => onPick(room.roomKey)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(room.roomKey) } }}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         left: `${xPct}%`,
         top: topStyle || 0,
         transform: 'translateX(-50%)',
         width: size,
+        zIndex: 5,
         pointerEvents: 'auto',
         cursor: 'pointer',
         animation: `thresholdLanternSway ${10 + sway}s ease-in-out infinite`,
         animationDelay: `${delay}s`,
         transformOrigin: 'top center',
         outline: 'none',
+        willChange: 'transform',
       }}>
       {/* fine gold chain */}
       <div style={{
@@ -661,31 +663,24 @@ function HubView({ onPick }) {
         <ThresholdDateBar />
       </div>
 
-      {/* ── Hanging lanterns — fixed to viewport ceiling for varied organic heights ── */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 5,
-      }}>
-        {layout.map((L) => {
-          const room = LANTERN_ROOMS.find(r => r.id === L.id)
-          return (
-            <ThresholdHangingLantern
-              key={L.id}
-              room={room}
-              xPct={L.xPct}
-              topStyle={L.topStyle}
-              chain={L.chain}
-              chainClipTop={L.chainClipTop}
-              size={L.size}
-              sway={L.sway}
-              delay={L.delay}
-              onPick={(key) => { setHovered(key); onPick(key) }}
-            />
-          )
-        })}
-      </div>
+      {/* ── Hanging lanterns — each directly position:fixed to avoid pointer-events:none parent bug on iOS ── */}
+      {layout.map((L) => {
+        const room = LANTERN_ROOMS.find(r => r.id === L.id)
+        return (
+          <ThresholdHangingLantern
+            key={L.id}
+            room={room}
+            xPct={L.xPct}
+            topStyle={L.topStyle}
+            chain={L.chain}
+            chainClipTop={L.chainClipTop}
+            size={L.size}
+            sway={L.sway}
+            delay={L.delay}
+            onPick={(key) => { setHovered(key); onPick(key) }}
+          />
+        )
+      })}
 
       {/* Hero text — fixed bottom-left */}
       <div style={{
