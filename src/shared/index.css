@@ -19,8 +19,13 @@
 
 * { box-sizing: border-box; }
 
-/* iOS Safari: eliminate 300ms tap delay and ghost highlight on all interactive elements */
-button, a, [role="button"], select, input, textarea, label {
+/* iOS Safari: eliminate 300ms tap delay, ghost highlight, and cursor on all interactive elements */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+select, input, textarea, label {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -241,7 +246,7 @@ body {
 }
 .rail-nav-item.active {
   color: var(--candle-soft);
-  background: rgba(232,201,140,0.07);
+  border-bottom: 1px solid rgba(232,201,140,0.55);
 }
 .rail-nav-item.active .dot {
   opacity: 1;
@@ -272,6 +277,7 @@ body {
 .rail.expanded .rail-threshold-btn {
   opacity: 1;
   pointer-events: auto;
+  border: 1px solid rgba(232,201,140,0.38);
 }
 .rail-threshold-btn:hover {
   filter: drop-shadow(0 0 9px rgba(244,210,138,0.7)) drop-shadow(0 0 18px rgba(232,201,140,0.35));
@@ -2510,7 +2516,7 @@ body {
 /* PWA standalone: push header below iPad/iPhone status bar */
 @media (display-mode: standalone) {
   .room-header-wrap {
-    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-top: calc(20px + env(safe-area-inset-top));
   }
 }
 

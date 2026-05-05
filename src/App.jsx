@@ -796,18 +796,34 @@ export default function App({ session }) {
     }))
   }
 
-  // Sync sidebar border top to actual header height so they form a clean L-shape
+  // Sync sidebar border top to header height — uses ResizeObserver so tab switches stay in sync
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      const rail = document.querySelector('.rail')
-      const hdr  = document.querySelector('.room-header-wrap')
-      if (rail && hdr) {
+    const rail = document.querySelector('.rail')
+    if (!rail) return
+
+    function sync() {
+      const hdr = document.querySelector('.room-header-wrap')
+      if (hdr) {
         rail.style.setProperty('--header-h', `${hdr.getBoundingClientRect().height}px`)
-      } else if (rail) {
+      } else {
         rail.style.removeProperty('--header-h')
       }
-    })
-    return () => cancelAnimationFrame(raf)
+    }
+
+    // Measure immediately + after layout settles
+    const raf = requestAnimationFrame(sync)
+    const timer = setTimeout(sync, 150)
+
+    // Watch for height changes (tab switches change header height)
+    const ro = new ResizeObserver(sync)
+    const hdr = document.querySelector('.room-header-wrap')
+    if (hdr) ro.observe(hdr)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+      ro.disconnect()
+    }
   }, [view])
 
   // Manage old bokeh/haze layers
