@@ -29,9 +29,6 @@ function weekMonday(date) {
   return d
 }
 
-function monthName(d) {
-  return ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-}
 
 // ── Colour / display helpers ──────────────────────────────────────────────────
 
@@ -131,34 +128,23 @@ function ArcStars({ stars, color, live = false }) {
 
 // ── Week separator ────────────────────────────────────────────────────────────
 
-// Tick x-positions at each column centre, within a 0–100 viewBox
-const TICK_X = [1,3,5,7,9,11,13].map(n => +((n / 14) * 100).toFixed(2))
-
 function WeekSep() {
   return (
     <div className="week-sep" aria-hidden="true">
-      {/* Light trail — barely-there radial bleed from the star outward */}
-      <div className="week-sep-trail" />
-      {/* Star — the main event */}
-      <div className="week-sep-ornament">
-        <svg viewBox="-22 -22 44 44" width="44" height="44">
-          <defs>
-            <filter id="ws-star-glow" x="-300%" y="-300%" width="700%" height="700%">
-              <feGaussianBlur stdDeviation="4.2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <g filter="url(#ws-star-glow)" className="week-sep-star">
-            <path d={sparkle(9.0, 2.0)}  fill="rgba(222,194,90,0.72)" />
-            <path d={sparkle(6.2, 1.4)}  fill="rgba(244,228,148,0.90)" />
-            <path d={sparkle(3.8, 0.88)} fill="rgba(255,248,200,0.98)" />
-            <circle cx="0" cy="0" r="1.6" fill="rgba(255,255,252,1.0)" />
-          </g>
-        </svg>
-      </div>
+      <div className="week-sep-line week-sep-line--l" />
+      <svg viewBox="-7 -7 14 14" width="14" height="14" style={{ flexShrink: 0, overflow: 'visible' }}>
+        <defs>
+          <filter id="wsd-glow" x="-250%" y="-250%" width="600%" height="600%">
+            <feGaussianBlur stdDeviation="1.6" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <g filter="url(#wsd-glow)">
+          <path d={sparkle(5.0, 1.2)} fill="rgba(244,212,158,0.82)" />
+          <circle cx="0" cy="0" r="0.9" fill="rgba(255,252,225,0.95)" />
+        </g>
+      </svg>
+      <div className="week-sep-line week-sep-line--r" />
     </div>
   )
 }
@@ -212,7 +198,7 @@ function DayTooltip({ entry, date, col }) {
 
 // ── Day cell ──────────────────────────────────────────────────────────────────
 
-function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, col }) {
+function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfMonth, col }) {
   const [showTip, setShowTip] = useState(false)
   const tipTimer = useRef(null)
 
@@ -254,8 +240,9 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, col }) {
         isFuture    ? 'cal-cell--future' : '',
         isPastEmpty ? 'cal-cell--empty'  : '',
         isToday     ? 'cal-cell--today'  : '',
+        isOutOfMonth ? 'cal-cell--out-of-month' : '',
       ].join(' ').trim()}
-      onClick={entry ? () => onClick(toDateStr(date)) : undefined}
+      onClick={entry && !isOutOfMonth ? () => onClick(toDateStr(date)) : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -290,23 +277,23 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, col }) {
 
 // ── Week row ──────────────────────────────────────────────────────────────────
 
-function WeekRow({ week, entryMap, thresholds, todayStr, onEdit }) {
-  const label = `${monthName(week.days[0])} ${week.days[0].getFullYear()}`
+function WeekRow({ week, entryMap, thresholds, todayStr, onEdit, viewMonth }) {
   return (
     <div className="cal-week">
-      <div className="cal-week-label">{label}</div>
       <div className="cal-week-days">
         {week.days.map((day, i) => {
           const ds = toDateStr(day)
+          const outOfMonth = viewMonth !== undefined && day.getMonth() !== viewMonth
           return (
             <DayCell
               key={ds}
               date={day}
-              entry={entryMap[ds] || null}
+              entry={outOfMonth ? null : (entryMap[ds] || null)}
               thresholds={thresholds}
-              onClick={onEdit}
+              onClick={outOfMonth ? undefined : onEdit}
               isToday={ds === todayStr}
               isFuture={ds > todayStr}
+              isOutOfMonth={outOfMonth}
               col={i}
             />
           )
@@ -316,37 +303,27 @@ function WeekRow({ week, entryMap, thresholds, todayStr, onEdit }) {
   )
 }
 
-// ── Build week list ───────────────────────────────────────────────────────────
+// ── Build weeks for a specific month ─────────────────────────────────────────
 
-function buildWeeks(entries) {
-  const today = new Date()
-  today.setHours(12, 0, 0, 0)
-
-  let earliest = entries.length > 0
-    ? new Date(Math.min(...entries.map(e => parseDate(e.date))))
-    : today
-
-  const future2 = addDays(today, 14)
-  let cur = weekMonday(earliest)
-  const lastMon = weekMonday(future2)
-
+function buildMonthWeeks(year, month) {
+  const firstDay = new Date(year, month, 1)
+  firstDay.setHours(12, 0, 0, 0)
+  const lastDay = new Date(year, month + 1, 0)
+  lastDay.setHours(12, 0, 0, 0)
+  let cur = weekMonday(firstDay)
   const weeks = []
-  while (cur <= lastMon) {
+  while (cur <= lastDay) {
     weeks.push({ days: Array.from({ length: 7 }, (_, i) => addDays(cur, i)) })
     cur = addDays(cur, 7)
   }
-
-  return weeks // oldest at top, newest at bottom
+  return weeks
 }
 
 // ── TrackerHistory ────────────────────────────────────────────────────────────
 
-const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-export default function TrackerHistory({ settings, session, onEditDate }) {
+export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth }) {
   const [entries, setEntries] = useState(null)
   const { thresholds } = settings
-  const bottomRef = useRef(null)
 
   useEffect(() => {
     loadAllEntries(session.user.id)
@@ -362,19 +339,12 @@ export default function TrackerHistory({ settings, session, onEditDate }) {
     return () => { if (bokeh) bokeh.style.opacity = prev }
   }, [])
 
-  useEffect(() => {
-    if (entries !== null) {
-      bottomRef.current?.scrollIntoView({ behavior: 'instant' })
-    }
-  }, [entries])
-
   const { entryMap, weeks, todayStr } = useMemo(() => {
     const todayStr = toDateStr(new Date())
-    if (!entries) return { entryMap: {}, weeks: [], todayStr }
     const entryMap = {}
-    for (const e of entries) entryMap[e.date] = e
-    return { entryMap, weeks: buildWeeks(entries), todayStr }
-  }, [entries])
+    if (entries) for (const e of entries) entryMap[e.date] = e
+    return { entryMap, weeks: buildMonthWeeks(viewYear, viewMonth), todayStr }
+  }, [entries, viewYear, viewMonth])
 
   if (entries === null) {
     return <div className="history-loading">opening the almanac…</div>
@@ -382,13 +352,10 @@ export default function TrackerHistory({ settings, session, onEditDate }) {
 
   return (
     <div className="celestial-cal">
-      <div className="cal-scroll-wrap">
-        <div className="cal-dow-header">
-          {DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
-        </div>
-
-        {weeks.map((week, wi) => (
-          <div key={toDateStr(week.days[0])}>
+      {weeks.map((week, wi) => {
+        const weekStr = toDateStr(week.days[0])
+        return (
+          <div key={weekStr}>
             {wi > 0 && <WeekSep />}
             <WeekRow
               week={week}
@@ -396,11 +363,11 @@ export default function TrackerHistory({ settings, session, onEditDate }) {
               thresholds={thresholds}
               todayStr={todayStr}
               onEdit={onEditDate}
+              viewMonth={viewMonth}
             />
           </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
+        )
+      })}
 
       {entries.length === 0 && (
         <div className="history-footnote">no past entries yet — begin and the stars will gather</div>

@@ -721,6 +721,14 @@ function HubView({ onPick }) {
 function Rail({ inRoom, current, onPick, onHome }) {
   return (
     <div className={`rail ${inRoom ? 'expanded' : ''}`} aria-label="navigation">
+      <button
+        type="button"
+        className="rail-threshold-btn"
+        aria-label="Return to the Threshold"
+        onClick={onHome}
+      >
+        <img src="/assets/logo.png" alt="" className="rail-threshold-icon" draggable={false} />
+      </button>
       <nav className="rail-nav" aria-hidden={!inRoom}>
         {ROOMS.map(r => (
           <a key={r.key}
@@ -732,32 +740,31 @@ function Rail({ inRoom, current, onPick, onHome }) {
           </a>
         ))}
       </nav>
-      <a className="rail-home" href="#" onClick={e => { e.preventDefault(); onHome() }}>
-        back to the threshold
-      </a>
     </div>
   )
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
+    return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Energy Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
-    return <SparksRoom onSettings={onSettings} session={session} />
+    return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
   }
   if (roomKey === 'engine-room') {
-    return <EngineRoom onSettings={onSettings} />
+    return <EngineRoom roomName={room?.name ?? 'Engine Room'} onSettings={onSettings} />
   }
   if (roomKey === 'physio') {
     return <FirstAidRoom onHome={onHome} />
   }
   return (
     <>
-      <div className="room-head">
-        <h2 className="room-title">{room ? room.name : '—'}</h2>
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{room ? room.name : '—'}</h2>
+        </div>
       </div>
       <div className="placeholder">
         this room hasn't been built yet — return to the threshold and choose another lantern.
@@ -769,9 +776,6 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
 // ─── App ───
 export default function App({ session }) {
   const [view, setView] = useState('hub')
-  const [leaving, setLeaving] = useState(false)
-  const [fadingIn, setFadingIn] = useState(false)
-  const [fast, setFast] = useState(false)
   const [settings, setSettings] = useState(null)
   const inRoom = view !== 'hub'
 
@@ -806,30 +810,20 @@ export default function App({ session }) {
     }
   }, [view])
 
-  function navigate(target, speed) {
-    const isFast = speed === 'fast'
-    setLeaving(true)
-    setTimeout(() => {
-      setView(target)
-      setLeaving(false)
-      setFast(isFast)
-      setFadingIn(true)
-    }, isFast ? 350 : 900)
-  }
-
   const [trackerInitTab, setTrackerInitTab] = useState(null)
+  const [trackerResetKey, setTrackerResetKey] = useState(0)
 
-  const goRoom = (key) => { if (key === 'tracker') setTrackerInitTab(null); navigate(key, 'slow') }
-  const goHome = () => navigate('hub', 'fast')
-  const goSettings = () => { setTrackerInitTab('settings'); navigate('tracker', 'slow') }
+  const goRoom = (key) => {
+    if (key === 'tracker') {
+      setTrackerInitTab(null)
+      setTrackerResetKey(k => k + 1)
+    }
+    setView(key)
+  }
+  const goHome = () => setView('hub')
+  const goSettings = () => { setTrackerInitTab('settings'); setView('tracker') }
 
-  const fadeClass = [
-    'view-fade',
-    leaving ? 'leaving' : '',
-    fadingIn && !leaving ? 'fading-in' : '',
-    fast ? 'fast' : '',
-    view === 'hub' ? 'is-hub' : 'is-room',
-  ].filter(Boolean).join(' ')
+  const fadeClass = `view-fade ${view === 'hub' ? 'is-hub' : 'is-room'}`
 
   if (!settings) return null
 
@@ -838,10 +832,10 @@ export default function App({ session }) {
       <div className="stage">
         {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} />}
         <main className="view">
-          <div className={fadeClass} key={leaving ? `leaving-${view}` : view}>
+          <div className={fadeClass} key={view}>
             {view === 'hub'
               ? <HubView onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} trackerResetKey={trackerResetKey} />}
           </div>
         </main>
       </div>

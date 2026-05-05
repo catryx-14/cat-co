@@ -149,14 +149,11 @@ body {
 .rail.expanded {
   flex-basis: 88px;
   width: 88px;
-  background: linear-gradient(90deg,
-    rgba(20,24,42,0.45) 0%,
-    rgba(20,24,42,0.18) 80%,
-    transparent 100%);
+  background: linear-gradient(180deg, #08102a 0%, #0f1a3a 20%, #16204a 45%, #14233f 70%, #0a1530 100%) fixed;
 }
 .rail.expanded::before {
   left: auto; right: 0;
-  background: linear-gradient(180deg, transparent, rgba(232,201,140,0.45), transparent);
+  background: linear-gradient(180deg, rgba(232,201,140,0.28) 0%, rgba(232,201,140,0.45) 40%, transparent 100%);
 }
 .rail.expanded .rail-mark {
   top: 48px;
@@ -182,7 +179,7 @@ body {
 
 .rail-nav {
   position: absolute;
-  inset: 96px 0 70px 0;
+  inset: 96px 0 16px 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -203,6 +200,9 @@ body {
   text-decoration: none;
   transition: background .35s ease, color .35s ease;
   position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
 }
 .rail-nav-item .dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -235,32 +235,41 @@ body {
   opacity: 1;
   animation: flicker 2.4s ease-in-out infinite;
 }
-.rail-home {
+.rail-threshold-btn {
   position: absolute;
-  bottom: 18px;
-  left: 8px; right: 8px;
-  font-family: "Crimson Pro", serif;
-  font-style: italic;
-  font-size: 11px;
-  color: var(--ink-faint);
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: transparent;
+  border: 0;
+  padding: 6px;
   cursor: pointer;
-  letter-spacing: 0.04em;
-  padding: 6px 4px;
-  text-align: center;
-  transition: color .35s ease;
   opacity: 0;
   pointer-events: none;
-  line-height: 1.2;
-  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transition: opacity 1s ease 0.3s, filter 280ms ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 0 5px rgba(232,201,140,0.35));
 }
-.rail.expanded .rail-home { opacity: 1; pointer-events: auto; transition: opacity 1s ease 0.5s, color .35s ease; }
-.rail-home:hover { color: var(--candle-soft); }
-.rail-home::before {
-  content: "←";
+.rail.expanded .rail-threshold-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rail-threshold-btn:hover {
+  filter: drop-shadow(0 0 9px rgba(244,210,138,0.7)) drop-shadow(0 0 18px rgba(232,201,140,0.35));
+}
+.rail-threshold-icon {
+  width: 24px;
+  height: auto;
   display: block;
-  font-style: normal;
-  color: var(--candle);
-  margin-bottom: 2px;
+  user-select: none;
+  pointer-events: none;
 }
 
 .view {
@@ -268,26 +277,13 @@ body {
   position: relative;
   min-height: 100vh;
 }
-@keyframes view-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
 .view-fade {
   position: absolute;
   inset: 0;
   display: block;
-  padding: 64px 56px 80px;
+  padding: 0 56px 80px;
   overflow-y: auto;
   opacity: 1;
-}
-.view-fade.fading-in {
-  animation: view-fade-in 1.2s ease both;
-}
-.view-fade.fading-in.fast {
-  animation-duration: 0.4s;
-}
-.view-fade.leaving {
-  animation: view-fade-in 0.35s ease reverse forwards;
 }
 .view-fade.is-hub {
   padding: 0;
@@ -603,7 +599,8 @@ body {
 }
 
 @media (max-width: 720px) {
-  .view-fade { padding: 36px 22px 60px; }
+  .view-fade { padding: 0 22px 60px; }
+  .room-header-wrap { margin: 0 -22px 20px; padding-left: 22px; padding-right: 22px; }
 
   /* ── sidebar → fixed bottom nav bar ── */
   .rail {
@@ -670,7 +667,7 @@ body {
     white-space: normal;
     word-break: break-word;
   }
-  .rail.expanded .rail-home { display: none !important; }
+  .rail.expanded .rail-threshold-btn { display: none !important; }
   /* push room content above the bottom bar */
   .view-fade:not(.is-hub) { padding-bottom: 74px; }
 
@@ -700,8 +697,19 @@ body {
   .footer .left { max-width: 100%; }
 
   /* ── energy tracker ── */
-  .room-tab { padding: 10px 11px 12px; font-size: 15px; letter-spacing: 0.03em; }
+  .room-tab { padding: 5px 11px 7px; font-size: 15px; letter-spacing: 0.03em; }
   .event-axes { flex-wrap: wrap; gap: 8px; }
+}
+
+/* Sticky header — matches page gradient, gold bottom border */
+.room-header-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, #08102a 0%, #0f1a3a 20%, #16204a 45%, #14233f 70%, #0a1530 100%) fixed;
+  border-bottom: 1px solid rgba(232,201,140,0.28);
+  margin: 0 -56px 20px;
+  padding: 10px 56px 0;
 }
 
 .room-head {
@@ -709,12 +717,12 @@ body {
   align-items: baseline;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 8px;
+  margin-bottom: 1px;
   flex-wrap: wrap;
 }
 .room-title {
   font-family: "Cagliostro", serif;
-  font-size: clamp(24px, 4vw, 30px);
+  font-size: 32px;
   letter-spacing: 0.02em;
   margin: 0;
   color: var(--candle-soft);
@@ -771,20 +779,24 @@ body {
 .room-tabs {
   display: flex;
   gap: 0;
-  margin: 4px 0 28px;
-  border-bottom: 1px solid rgba(232,201,140,0.12);
+  margin: 0;
 }
 .room-tab {
   font-family: "Cagliostro", serif;
   font-size: 17px;
   letter-spacing: 0.06em;
-  padding: 10px 22px 12px;
+  padding: 5px 22px 7px;
   color: var(--ink-faint);
   cursor: pointer;
   border-bottom: 1px solid transparent;
   margin-bottom: -1px;
   transition: color .35s ease, border-color .35s ease;
   text-transform: lowercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 .room-tab:hover { color: var(--ink-soft); }
 .room-tab.active {
@@ -1599,10 +1611,47 @@ body {
 
 /* ── Celestial Calendar (History tab) ──────────────────────────────────────── */
 
+/* Month navigation */
+.cal-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 2px 0 1px;
+}
+.cal-month-label {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  letter-spacing: 0.10em;
+  color: rgba(232,201,140,0.85);
+  min-width: 116px;
+  text-align: center;
+  text-shadow: 0 0 12px rgba(232,201,140,0.25);
+}
+.cal-month-arrow {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: rgba(232,201,140,0.45);
+  transition: color 250ms;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cal-month-arrow:hover { color: rgba(244,212,158,0.9); }
+.cal-month-arrow svg { display: block; }
+
 .celestial-cal {
   display: flex;
   flex-direction: column;
   gap: 0;
+  padding-top: 12px;
 }
 
 .cal-scroll-wrap {
@@ -1621,7 +1670,7 @@ body {
   font-size: 9px;
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: rgba(232,201,140,0.25);
+  color: rgba(232,201,140,0.60);
   text-align: center;
   padding: 0 0 6px;
 }
@@ -1647,38 +1696,24 @@ body {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
-/* Week separator */
+/* Week separator — thin gold rule fading to edges, small diamond star at centre */
 .week-sep {
-  position: relative;
-  width: 100%;
-  height: 28px;
-  margin: 8px 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  width: 100%;
+  margin: 5px 0;
+  height: 14px;
   overflow: visible;
 }
-
-/* Light trail — radial bleed from the star, fades before the edges */
-.week-sep-trail {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 8px;
-  transform: translateY(-50%);
-  background: radial-gradient(
-    ellipse 62% 100% at center,
-    rgba(248,228,140,0.38) 0%,
-    rgba(232,201,140,0.12) 40%,
-    transparent 68%
-  );
+.week-sep-line {
+  flex: 1;
+  height: 1px;
 }
-
-.week-sep-ornament {
-  position: relative;
-  z-index: 1;
-  line-height: 0;
+.week-sep-line--l {
+  background: linear-gradient(90deg, transparent 0%, rgba(232,184,124,0.55) 100%);
+}
+.week-sep-line--r {
+  background: linear-gradient(90deg, rgba(232,184,124,0.55) 0%, transparent 100%);
 }
 
 /* Arc star glow — CSS drop-shadow on the SVG element */
@@ -1701,15 +1736,6 @@ body {
     drop-shadow(0 0 10px rgba(232,64,64,0.28));
 }
 
-/* Separator star pulse */
-.week-sep-star {
-  animation: sep-star-pulse 3.2s ease-in-out infinite;
-}
-@keyframes sep-star-pulse {
-  0%, 100% { opacity: 0.60; }
-  50%       { opacity: 1.00; }
-}
-
 /* Day cell */
 .cal-cell {
   position: relative;
@@ -1724,6 +1750,12 @@ body {
 
 .cal-cell--logged {
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.cal-cell--out-of-month {
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .cal-cell--logged:hover {
@@ -2422,6 +2454,12 @@ body {
 @keyframes thresholdTwinkle {
   from { opacity: var(--op-max, 0.6); }
   to   { opacity: var(--op-min, 0.1); }
+}
+
+/* Threshold lantern touch target */
+.threshold-lantern-wrap {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Floating bokeh orbs */

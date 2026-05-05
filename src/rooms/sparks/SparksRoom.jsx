@@ -521,7 +521,7 @@ function ViewToggle({ value, onChange }) {
 }
 
 // ─── main Sparks room ──────────────────────────────────────────────────
-export default function SparksRoom({ onSettings }) {
+export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
   const [sparks, setSparks] = useState([])
   const [draft, setDraft] = useState('')
   const [draftTag, setDraftTag] = useState('general')
@@ -599,9 +599,11 @@ export default function SparksRoom({ onSettings }) {
 
   if (!user) return (
     <>
-      <div className="room-head">
-        <h2 className="room-title">Sparks</h2>
-        <RoomMark date={todayStr()} onSettings={onSettings} />
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{roomName}</h2>
+          <RoomMark date={todayStr()} onSettings={onSettings} />
+        </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0' }}>
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
@@ -625,9 +627,11 @@ export default function SparksRoom({ onSettings }) {
   return (
     <>
       {/* room header */}
-      <div className="room-head">
-        <h2 className="room-title">Sparks</h2>
-        <RoomMark date={todayStr()} onSettings={onSettings} />
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{roomName}</h2>
+          <RoomMark date={todayStr()} onSettings={onSettings} />
+        </div>
       </div>
 
       {/* capture box */}

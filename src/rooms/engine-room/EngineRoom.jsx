@@ -9,7 +9,7 @@ const CATEGORY_COLORS = {
   reference: 'rgba(126,184,217,0.7)',
 }
 
-export default function EngineRoom({ onSettings }) {
+export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -34,9 +34,11 @@ export default function EngineRoom({ onSettings }) {
 
   return (
     <>
-      <div className="room-head">
-        <h2 className="room-title">Engine Room</h2>
-        <RoomMark date={todayStr()} onSettings={onSettings} />
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{roomName}</h2>
+          <RoomMark date={todayStr()} onSettings={onSettings} />
+        </div>
       </div>
 
       <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(240,227,194,0.35)', marginBottom: 32 }}>

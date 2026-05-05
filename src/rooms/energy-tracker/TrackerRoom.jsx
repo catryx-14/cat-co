@@ -1487,11 +1487,27 @@ function RecalculateSection({ session }) {
   )
 }
 
+const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+const HIST_DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 // ─── TrackerRoom shell ───
-export default function TrackerRoom({ onHome, session, settings, onThresholdsChange, initialTab }) {
+export default function TrackerRoom({ onHome, session, settings, onThresholdsChange, initialTab, roomName = 'Energy Tracker' }) {
   const [tab, setTab] = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey, setTodayResetKey] = useState(0)
+
+  // Month nav state — lifted here so it lives in the sticky header
+  const [viewYear, setViewYear]   = useState(() => new Date().getFullYear())
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
 
   function handleTabChange(t) {
     if (t === 'today') setTodayResetKey(k => k + 1)
@@ -1499,29 +1515,81 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
     if (t !== 'history') setEditDate(null)
   }
 
+  // Lock scroll on Today tab — measure actual header height for centering
+  useEffect(() => {
+    const vf = document.querySelector('.view-fade')
+    if (!vf) return
+    if (tab === 'today') {
+      vf.style.overflowY = 'hidden'
+      const hdr = vf.querySelector('.room-header-wrap')
+      if (hdr) vf.style.setProperty('--header-h', `${hdr.getBoundingClientRect().height}px`)
+    } else {
+      vf.style.overflowY = ''
+      vf.style.removeProperty('--header-h')
+    }
+    return () => { vf.style.overflowY = ''; vf.style.removeProperty('--header-h') }
+  }, [tab])
+
+  const showHistoryNav = tab === 'history' && !editDate
+
   return (
     <>
-      <div className="room-head">
-        <h2 className="room-title">{tab === 'settings' ? 'settings' : 'Energy Tracker'}</h2>
-        <RoomMark date={todayDisplayStr()} onSettings={() => setTab('settings')} />
-      </div>
-      {tab !== 'settings' && <div className="room-tabs">
-        {['today', 'horizon', 'history'].map(t => (
-          <div key={t}
-               className={`room-tab ${tab === t ? 'active' : ''}`}
-               onClick={() => handleTabChange(t)}>
-            {t}
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{tab === 'settings' ? 'settings' : roomName}</h2>
+          <RoomMark date={todayDisplayStr()} onSettings={() => setTab('settings')} />
+        </div>
+        {tab !== 'settings' && (
+          <div className="room-tabs">
+            {['today', 'horizon', 'history'].map(t => (
+              <div key={t}
+                   className={`room-tab ${tab === t ? 'active' : ''}`}
+                   onClick={() => handleTabChange(t)}>
+                {t}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>}
+        )}
+        {showHistoryNav && (
+          <>
+            <div className="cal-month-nav">
+              <button className="cal-month-arrow" onClick={prevMonth} aria-label="Previous month">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="13,4 7,10 13,16" />
+                </svg>
+              </button>
+              <div className="cal-month-label">{HIST_MONTHS[viewMonth]} {viewYear}</div>
+              <button className="cal-month-arrow" onClick={nextMonth} aria-label="Next month">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="7,4 13,10 7,16" />
+                </svg>
+              </button>
+            </div>
+            <div className="cal-dow-header">
+              {HIST_DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Today stays mounted so unsaved state survives tab switches */}
-      <div style={{ display: tab === 'today' ? '' : 'none' }}>
+      <div style={{
+        display: tab === 'today' ? 'flex' : 'none',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minHeight: 'calc(100dvh - var(--header-h, 80px) - 20px)',
+      }}>
         <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} />
       </div>
       {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
       {tab === 'history' && !editDate && (
-        <TrackerHistory settings={settings} session={session} onEditDate={date => setEditDate(date)} />
+        <TrackerHistory
+          settings={settings}
+          session={session}
+          onEditDate={date => setEditDate(date)}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+        />
       )}
       {tab === 'history' && editDate && (
         <HistoryDateEditor
