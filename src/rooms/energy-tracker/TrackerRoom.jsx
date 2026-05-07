@@ -880,7 +880,7 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
 }
 
 // ─── TrackerDayEditor ───
-function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey }) {
+function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough }) {
   const dateStr = dateProp || todayDateStr()
   const isToday = dateStr === todayDateStr()
   const [loading, setLoading] = useState(true)
@@ -894,9 +894,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [siCarryIn, setSiCarryIn] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
-  const [drillThrough, setDrillThrough] = useState(null)
 
-  useEffect(() => { setDrillThrough(null) }, [resetKey])
+  useEffect(() => { onDrillThrough?.(null) }, [resetKey])
 
   useEffect(() => {
     async function init() {
@@ -1047,8 +1046,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
         drillThrough={drillThrough}
-        onOrb={setDrillThrough}
-        onClose={() => setDrillThrough(null)}
+        onOrb={onDrillThrough}
+        onClose={() => onDrillThrough?.(null)}
         saveStatus={saveStatus}
       />
       {drillThrough && (
@@ -1495,6 +1494,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
   const [tab, setTab] = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey, setTodayResetKey] = useState(0)
+  const [drillThrough, setDrillThrough] = useState(null)
 
   // Month nav state — lifted here so it lives in the sticky header
   const [viewYear, setViewYear]   = useState(() => new Date().getFullYear())
@@ -1510,16 +1510,16 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
   }
 
   function handleTabChange(t) {
-    if (t === 'today') setTodayResetKey(k => k + 1)
+    if (t === 'today') { setTodayResetKey(k => k + 1); setDrillThrough(null) }
     setTab(t)
     if (t !== 'history') setEditDate(null)
   }
 
-  // Lock scroll on Today tab — measure with window.innerHeight for iPad Safari reliability
+  // Lock scroll only on the sky view (Today tab with no drill-through active)
   useEffect(() => {
     const vf = document.querySelector('.view-fade')
     if (!vf) return
-    if (tab === 'today') {
+    if (tab === 'today' && !drillThrough) {
       vf.style.overflowY = 'hidden'
       const hdr = vf.querySelector('.room-header-wrap')
       const hdrH = hdr ? hdr.getBoundingClientRect().height : 80
@@ -1531,7 +1531,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
       vf.style.removeProperty('--today-h')
     }
     return () => { vf.style.overflowY = ''; vf.style.removeProperty('--today-h') }
-  }, [tab])
+  }, [tab, drillThrough])
 
   const showHistoryNav = tab === 'history' && !editDate
 
@@ -1582,7 +1582,7 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
         justifyContent: 'center',
         minHeight: 'var(--today-h, calc(100svh - 100px))',
       }}>
-        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} />
+        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} />
       </div>
       {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
       {tab === 'history' && !editDate && (
