@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import FirstAidToolsScreen from "./FirstAidToolsScreen.jsx";
+import { supabase } from "../../shared/lib/supabase.js";
 
 // Colour sync note: #e8e0ff / #7a6aa0 appear in the keyframes, the holding state,
 // the fading state, and the header. If these colours ever change, update all four
@@ -21,15 +23,40 @@ const states = [
 ];
 
 export default function FirstAidRoom({ onHome }) {
+  const [faView, setFaView] = useState("checking");  // "checking" | "picker" | "tools"
+  const [activeMechanism, setActiveMechanism] = useState(null);
+
   const [stage, setStage] = useState(STAGES.FULL);
   const [selected, setSelected] = useState(null);
   const [autoPlayed, setAutoPlayed] = useState(false);
   const [visibleCards, setVisibleCards] = useState([]);
 
+  // On mount: check for an active session and skip straight to tools if one exists.
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFaView("picker"); return; }
+
+      const { data: session } = await supabase
+        .from("first_aid_sessions")
+        .select("user_state_id, user_states(mechanism_id)")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (session?.user_states?.mechanism_id) {
+        setActiveMechanism(session.user_states.mechanism_id);
+        setFaView("tools");
+      } else {
+        setFaView("picker");
+      }
+    }
+    checkSession();
+  }, []);
+
   // Outfit is loaded globally via index.html — no dynamic injection needed.
 
   useEffect(() => {
-    if (autoPlayed) return;
+    if (autoPlayed || faView !== "picker") return;
     const timer = setTimeout(() => {
       setAutoPlayed(true);
       setStage(STAGES.HOLDING);
@@ -39,7 +66,7 @@ export default function FirstAidRoom({ onHome }) {
       setTimeout(() => setStage(STAGES.CARDS),    9400);
     }, 37400);
     return () => clearTimeout(timer);
-  }, [autoPlayed]);
+  }, [autoPlayed, faView]);
 
   useEffect(() => {
     if (stage !== STAGES.CARDS) return;
@@ -65,7 +92,10 @@ export default function FirstAidRoom({ onHome }) {
   };
 
   const handleConfirm = () => {
-    console.log("First Aid state selected:", selected);
+    const state = states.find(s => s.id === selected);
+    if (!state) return;
+    setActiveMechanism(state.mechanism);
+    setFaView("tools");
   };
 
   const isFull      = stage === STAGES.FULL;
@@ -74,6 +104,12 @@ export default function FirstAidRoom({ onHome }) {
   const showHeader   = [STAGES.HEADER, STAGES.SUBTITLE, STAGES.CARDS].includes(stage);
   const showSubtitle = [STAGES.SUBTITLE, STAGES.CARDS].includes(stage);
   const showCards    = stage === STAGES.CARDS;
+
+  if (faView === "checking") return null;
+
+  if (faView === "tools") {
+    return <FirstAidToolsScreen mechanism={activeMechanism} onBack={() => setFaView("picker")} />;
+  }
 
   return (
     <div style={{
