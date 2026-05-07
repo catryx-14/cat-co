@@ -8,7 +8,7 @@ const TIER_LABELS = {
   4: "tier 4 — enough online to reach outward",
 };
 
-export default function FirstAidToolsScreen({ mechanism, onBack }) {
+export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset }) {
   const [userState, setUserState]       = useState(null);
   const [permissions, setPermissions]   = useState([]);
   const [tierGroups, setTierGroups]     = useState({});
@@ -127,10 +127,18 @@ export default function FirstAidToolsScreen({ mechanism, onBack }) {
     setTickedIds(new Set());
     setOpenTiers(new Set([1]));
     setShowResetConfirm(false);
-    await supabase
+    const { error: resetErr } = await supabase
       .from("first_aid_sessions")
-      .update({ ticked_tool_ids: [], updated_at: new Date().toISOString() })
+      .update({ ticked_tool_ids: [], user_state_id: null, updated_at: new Date().toISOString() })
       .eq("user_id", user.id);
+    if (resetErr) console.error("[FirstAid] reset update error:", resetErr);
+    const { data: check } = await supabase
+      .from("first_aid_sessions")
+      .select("user_state_id, ticked_tool_ids")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    console.log("[FirstAid] session after reset:", JSON.stringify(check));
+    onReset();
   }
 
   if (loading) return (
@@ -158,7 +166,7 @@ export default function FirstAidToolsScreen({ mechanism, onBack }) {
         borderBottom: "1px solid rgba(232,201,140,0.28)",
         flexShrink: 0,
       }}>
-        <button onClick={onBack} style={btnReset({ color: "rgba(245,237,214,0.65)", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" })}>
+        <button onClick={onChangeState} style={btnReset({ color: "rgba(245,237,214,0.65)", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" })}>
           ← change state
         </button>
         <div style={{ color: "#f5edd6", fontSize: "15px", fontWeight: 400, letterSpacing: "0.04em" }}>

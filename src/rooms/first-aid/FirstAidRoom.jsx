@@ -43,7 +43,7 @@ export default function FirstAidRoom({ onHome }) {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (session?.user_states?.mechanism_id) {
+      if (session?.user_state_id && session?.user_states?.mechanism_id) {
         setActiveMechanism(session.user_states.mechanism_id);
         setFaView("tools");
       } else {
@@ -108,7 +108,24 @@ export default function FirstAidRoom({ onHome }) {
   if (faView === "checking") return null;
 
   if (faView === "tools") {
-    return <FirstAidToolsScreen mechanism={activeMechanism} onBack={() => setFaView("picker")} />;
+    return (
+      <FirstAidToolsScreen
+        mechanism={activeMechanism}
+        onChangeState={() => {
+          setAutoPlayed(true);
+          setStage(STAGES.CARDS);
+          setSelected(null);
+          setFaView("picker");
+        }}
+        onReset={() => {
+          setStage(STAGES.FULL);
+          setSelected(null);
+          setVisibleCards([]);
+          setAutoPlayed(false);
+          setFaView("picker");
+        }}
+      />
+    );
   }
 
   return (
