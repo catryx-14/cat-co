@@ -14,10 +14,11 @@ const STAGES = {
 };
 
 const states = [
-  { id: "a", label: "Something difficult happened" },
-  { id: "b", label: "I'm overwhelmed — everything is too much" },
-  { id: "c", label: "I've shut down" },
-  { id: "d", label: "I'm frazzled and I don't know why" },
+  { id: "a", label: "I'm overwhelmed — everything is too much", mechanism: "sensory_flooding",       textColor: "#a8d8f0", glowColor: "#1880b0" },
+  { id: "b", label: "I'm frazzled and I don't know why",        mechanism: "accumulated_load",       textColor: "#a8c890", glowColor: "#507040" },
+  { id: "c", label: "I feel activated and angry",               mechanism: "sympathetic_activation", textColor: "#f0c070", glowColor: "#c87820" },
+  { id: "d", label: "I think I need to cry",                    mechanism: "grief_processing",       textColor: "#e8a0b0", glowColor: "#c05070" },
+  { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown",        textColor: "#c8a8f8", glowColor: "#7020d0" },
 ];
 
 export default function FirstAidRoom({ onHome }) {
@@ -28,8 +29,6 @@ export default function FirstAidRoom({ onHome }) {
 
   // Outfit is loaded globally via index.html — no dynamic injection needed.
 
-  // Transition sequence: +1 cycle (37.4s) → holds tiny 5s → fades over 2s →
-  // header snaps in 0.4s → subtitle drifts in 0.8s → cards stagger 180ms apart
   useEffect(() => {
     if (autoPlayed) return;
     const timer = setTimeout(() => {
@@ -67,8 +66,6 @@ export default function FirstAidRoom({ onHome }) {
   };
 
   const handleConfirm = () => {
-    // TODO: Navigate to Tools screen — pass `selected` forward here when that
-    // session is built. `selected` will be one of: "a", "b", "c", "d".
     console.log("First Aid state selected:", selected);
   };
 
@@ -80,7 +77,6 @@ export default function FirstAidRoom({ onHome }) {
   const showCards    = stage === STAGES.CARDS;
 
   return (
-    // No background set here — the site's body gradient and star canvas show through.
     <div style={{
       minHeight: "100%",
       display: "flex",
@@ -88,8 +84,6 @@ export default function FirstAidRoom({ onHome }) {
       fontFamily: "'Outfit', sans-serif",
       overflow: "hidden",
     }}>
-
-      {/* Header area */}
       <div style={{
         padding: showHeader ? "40px 36px 32px" : "0 36px",
         overflow: "hidden",
@@ -110,7 +104,6 @@ export default function FirstAidRoom({ onHome }) {
         }}>
           breathe.
         </div>
-
         <div className="fa-subtitle" style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 300,
@@ -125,7 +118,6 @@ export default function FirstAidRoom({ onHome }) {
         </div>
       </div>
 
-      {/* Main area — centers the breathe animation or shows cards */}
       <div
         style={{
           flex: 1,
@@ -138,8 +130,6 @@ export default function FirstAidRoom({ onHome }) {
         }}
         onClick={isFull ? skip : undefined}
       >
-
-        {/* Large breathe. — animated during FULL, locked tiny during HOLDING/FADING */}
         {!showHeader && (
           <span className="fa-breathe-word" style={{
             fontFamily: "'Outfit', sans-serif",
@@ -147,12 +137,10 @@ export default function FirstAidRoom({ onHome }) {
             display: "block",
             textAlign: "center",
             userSelect: "none",
-            // FULL: animation running — scale 1→0.533, opacity 1→0.35, 11s cycle
             ...(isFull ? {
               willChange: "transform, opacity",
               animation: "breathePulse 11s cubic-bezier(0.45, 0, 0.55, 1) infinite",
             } : {}),
-            // HOLDING: locked at exhale bottom, no transition
             ...(isHolding ? {
               transform: "scale(0.533)",
               opacity: 0.35,
@@ -160,7 +148,6 @@ export default function FirstAidRoom({ onHome }) {
               color: "#7a6aa0",
               transition: "none",
             } : {}),
-            // FADING: stays tiny, opacity fades to 0 over 2s
             ...(isFading ? {
               transform: "scale(0.533)",
               opacity: 0,
@@ -187,59 +174,107 @@ export default function FirstAidRoom({ onHome }) {
           </div>
         )}
 
-        {/* State picker cards */}
         {showCards && (
-          <div style={{
-            width: "100%",
-            maxWidth: "520px",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "10px",
-          }}>
-            {states.map((state, i) => (
-              <button
-                key={state.id}
-                className="state-btn"
-                onClick={() => setSelected(state.id)}
-                style={{
-                  background:   "#131630",
-                  border:       "1.5px solid rgba(180,160,220,0.6)",
-                  borderRadius: "10px",
-                  padding:      "18px 22px",
-                  textAlign:    "center",
-                  cursor:       "pointer",
-                  width:        "100%",
-                  fontFamily:   "'Outfit', sans-serif",
-                  fontSize:     "16px",
-                  fontWeight:   400,
-                  color:        "rgba(245,237,214,0.75)",
-                  letterSpacing: "0.02em",
-                  lineHeight:   1.4,
-                  opacity:      visibleCards.includes(i) ? 1 : 0,
-                  transform:    visibleCards.includes(i) ? "translateY(0)" : "translateY(10px)",
-                  transition:   "opacity 0.5s ease, transform 0.5s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease",
-                }}>
-                {state.label}
-              </button>
-            ))}
+          <div style={{ width: "100%", maxWidth: "520px" }}>
+            {/* Rows 1 & 2 — 2×2 grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "14px",
+            }}>
+              {states.slice(0, 4).map((state, i) => (
+                <button
+                  key={state.id}
+                  className={`state-btn state-btn--${state.mechanism}`}
+                  data-mechanism={state.mechanism}
+                  onClick={() => setSelected(state.id)}
+                  style={{
+                    background:    "#0f1428",
+                    border:        selected === state.id
+                      ? `1px solid ${state.glowColor}`
+                      : "1px solid rgba(255,255,255,0.08)",
+                    borderRadius:  "12px",
+                    padding:       "22px 20px",
+                    textAlign:     "center",
+                    cursor:        "pointer",
+                    width:         "100%",
+                    fontFamily:    "'Outfit', sans-serif",
+                    fontSize:      "0.95rem",
+                    fontWeight:    400,
+                    color:         state.textColor,
+                    lineHeight:    1.45,
+                    position:      "relative",
+                    overflow:      "hidden",
+                    opacity:       visibleCards.includes(i) ? 1 : 0,
+                    transform:     visibleCards.includes(i) ? "translateY(0)" : "translateY(10px)",
+                    transition:    "opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease",
+                    "--glow":      state.glowColor,
+                  }}>
+                  {state.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Row 3 — single centred anchor card */}
+            <div style={{
+              display:        "flex",
+              justifyContent: "center",
+              marginTop:      "14px",
+            }}>
+              {(() => {
+                const state = states[4];
+                const i = 4;
+                return (
+                  <button
+                    key={state.id}
+                    className={`state-btn state-btn--${state.mechanism}`}
+                    data-mechanism={state.mechanism}
+                    onClick={() => setSelected(state.id)}
+                    style={{
+                      background:    "#0f1428",
+                      border:        selected === state.id
+                        ? `1px solid ${state.glowColor}`
+                        : "1px solid rgba(255,255,255,0.08)",
+                      borderRadius:  "12px",
+                      padding:       "22px 20px",
+                      textAlign:     "center",
+                      cursor:        "pointer",
+                      width:         "280px",
+                      fontFamily:    "'Outfit', sans-serif",
+                      fontSize:      "0.95rem",
+                      fontWeight:    400,
+                      color:         state.textColor,
+                      lineHeight:    1.45,
+                      position:      "relative",
+                      overflow:      "hidden",
+                      opacity:       visibleCards.includes(i) ? 1 : 0,
+                      transform:     visibleCards.includes(i) ? "translateY(0)" : "translateY(10px)",
+                      transition:    "opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease",
+                      "--glow":      state.glowColor,
+                    }}>
+                    {state.label}
+                  </button>
+                );
+              })()}
+            </div>
 
             {selected && (
               <button
                 onClick={handleConfirm}
                 style={{
-                  gridColumn:   "1 / -1",
-                  marginTop:    "8px",
-                  width:        "100%",
-                  padding:      "16px",
-                  background:   "rgba(180,160,220,0.08)",
-                  border:       "1.5px solid rgba(180,160,220,0.95)",
-                  borderRadius: "10px",
-                  color:        "rgba(255,255,255,0.95)",
-                  fontFamily:   "'Outfit', sans-serif",
-                  fontSize:     "15px",
-                  fontWeight:   400,
+                  display:       "block",
+                  marginTop:     "20px",
+                  width:         "100%",
+                  padding:       "16px",
+                  background:    "rgba(180,160,220,0.08)",
+                  border:        "1.5px solid rgba(180,160,220,0.95)",
+                  borderRadius:  "10px",
+                  color:         "rgba(255,255,255,0.95)",
+                  fontFamily:    "'Outfit', sans-serif",
+                  fontSize:      "15px",
+                  fontWeight:    400,
                   letterSpacing: "0.06em",
-                  cursor:       "pointer",
+                  cursor:        "pointer",
                 }}>
                 this is where I am →
               </button>
@@ -268,10 +303,6 @@ export default function FirstAidRoom({ onHome }) {
         )}
       </div>
 
-      {/* breathePulse keyframes — locked values, do not change independently:
-          all colour/scale/opacity values also appear in the holding/fading inline
-          styles above and in the header text. Change all together or never.
-          scale(0.533) ≈ 64/120 (desktop) ≈ 30/56 (mobile) — compositor-only, no reflow. */}
       <style>{`
         .fa-breathe-word { font-size: 120px; }
         @keyframes breathePulse {
@@ -294,11 +325,32 @@ export default function FirstAidRoom({ onHome }) {
           .fa-title    { font-size: 48px !important; }
           .fa-subtitle { font-size: 18px !important; letter-spacing: 0.14em !important; }
         }
-        .state-btn:hover {
-          background: rgba(180,160,220,0.08) !important;
-          border-color: rgba(180,160,220,0.95) !important;
-          color: rgba(255,255,255,0.95) !important;
+
+        @keyframes cardGlow {
+          0%   { opacity: 0.15; }
+          50%  { opacity: 0.28; }
+          100% { opacity: 0.15; }
         }
+
+        .state-btn::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: 12px;
+          background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%);
+          animation: cardGlow 4s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .state-btn:hover {
+          transform: translateY(-2px) !important;
+        }
+
+        .state-btn--sensory_flooding:hover    { box-shadow: 0 0 28px rgba(24,128,176,0.25); }
+        .state-btn--accumulated_load:hover    { box-shadow: 0 0 28px rgba(80,112,64,0.25); }
+        .state-btn--sympathetic_activation:hover { box-shadow: 0 0 28px rgba(200,120,32,0.25); }
+        .state-btn--grief_processing:hover    { box-shadow: 0 0 28px rgba(192,80,112,0.25); }
+        .state-btn--dorsal_shutdown:hover     { box-shadow: 0 0 32px rgba(160,100,240,0.3); }
       `}</style>
     </div>
   );
