@@ -14,11 +14,10 @@ const STAGES = {
 };
 
 const states = [
-  { id: "a", label: "I'm overwhelmed — everything is too much", mechanism: "sensory_flooding",       textColor: "#a8d8f0", glowColor: "#1880b0" },
-  { id: "b", label: "I'm frazzled and I don't know why",        mechanism: "accumulated_load",       textColor: "#a8c890", glowColor: "#507040" },
-  { id: "c", label: "I feel activated and angry",               mechanism: "sympathetic_activation", textColor: "#f0c070", glowColor: "#c87820" },
-  { id: "d", label: "I think I need to cry",                    mechanism: "grief_processing",       textColor: "#e8a0b0", glowColor: "#c05070" },
-  { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown",        textColor: "#c8a8f8", glowColor: "#7020d0" },
+  { id: "a", label: "I'm overwhelmed — everything is too much", mechanism: "sensory_flooding"       },
+  { id: "c", label: "I feel activated and angry",               mechanism: "sympathetic_activation" },
+  { id: "d", label: "I think I need to cry",                    mechanism: "grief_processing"       },
+  { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown"        },
 ];
 
 export default function FirstAidRoom({ onHome }) {
@@ -176,23 +175,22 @@ export default function FirstAidRoom({ onHome }) {
 
         {showCards && (
           <div style={{ width: "100%", maxWidth: "520px" }}>
-            {/* Rows 1 & 2 — 2×2 grid */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: "14px",
             }}>
-              {states.slice(0, 4).map((state, i) => (
+              {states.map((state, i) => (
                 <button
                   key={state.id}
-                  className={`state-btn state-btn--${state.mechanism}`}
+                  className="state-btn"
                   data-mechanism={state.mechanism}
                   onClick={() => setSelected(state.id)}
                   style={{
                     background:    "#0f1428",
                     border:        selected === state.id
-                      ? `1px solid ${state.glowColor}`
-                      : "1px solid rgba(255,255,255,0.08)",
+                      ? "1px solid rgba(232,201,140,0.85)"
+                      : "1px solid rgba(232,201,140,0.45)",
                     borderRadius:  "12px",
                     padding:       "22px 20px",
                     textAlign:     "center",
@@ -201,61 +199,15 @@ export default function FirstAidRoom({ onHome }) {
                     fontFamily:    "'Outfit', sans-serif",
                     fontSize:      "0.95rem",
                     fontWeight:    400,
-                    color:         state.textColor,
+                    color:         "#f5edd6",
                     lineHeight:    1.45,
-                    position:      "relative",
-                    overflow:      "hidden",
                     opacity:       visibleCards.includes(i) ? 1 : 0,
                     transform:     visibleCards.includes(i) ? "translateY(0)" : "translateY(10px)",
                     transition:    "opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease",
-                    "--glow":      state.glowColor,
                   }}>
                   {state.label}
                 </button>
               ))}
-            </div>
-
-            {/* Row 3 — single centred anchor card */}
-            <div style={{
-              display:        "flex",
-              justifyContent: "center",
-              marginTop:      "14px",
-            }}>
-              {(() => {
-                const state = states[4];
-                const i = 4;
-                return (
-                  <button
-                    key={state.id}
-                    className={`state-btn state-btn--${state.mechanism}`}
-                    data-mechanism={state.mechanism}
-                    onClick={() => setSelected(state.id)}
-                    style={{
-                      background:    "#0f1428",
-                      border:        selected === state.id
-                        ? `1px solid ${state.glowColor}`
-                        : "1px solid rgba(255,255,255,0.08)",
-                      borderRadius:  "12px",
-                      padding:       "22px 20px",
-                      textAlign:     "center",
-                      cursor:        "pointer",
-                      width:         "280px",
-                      fontFamily:    "'Outfit', sans-serif",
-                      fontSize:      "0.95rem",
-                      fontWeight:    400,
-                      color:         state.textColor,
-                      lineHeight:    1.45,
-                      position:      "relative",
-                      overflow:      "hidden",
-                      opacity:       visibleCards.includes(i) ? 1 : 0,
-                      transform:     visibleCards.includes(i) ? "translateY(0)" : "translateY(10px)",
-                      transition:    "opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease",
-                      "--glow":      state.glowColor,
-                    }}>
-                    {state.label}
-                  </button>
-                );
-              })()}
             </div>
 
             {selected && (
@@ -326,31 +278,9 @@ export default function FirstAidRoom({ onHome }) {
           .fa-subtitle { font-size: 18px !important; letter-spacing: 0.14em !important; }
         }
 
-        @keyframes cardGlow {
-          0%   { opacity: 0.15; }
-          50%  { opacity: 0.28; }
-          100% { opacity: 0.15; }
-        }
-
-        .state-btn::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: 12px;
-          background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%);
-          animation: cardGlow 4s ease-in-out infinite;
-          pointer-events: none;
-        }
-
         .state-btn:hover {
           transform: translateY(-2px) !important;
         }
-
-        .state-btn--sensory_flooding:hover    { box-shadow: 0 0 28px rgba(24,128,176,0.25); }
-        .state-btn--accumulated_load:hover    { box-shadow: 0 0 28px rgba(80,112,64,0.25); }
-        .state-btn--sympathetic_activation:hover { box-shadow: 0 0 28px rgba(200,120,32,0.25); }
-        .state-btn--grief_processing:hover    { box-shadow: 0 0 28px rgba(192,80,112,0.25); }
-        .state-btn--dorsal_shutdown:hover     { box-shadow: 0 0 32px rgba(160,100,240,0.3); }
       `}</style>
     </div>
   );
