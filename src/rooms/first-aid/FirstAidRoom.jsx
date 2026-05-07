@@ -22,17 +22,21 @@ const states = [
   { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown"        },
 ];
 
-export default function FirstAidRoom({ onHome }) {
-  const [faView, setFaView] = useState("checking");  // "checking" | "picker" | "tools"
-  const [activeMechanism, setActiveMechanism] = useState(null);
+export default function FirstAidRoom({ onHome, supporterMode = false, catUserId = null, onBack = null, directMechanism = null }) {
+  const [faView, setFaView] = useState(
+    supporterMode ? (directMechanism ? "tools" : "picker") : "checking"
+  );
+  const [activeMechanism, setActiveMechanism] = useState(directMechanism);
 
-  const [stage, setStage] = useState(STAGES.FULL);
+  const [stage, setStage] = useState(supporterMode ? STAGES.CARDS : STAGES.FULL);
   const [selected, setSelected] = useState(null);
-  const [autoPlayed, setAutoPlayed] = useState(false);
+  const [autoPlayed, setAutoPlayed] = useState(supporterMode);
   const [visibleCards, setVisibleCards] = useState([]);
 
   // On mount: check for an active session and skip straight to tools if one exists.
+  // Skipped in supporter mode — always land on picker.
   useEffect(() => {
+    if (supporterMode) return;
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setFaView("picker"); return; }
@@ -51,7 +55,7 @@ export default function FirstAidRoom({ onHome }) {
       }
     }
     checkSession();
-  }, []);
+  }, [supporterMode]);
 
   // Outfit is loaded globally via index.html — no dynamic injection needed.
 
@@ -111,6 +115,8 @@ export default function FirstAidRoom({ onHome }) {
     return (
       <FirstAidToolsScreen
         mechanism={activeMechanism}
+        dataUserId={supporterMode ? catUserId : null}
+        onSupporterBack={supporterMode ? onBack : null}
         onChangeState={() => {
           setAutoPlayed(true);
           setStage(STAGES.CARDS);
@@ -118,11 +124,17 @@ export default function FirstAidRoom({ onHome }) {
           setFaView("picker");
         }}
         onReset={() => {
-          setStage(STAGES.FULL);
-          setSelected(null);
-          setVisibleCards([]);
-          setAutoPlayed(false);
-          setFaView("picker");
+          if (supporterMode) {
+            setStage(STAGES.CARDS);
+            setSelected(null);
+            setFaView("picker");
+          } else {
+            setStage(STAGES.FULL);
+            setSelected(null);
+            setVisibleCards([]);
+            setAutoPlayed(false);
+            setFaView("picker");
+          }
         }}
       />
     );

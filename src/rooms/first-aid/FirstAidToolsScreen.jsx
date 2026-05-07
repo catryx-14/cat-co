@@ -8,7 +8,7 @@ const TIER_LABELS = {
   4: "tier 4 — enough online to reach outward",
 };
 
-export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset }) {
+export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset, dataUserId = null, onSupporterBack = null }) {
   const [userState, setUserState]       = useState(null);
   const [permissions, setPermissions]   = useState([]);
   const [tierGroups, setTierGroups]     = useState({});
@@ -29,11 +29,14 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // For supporter mode, state data comes from Cat's user ID; session always uses the authenticated user.
+      const stateUserId = dataUserId || user.id;
+
       // user_state for this mechanism
       const { data: us, error: usErr } = await supabase
         .from("user_states")
         .select("id, custom_label, intro_text")
-        .eq("user_id", user.id)
+        .eq("user_id", stateUserId)
         .eq("mechanism_id", mechanism)
         .eq("is_active", true)
         .maybeSingle();
@@ -46,7 +49,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
         .from("user_state_permissions")
         .select("id, display_order, permissions_library(text)")
         .eq("user_state_id", us.id)
-        .eq("user_id", user.id)
+        .eq("user_id", stateUserId)
         .order("display_order");
       if (permsErr) throw permsErr;
       setPermissions((perms ?? []).map(p => p.permissions_library?.text).filter(Boolean));
@@ -56,7 +59,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
         .from("user_tool_assignments")
         .select("id, tier, display_order, custom_note, regulation_tools(name, has_card, description, how_to_use, time_component, access_cost, the_science, notes_variations)")
         .eq("user_state_id", us.id)
-        .eq("user_id", user.id)
+        .eq("user_id", stateUserId)
         .eq("is_active", true)
         .order("tier")
         .order("display_order");
@@ -73,7 +76,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
       }
       setTierGroups(groups);
 
-      // session — restore ticks if same state, else start fresh
+      // session always keyed to the authenticated user (Wes's ticks are his own)
       const { data: session, error: sessErr } = await supabase
         .from("first_aid_sessions")
         .select("user_state_id, ticked_tool_ids")
@@ -84,7 +87,6 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
       if (session && session.user_state_id === us.id) {
         setTickedIds(new Set(session.ticked_tool_ids ?? []));
       } else {
-        // new state or no session — upsert fresh
         await supabase
           .from("first_aid_sessions")
           .upsert(
@@ -157,12 +159,27 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", fontFamily: "'Outfit', sans-serif" }}>
 
+      {/* ── Supporter back link ── */}
+      {onSupporterBack && (
+        <div style={{
+          padding: "12px 24px 0",
+          flexShrink: 0,
+        }}>
+          <button
+            onClick={onSupporterBack}
+            style={btnReset({ color: "rgba(110,192,191,0.7)", fontSize: "12px", letterSpacing: "0.02em" })}
+          >
+            ← back to supporter tree
+          </button>
+        </div>
+      )}
+
       {/* ── Top bar ── */}
       <div style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "20px 24px 16px",
+        padding: onSupporterBack ? "10px 24px 16px" : "20px 24px 16px",
         borderBottom: "1px solid rgba(232,201,140,0.28)",
         flexShrink: 0,
       }}>

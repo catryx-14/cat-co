@@ -8,5 +8,5 @@ import AuthGate from './AuthGate.jsx'
 initAtmosphere()
 
 ReactDOM.createRoot(document.getElementById('app-root')).render(
-  <AuthGate>{(session) => <App session={session} />}</AuthGate>
+  <AuthGate>{(session, profile) => <App session={session} profile={profile} />}</AuthGate>
 )

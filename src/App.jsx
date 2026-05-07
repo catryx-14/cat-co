@@ -3,6 +3,7 @@ import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
+import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
@@ -773,7 +774,12 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
 }
 
 // ─── App ───
-export default function App({ session }) {
+export default function App({ session, profile }) {
+  if (profile?.role === 'supporter') return <SupporterApp profile={profile} />
+  return <HubApp session={session} />
+}
+
+function HubApp({ session }) {
   const [view, setView] = useState('hub')
   const [settings, setSettings] = useState(null)
   const inRoom = view !== 'hub'

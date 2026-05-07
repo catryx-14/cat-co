@@ -3,6 +3,7 @@ import { supabase } from './shared/lib/supabase.js'
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined)
+  const [profile, setProfile] = useState(undefined)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -15,7 +16,19 @@ export default function AuthGate({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (session === undefined) return null
+  useEffect(() => {
+    if (session === undefined) return
+    if (!session) { setProfile(null); return }
+    supabase
+      .from('profiles')
+      .select('role, display_name, linked_user_id')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setProfile(data ?? null))
+      .catch(() => setProfile(null))
+  }, [session])
+
+  if (session === undefined || (session && profile === undefined)) return null
 
   if (!session) {
     async function signInWithEmail(e) {
@@ -78,5 +91,5 @@ export default function AuthGate({ children }) {
     )
   }
 
-  return children(session)
+  return children(session, profile)
 }
