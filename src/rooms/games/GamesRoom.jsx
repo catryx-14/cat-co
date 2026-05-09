@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ── Cat asset imports ────────────────────────────────────────────────────────
 import blackCat1   from '../../assets/cats/black Cat 1.png'
@@ -158,100 +158,173 @@ function buildRound() {
   return { groups, cats: shuffle(cats) }
 }
 
-// ── Styles (inline to keep component self-contained) ─────────────────────────
+// ── Keyframe styles ──────────────────────────────────────────────────────────
 const css = `
 @keyframes catShake {
-  0%,100% { transform: translateX(0) rotate(0deg); }
-  15%      { transform: translateX(-6px) rotate(-3deg); }
-  30%      { transform: translateX(6px)  rotate(3deg); }
-  45%      { transform: translateX(-4px) rotate(-2deg); }
-  60%      { transform: translateX(4px)  rotate(2deg); }
-  75%      { transform: translateX(-2px) rotate(-1deg); }
+  0%,100% { transform: scale(1) translateX(0) rotate(0deg); }
+  15%      { transform: scale(1) translateX(-8px) rotate(-3deg); }
+  30%      { transform: scale(1) translateX(8px)  rotate(3deg); }
+  45%      { transform: scale(1) translateX(-5px) rotate(-2deg); }
+  60%      { transform: scale(1) translateX(5px)  rotate(2deg); }
+  75%      { transform: scale(1) translateX(-2px) rotate(-1deg); }
 }
 @keyframes catPop {
   0%   { transform: scale(1); }
-  40%  { transform: scale(1.18); }
-  70%  { transform: scale(0.93); }
+  40%  { transform: scale(1.12); }
+  70%  { transform: scale(0.95); }
   100% { transform: scale(1); }
 }
-@keyframes basketPulse {
-  0%,100% { box-shadow: var(--basket-glow-base); }
-  50%     { box-shadow: var(--basket-glow-peak); }
-}
 @keyframes scoreFlash {
-  0%   { transform: scale(1); color: #e8c98c; }
+  0%   { transform: scale(1);    color: #e8c98c; }
   40%  { transform: scale(1.35); color: #fff; }
-  100% { transform: scale(1); color: #e8c98c; }
+  100% { transform: scale(1);    color: #e8c98c; }
 }
 @keyframes roundIn {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes catLand {
-  0%   { opacity: 1; transform: scale(1); }
-  60%  { opacity: 0.5; transform: scale(0.5); }
-  100% { opacity: 0; transform: scale(0.1); }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes starBurst {
-  0%   { transform: scale(0) rotate(0deg); opacity: 1; }
-  60%  { opacity: 1; }
-  100% { transform: scale(1.8) rotate(180deg); opacity: 0; }
+@keyframes catSlideLeft {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes catSlideRight {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 `
 
+// ── Game menu tile ───────────────────────────────────────────────────────────
+const GAME_TILES = [
+  {
+    id: 'cat-sort',
+    title: 'Cat Sorting Game',
+    description: 'sort the cats into their colour groups',
+    icon: '🐱',
+  },
+]
+
+function GamesMenu({ onSelect }) {
+  return (
+    <div style={{
+      padding: '24px 32px 40px',
+      animation: 'fadeSlideIn 0.4s ease',
+    }}>
+      <p style={{
+        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontSize: 18,
+        color: 'rgba(255,255,255,0.45)',
+        margin: '0 0 28px',
+        fontStyle: 'italic',
+      }}>
+        choose a game
+      </p>
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 16,
+      }}>
+        {GAME_TILES.map(tile => (
+          <button
+            key={tile.id}
+            onClick={() => onSelect(tile.id)}
+            style={{
+              width: 220,
+              padding: '20px 24px',
+              borderRadius: 16,
+              border: '1.5px solid rgba(232,201,140,0.2)',
+              background: 'rgba(255,255,255,0.04)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.2s, border-color 0.2s, transform 0.15s',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(232,201,140,0.08)'
+              e.currentTarget.style.borderColor = 'rgba(232,201,140,0.45)'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.borderColor = 'rgba(232,201,140,0.2)'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+          >
+            <span style={{ fontSize: 28 }}>{tile.icon}</span>
+            <span style={{
+              fontFamily: "'Crimson Pro', Georgia, serif",
+              fontSize: 20,
+              color: '#e8c98c',
+              lineHeight: 1.2,
+            }}>
+              {tile.title}
+            </span>
+            <span style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.45)',
+              lineHeight: 1.5,
+            }}>
+              {tile.description}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Basket cushion ───────────────────────────────────────────────────────────
-function Basket({ group, isTarget, placedCount, onSelect, selectedCatGroupId }) {
-  const isCorrectTarget = isTarget && selectedCatGroupId === group.id
-  const isPotentialTarget = isTarget && selectedCatGroupId != null
+function Basket({ group, isTarget, placedCount, onSelect }) {
+  const [hovered, setHovered] = useState(false)
+  const active = isTarget && hovered
 
   return (
     <div
-      onClick={onSelect}
+      onClick={isTarget ? onSelect : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 6,
-        cursor: isPotentialTarget ? 'pointer' : 'default',
-        opacity: isPotentialTarget && !isCorrectTarget ? 0.7 : 1,
-        transition: 'opacity 0.2s, transform 0.2s',
-        transform: isCorrectTarget ? 'scale(1.04)' : 'scale(1)',
+        cursor: isTarget ? 'pointer' : 'default',
+        transition: 'transform 0.15s',
+        transform: active ? 'scale(1.06)' : 'scale(1)',
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-          width: 90,
-          height: 72,
-          borderRadius: 14,
-          background: `radial-gradient(ellipse at 50% 40%, ${group.cushionGlow}, ${group.cushionColor} 70%)`,
-          border: `2px solid ${isCorrectTarget ? group.borderColor : 'rgba(255,255,255,0.08)'}`,
-          boxShadow: isCorrectTarget
-            ? `0 0 18px ${group.cushionGlow}, 0 0 6px ${group.borderColor}`
-            : `0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)`,
-          transition: 'border-color 0.2s, box-shadow 0.2s',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 4,
-        }}
-      >
-        {/* Cushion texture lines */}
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', pointerEvents: 'none',
-        }}>
+      <div style={{
+        position: 'relative',
+        width: 90,
+        height: 72,
+        borderRadius: 14,
+        background: `radial-gradient(ellipse at 50% 40%, ${group.cushionGlow}, ${group.cushionColor} 70%)`,
+        border: `2px solid ${active ? group.borderColor : 'rgba(255,255,255,0.08)'}`,
+        boxShadow: active
+          ? `0 0 20px ${group.cushionGlow}, 0 0 8px ${group.borderColor}`
+          : `0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)`,
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {/* Cushion stitch lines */}
+        <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', pointerEvents: 'none' }}>
           {[0.3, 0.5, 0.7].map(y => (
             <div key={y} style={{
-              position: 'absolute',
-              left: '10%', right: '10%',
-              top: `${y * 100}%`,
-              height: 1,
-              background: `rgba(255,255,255,0.06)`,
+              position: 'absolute', left: '10%', right: '10%',
+              top: `${y * 100}%`, height: 1,
+              background: 'rgba(255,255,255,0.06)',
             }} />
           ))}
         </div>
-        {/* Cat count pips */}
+        {/* Pip progress */}
         <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 1 }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{
@@ -262,26 +335,15 @@ function Basket({ group, isTarget, placedCount, onSelect, selectedCatGroupId }) 
             }} />
           ))}
         </div>
-        {/* Glow ring when selected */}
-        {isCorrectTarget && (
-          <div style={{
-            position: 'absolute', inset: -3, borderRadius: 16,
-            border: `1.5px solid ${group.borderColor}`,
-            opacity: 0.5, pointerEvents: 'none',
-            animation: 'basketPulse 1s ease-in-out infinite',
-            '--basket-glow-base': `0 0 8px ${group.cushionGlow}`,
-            '--basket-glow-peak': `0 0 22px ${group.cushionGlow}`,
-          }} />
-        )}
       </div>
       <span style={{
         fontSize: 11,
         fontFamily: "'Outfit', sans-serif",
-        color: isCorrectTarget ? group.borderColor : 'rgba(255,255,255,0.5)',
+        color: active ? group.borderColor : 'rgba(255,255,255,0.45)',
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        transition: 'color 0.2s',
-        fontWeight: isCorrectTarget ? 600 : 400,
+        transition: 'color 0.15s',
+        fontWeight: active ? 600 : 400,
       }}>
         {group.label}
       </span>
@@ -289,163 +351,302 @@ function Basket({ group, isTarget, placedCount, onSelect, selectedCatGroupId }) 
   )
 }
 
-// ── Cat card ─────────────────────────────────────────────────────────────────
-function CatCard({ cat, isSelected, isPlaced, onSelect }) {
-  const [anim, setAnim] = useState(null)
-
-  useEffect(() => {
-    if (anim) {
-      const t = setTimeout(() => setAnim(null), 500)
-      return () => clearTimeout(t)
-    }
-  }, [anim])
-
-  function triggerShake() { setAnim('shake') }
-  function triggerPop()   { setAnim('pop') }
-
-  // expose shake/pop via ref-like callback on the card — parent will call these
-  // We instead respond to prop changes from parent
-  useEffect(() => {
-    if (cat._shake) triggerShake()
-    if (cat._pop)   triggerPop()
-  }, [cat._shake, cat._pop])
-
-  if (isPlaced) return null
+// ── Large single-cat viewer ──────────────────────────────────────────────────
+function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext, onSelect }) {
+  const cat = cats[viewIndex]
+  const isPlaced = !!placed[cat.id]
+  const isSelected = selected === cat.id
+  const total = cats.length
 
   return (
-    <div
-      onClick={onSelect}
-      style={{
-        position: 'relative',
-        width: 88,
-        height: 88,
-        borderRadius: 12,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #e8c98c' : '2px solid rgba(255,255,255,0.08)',
-        boxShadow: isSelected
-          ? '0 0 18px rgba(232,201,140,0.5), 0 4px 20px rgba(0,0,0,0.6)'
-          : '0 4px 14px rgba(0,0,0,0.5)',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-        animation: anim === 'shake' ? 'catShake 0.45s ease' : anim === 'pop' ? 'catPop 0.4s ease' : 'none',
-        flexShrink: 0,
-      }}
-    >
-      <img
-        src={cat.src}
-        alt="cat"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        draggable={false}
-      />
-      {isSelected && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(232,201,140,0.15)',
-          pointerEvents: 'none',
-        }} />
-      )}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 16,
+      flex: 1,
+      justifyContent: 'center',
+      padding: '8px 24px 24px',
+    }}>
+      {/* Counter */}
+      <div style={{
+        fontFamily: "'Outfit', sans-serif",
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.3)',
+        letterSpacing: '0.08em',
+      }}>
+        cat {viewIndex + 1} of {total}
+      </div>
+
+      {/* Cat image + nav row */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 20,
+      }}>
+        {/* Prev arrow */}
+        <button
+          onClick={onPrev}
+          style={{
+            width: 40, height: 40, borderRadius: '50%',
+            border: '1.5px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.04)',
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: 18, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s, color 0.15s',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+        >
+          ‹
+        </button>
+
+        {/* Cat image */}
+        <div
+          onClick={() => !isPlaced && onSelect(cat.id)}
+          style={{
+            position: 'relative',
+            width: 'clamp(180px, 28vw, 240px)',
+            height: 'clamp(180px, 28vw, 240px)',
+            borderRadius: 20,
+            overflow: 'hidden',
+            border: isSelected
+              ? '3px solid #e8c98c'
+              : isPlaced
+              ? '3px solid rgba(136,226,180,0.4)'
+              : '3px solid rgba(255,255,255,0.08)',
+            boxShadow: isSelected
+              ? '0 0 28px rgba(232,201,140,0.45), 0 8px 32px rgba(0,0,0,0.6)'
+              : isPlaced
+              ? '0 0 16px rgba(136,226,180,0.15), 0 8px 24px rgba(0,0,0,0.5)'
+              : '0 8px 32px rgba(0,0,0,0.6)',
+            cursor: isPlaced ? 'default' : 'pointer',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            animation: catAnim === 'shake' ? 'catShake 0.45s ease'
+                     : catAnim === 'pop'   ? 'catPop 0.35s ease'
+                     : catAnim === 'left'  ? 'catSlideLeft 0.22s ease'
+                     : catAnim === 'right' ? 'catSlideRight 0.22s ease'
+                     : 'none',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={cat.src}
+            alt="cat"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            draggable={false}
+          />
+          {/* Gold selection overlay */}
+          {isSelected && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(232,201,140,0.1)',
+              pointerEvents: 'none',
+            }} />
+          )}
+          {/* Placed overlay */}
+          {isPlaced && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(8,16,42,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+            }}>
+              <span style={{ fontSize: 32, opacity: 0.8 }}>✓</span>
+            </div>
+          )}
+        </div>
+
+        {/* Next arrow */}
+        <button
+          onClick={onNext}
+          style={{
+            width: 40, height: 40, borderRadius: '50%',
+            border: '1.5px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.04)',
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: 18, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s, color 0.15s',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Dot strip */}
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 280 }}>
+        {cats.map((c, i) => (
+          <div
+            key={c.id}
+            style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: placed[c.id]
+                ? 'rgba(136,226,180,0.6)'
+                : i === viewIndex
+                ? '#e8c98c'
+                : 'rgba(255,255,255,0.15)',
+              transition: 'background 0.2s',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Instruction */}
+      <div style={{
+        fontFamily: "'Outfit', sans-serif",
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.28)',
+        letterSpacing: '0.06em',
+        textAlign: 'center',
+      }}>
+        {isPlaced
+          ? 'already placed — browse with arrows'
+          : isSelected
+          ? 'tap the matching basket above'
+          : 'tap the cat to select it'}
+      </div>
     </div>
   )
 }
 
 // ── Round complete overlay ────────────────────────────────────────────────────
-function RoundComplete({ score, roundNumber, onNext }) {
+function RoundComplete({ score, roundNumber, onNext, onMenu }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 20,
-      background: 'rgba(8,16,42,0.92)',
+      background: 'rgba(8,16,42,0.93)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       gap: 24,
       animation: 'roundIn 0.5s ease',
       backdropFilter: 'blur(4px)',
     }}>
-      {/* Stars */}
-      <div style={{ fontSize: 40, letterSpacing: 8 }}>✦ ✦ ✦</div>
+      <div style={{ fontSize: 38, letterSpacing: 10 }}>✦ ✦ ✦</div>
       <div style={{
         fontFamily: "'Crimson Pro', Georgia, serif",
         fontSize: 'clamp(24px, 5vw, 38px)',
-        color: '#e8c98c',
-        textAlign: 'center',
-        lineHeight: 1.2,
+        color: '#e8c98c', textAlign: 'center', lineHeight: 1.2,
       }}>
         round {roundNumber} complete
       </div>
       <div style={{
         fontFamily: "'Outfit', sans-serif",
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.6)',
-        letterSpacing: '0.05em',
+        fontSize: 15, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.05em',
       }}>
         score so far
       </div>
       <div style={{
         fontFamily: "'Crimson Pro', Georgia, serif",
-        fontSize: 'clamp(48px, 10vw, 72px)',
-        color: '#fff',
-        lineHeight: 1,
+        fontSize: 'clamp(52px, 10vw, 76px)',
+        color: '#fff', lineHeight: 1,
       }}>
         {score}
       </div>
-      <button
-        onClick={onNext}
-        style={{
-          marginTop: 8,
-          padding: '12px 36px',
-          borderRadius: 999,
-          border: '1.5px solid rgba(232,201,140,0.5)',
-          background: 'rgba(232,201,140,0.1)',
-          color: '#e8c98c',
-          fontFamily: "'Outfit', sans-serif",
-          fontSize: 15,
-          letterSpacing: '0.08em',
-          cursor: 'pointer',
-          transition: 'background 0.2s, border-color 0.2s',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = 'rgba(232,201,140,0.2)'
-          e.currentTarget.style.borderColor = 'rgba(232,201,140,0.8)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = 'rgba(232,201,140,0.1)'
-          e.currentTarget.style.borderColor = 'rgba(232,201,140,0.5)'
-        }}
-      >
-        next round
-      </button>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          onClick={onNext}
+          style={btnStyle('#e8c98c')}
+          onMouseEnter={e => btnHover(e, '#e8c98c')}
+          onMouseLeave={e => btnLeave(e, '#e8c98c')}
+        >
+          next round
+        </button>
+        <button
+          onClick={onMenu}
+          style={btnStyle('rgba(255,255,255,0.35)')}
+          onMouseEnter={e => btnHover(e, 'rgba(255,255,255,0.6)')}
+          onMouseLeave={e => btnLeave(e, 'rgba(255,255,255,0.35)')}
+        >
+          games menu
+        </button>
+      </div>
     </div>
   )
 }
 
-// ── Main GamesRoom ────────────────────────────────────────────────────────────
-export default function GamesRoom({ roomName = 'Games' }) {
+function btnStyle(col) {
+  return {
+    padding: '12px 32px', borderRadius: 999,
+    border: `1.5px solid ${col}40`,
+    background: `${col}12`,
+    color: col, fontFamily: "'Outfit', sans-serif",
+    fontSize: 14, letterSpacing: '0.08em',
+    cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
+  }
+}
+function btnHover(e, col) {
+  e.currentTarget.style.background = `${col}22`
+  e.currentTarget.style.borderColor = `${col}99`
+}
+function btnLeave(e, col) {
+  e.currentTarget.style.background = `${col}12`
+  e.currentTarget.style.borderColor = `${col}40`
+}
+
+// ── Cat Sorting Game ─────────────────────────────────────────────────────────
+function CatSortGame({ onBack }) {
   const [round, setRound]       = useState(() => buildRound())
   const [roundNumber, setRoundNumber] = useState(1)
   const [cats, setCats]         = useState(() => round.cats)
-  const [placed, setPlaced]     = useState({})          // catId → true
-  const [selected, setSelected] = useState(null)        // catId
+  const [placed, setPlaced]     = useState({})
+  const [selected, setSelected] = useState(null)
+  const [viewIndex, setViewIndex] = useState(0)
+  const [catAnim, setCatAnim]   = useState(null)
   const [score, setScore]       = useState(0)
   const [streak, setStreak]     = useState(0)
   const [showComplete, setShowComplete] = useState(false)
   const [scoreFlash, setScoreFlash] = useState(false)
   const scoreRef = useRef(score)
   scoreRef.current = score
+  const placedRef = useRef(placed)
+  placedRef.current = placed
 
-  // Keep cats in sync with round
   useEffect(() => {
     setCats(round.cats)
     setPlaced({})
     setSelected(null)
+    setViewIndex(0)
     setShowComplete(false)
+    setCatAnim(null)
   }, [round])
 
-  function startNextRound() {
-    const next = buildRound()
-    setRound(next)
-    setRoundNumber(n => n + 1)
+  function triggerAnim(name, duration = 450) {
+    setCatAnim(name)
+    setTimeout(() => setCatAnim(null), duration)
+  }
+
+  function navigate(dir) {
+    setSelected(null)
+    setCatAnim(dir === 1 ? 'left' : 'right')
+    setTimeout(() => {
+      setViewIndex(i => (i + dir + cats.length) % cats.length)
+      setCatAnim(null)
+    }, 120)
+  }
+
+  function advanceToNextUnplaced(fromIndex, afterPlaced) {
+    const total = cats.length
+    for (let offset = 1; offset < total; offset++) {
+      const idx = (fromIndex + offset) % total
+      if (!afterPlaced[cats[idx].id]) {
+        setCatAnim('left')
+        setTimeout(() => {
+          setViewIndex(idx)
+          setCatAnim(null)
+        }, 120)
+        return
+      }
+    }
   }
 
   function handleCatSelect(catId) {
+    if (placed[catId]) return
     setSelected(prev => prev === catId ? null : catId)
   }
 
@@ -455,32 +656,36 @@ export default function GamesRoom({ roomName = 'Games' }) {
     if (!cat) return
 
     if (cat.groupId === groupId) {
-      // Correct
       const points = 10 + streak * 2
-      const newScore = scoreRef.current + points
-      setScore(newScore)
+      setScore(scoreRef.current + points)
       setStreak(s => s + 1)
       setScoreFlash(true)
       setTimeout(() => setScoreFlash(false), 400)
-
-      // Trigger pop animation
-      setCats(prev => prev.map(c => c.id === selected ? { ...c, _pop: Date.now() } : { ...c, _pop: null }))
+      triggerAnim('pop', 350)
       const catId = selected
       setTimeout(() => {
         setPlaced(prev => {
           const newPlaced = { ...prev, [catId]: true }
-          if (Object.keys(newPlaced).length === 15) {
-            setTimeout(() => setShowComplete(true), 300)
+          placedRef.current = newPlaced
+          if (Object.keys(newPlaced).length === cats.length) {
+            setTimeout(() => setShowComplete(true), 350)
+          } else {
+            advanceToNextUnplaced(viewIndex, newPlaced)
           }
           return newPlaced
         })
         setSelected(null)
       }, 350)
     } else {
-      // Wrong
       setStreak(0)
-      setCats(prev => prev.map(c => c.id === selected ? { ...c, _shake: Date.now() } : { ...c, _shake: null }))
+      triggerAnim('shake', 450)
     }
+  }
+
+  function startNextRound() {
+    setRound(buildRound())
+    setRoundNumber(n => n + 1)
+    setScore(s => s) // keep cumulative score
   }
 
   const placedByGroup = {}
@@ -488,17 +693,112 @@ export default function GamesRoom({ roomName = 'Games' }) {
     placedByGroup[g.id] = cats.filter(c => c.groupId === g.id && placed[c.id]).length
   })
 
-  const selectedCat = selected ? cats.find(c => c.id === selected) : null
+  return (
+    <div style={{
+      minHeight: '100%', display: 'flex', flexDirection: 'column',
+      position: 'relative', fontFamily: "'Outfit', sans-serif",
+    }}>
+      {/* Top bar: score + streak + back */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 28px 4px',
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.3)', fontSize: 13,
+            fontFamily: "'Outfit', sans-serif", letterSpacing: '0.05em',
+            padding: 0, transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+        >
+          ← games
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {streak >= 2 && (
+            <div style={{
+              fontSize: 12, color: '#88e2b4', letterSpacing: '0.06em',
+              background: 'rgba(42,138,90,0.2)', border: '1px solid rgba(42,138,90,0.4)',
+              borderRadius: 999, padding: '3px 12px',
+            }}>
+              ✦ ×{streak} streak
+            </div>
+          )}
+          <div style={{
+            fontFamily: "'Crimson Pro', Georgia, serif",
+            fontSize: 26, color: '#e8c98c',
+            animation: scoreFlash ? 'scoreFlash 0.35s ease' : 'none',
+            minWidth: 48, textAlign: 'right',
+          }}>
+            {score}
+          </div>
+        </div>
+      </div>
+
+      {/* Baskets */}
+      <div style={{
+        display: 'flex', justifyContent: 'center',
+        gap: 'clamp(6px, 2vw, 18px)',
+        padding: 'clamp(10px, 2vh, 20px) 20px 6px',
+        flexShrink: 0, flexWrap: 'wrap',
+      }}>
+        {round.groups.map(group => (
+          <Basket
+            key={group.id}
+            group={group}
+            isTarget={selected !== null}
+            placedCount={placedByGroup[group.id] || 0}
+            onSelect={() => handleBasketSelect(group.id)}
+          />
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div style={{
+        height: 1, margin: '6px 32px',
+        background: 'linear-gradient(90deg, transparent, rgba(232,201,140,0.18), transparent)',
+        flexShrink: 0,
+      }} />
+
+      {/* Cat viewer */}
+      <CatViewer
+        cats={cats}
+        viewIndex={viewIndex}
+        placed={placed}
+        selected={selected}
+        catAnim={catAnim}
+        onPrev={() => navigate(-1)}
+        onNext={() => navigate(1)}
+        onSelect={handleCatSelect}
+      />
+
+      {/* Round complete */}
+      {showComplete && (
+        <RoundComplete
+          score={score}
+          roundNumber={roundNumber}
+          onNext={startNextRound}
+          onMenu={onBack}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Main GamesRoom ────────────────────────────────────────────────────────────
+export default function GamesRoom({ roomName = 'Games' }) {
+  const [activeGame, setActiveGame] = useState(null)
 
   return (
     <>
       <style>{css}</style>
       <div style={{
-        minHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
+        minHeight: '100%', display: 'flex', flexDirection: 'column',
         fontFamily: "'Outfit', sans-serif",
-        position: 'relative',
       }}>
         {/* Header */}
         <div className="room-header-wrap">
@@ -507,125 +807,10 @@ export default function GamesRoom({ roomName = 'Games' }) {
           </div>
         </div>
 
-        {/* Score bar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 32px 0',
-          flexShrink: 0,
-        }}>
-          <div style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
-            fontSize: 28,
-            color: '#e8c98c',
-            animation: scoreFlash ? 'scoreFlash 0.35s ease' : 'none',
-            minWidth: 80,
-          }}>
-            {score}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {streak >= 2 && (
-              <div style={{
-                fontSize: 12,
-                color: '#88e2b4',
-                letterSpacing: '0.06em',
-                fontFamily: "'Outfit', sans-serif",
-                background: 'rgba(42,138,90,0.2)',
-                border: '1px solid rgba(42,138,90,0.4)',
-                borderRadius: 999,
-                padding: '3px 12px',
-              }}>
-                ✦ ×{streak} streak
-              </div>
-            )}
-            <div style={{
-              fontSize: 12,
-              color: 'rgba(255,255,255,0.35)',
-              letterSpacing: '0.05em',
-            }}>
-              round {roundNumber}
-            </div>
-          </div>
-        </div>
-
-        {/* Baskets */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 'clamp(8px, 2vw, 20px)',
-          padding: 'clamp(16px, 3vh, 28px) 24px 8px',
-          flexShrink: 0,
-          flexWrap: 'wrap',
-        }}>
-          {round.groups.map(group => (
-            <Basket
-              key={group.id}
-              group={group}
-              isTarget={selected !== null}
-              placedCount={placedByGroup[group.id] || 0}
-              onSelect={() => handleBasketSelect(group.id)}
-              selectedCatGroupId={selectedCat?.groupId}
-            />
-          ))}
-        </div>
-
-        {/* Divider */}
-        <div style={{
-          height: 1,
-          margin: '8px 32px',
-          background: 'linear-gradient(90deg, transparent, rgba(232,201,140,0.2), transparent)',
-          flexShrink: 0,
-        }} />
-
-        {/* Instructions */}
-        <div style={{
-          textAlign: 'center',
-          fontSize: 12,
-          color: 'rgba(255,255,255,0.3)',
-          letterSpacing: '0.06em',
-          padding: '0 24px 8px',
-          flexShrink: 0,
-        }}>
-          {selected
-            ? 'tap the matching basket'
-            : 'tap a cat to select it'}
-        </div>
-
-        {/* Cat grid */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '8px 24px 32px',
-        }}>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'clamp(8px, 1.5vw, 14px)',
-            justifyContent: 'center',
-            maxWidth: 640,
-            margin: '0 auto',
-          }}>
-            {cats.map(cat => (
-              <CatCard
-                key={cat.id}
-                cat={cat}
-                isSelected={selected === cat.id}
-                isPlaced={!!placed[cat.id]}
-                onSelect={() => !placed[cat.id] && handleCatSelect(cat.id)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Round complete overlay */}
-        {showComplete && (
-          <RoundComplete
-            score={score}
-            roundNumber={roundNumber}
-            onNext={startNextRound}
-          />
-        )}
+        {activeGame === 'cat-sort'
+          ? <CatSortGame onBack={() => setActiveGame(null)} />
+          : <GamesMenu onSelect={setActiveGame} />
+        }
       </div>
     </>
   )
