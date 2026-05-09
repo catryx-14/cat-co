@@ -197,6 +197,177 @@ const css = `
 }
 `
 
+// ── Basket icons (SVG) ──────────────────────────────────────────────────────
+function IconYarn({ color, bg }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      <ellipse cx="32" cy="58" rx="15" ry="4" fill="rgba(0,0,0,0.3)"/>
+      <circle cx="32" cy="31" r="22" fill={bg}/>
+      <circle cx="32" cy="31" r="22" fill={color} fillOpacity="0.85"/>
+      <path d="M11 23 Q32 7 53 23" stroke="rgba(255,255,255,0.3)" strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M9 31 Q32 15 55 31" stroke="rgba(255,255,255,0.22)" strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M11 39 Q32 23 53 39" stroke="rgba(255,255,255,0.18)" strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M17 48 Q34 36 51 46" stroke="rgba(255,255,255,0.12)" strokeWidth="1.6" strokeLinecap="round"/>
+      <path d="M25 10 Q21 31 25 52" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="22" cy="20" r="6" fill="rgba(255,255,255,0.2)"/>
+      <path d="M51 15 Q58 7 55 2" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="51" cy="16" r="2.5" fill="rgba(255,255,255,0.4)"/>
+    </svg>
+  )
+}
+
+function IconCatBed({ color, bg, dark = false }) {
+  const base = dark ? '#0e0e20' : '#1c2038'
+  const cushion = dark ? '#181828' : '#252a48'
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      <ellipse cx="32" cy="61" rx="20" ry="4" fill="rgba(0,0,0,0.3)"/>
+      {/* walls */}
+      <path d="M10 46 Q10 60 32 60 Q54 60 54 46Z" fill={base}/>
+      {/* rim */}
+      <ellipse cx="32" cy="46" rx="22" ry="9" fill={base} stroke={color} strokeWidth="1.5" strokeOpacity="0.55"/>
+      {/* cushion */}
+      <ellipse cx="32" cy="44" rx="16" ry="6" fill={cushion} stroke={color} strokeWidth="1" strokeOpacity="0.4"/>
+      {[22,32,42].map(x => <circle key={x} cx={x} cy={44} r={1.5} fill={color} fillOpacity="0.45"/>)}
+      {/* ear bumps */}
+      {[14,50].map(x => (
+        <g key={x}>
+          <ellipse cx={x} cy={35} rx={7} ry={9} fill={base} stroke={color} strokeWidth="1.5" strokeOpacity="0.5"/>
+          <ellipse cx={x} cy={35} rx={3.5} ry={5} fill={color} fillOpacity="0.28"/>
+        </g>
+      ))}
+      {dark && (
+        <>
+          <path d="M25 46 Q27 44 29 46" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none" strokeOpacity="0.55"/>
+          <path d="M35 46 Q37 44 39 46" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none" strokeOpacity="0.55"/>
+        </>
+      )}
+    </svg>
+  )
+}
+
+function IconFeather({ color, bg }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      {/* wand stick */}
+      <line x1="44" y1="60" x2="24" y2="20" stroke="#7a5c30" strokeWidth="3" strokeLinecap="round"/>
+      {/* bead */}
+      <circle cx="24" cy="20" r="4.5" fill={bg} stroke={color} strokeWidth="1.5"/>
+      {/* string */}
+      <path d="M24 24 Q20 32 22 42" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" strokeLinecap="round"/>
+      {/* feathers hanging */}
+      <path d="M22 26 Q10 32 8 44" stroke={color} strokeWidth="2.2" strokeLinecap="round" fill="none" strokeOpacity="0.9"/>
+      <path d="M22 26 Q8 34 10 46 Q14 44 18 36 Q20 30 22 26Z" fill={color} fillOpacity="0.25"/>
+      <path d="M22 28 Q16 36 18 48" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" strokeOpacity="0.75"/>
+      <path d="M22 28 Q14 38 18 50 Q22 48 24 40 Q24 33 22 28Z" fill={color} fillOpacity="0.2"/>
+      <path d="M22 30 Q24 40 22 52" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" strokeOpacity="0.65"/>
+      <path d="M22 30 Q24 42 22 54 Q26 52 28 44 Q28 36 22 30Z" fill={color} fillOpacity="0.2"/>
+      <path d="M22 28 Q30 36 32 48" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" strokeOpacity="0.7"/>
+      <path d="M22 28 Q30 38 32 50 Q28 50 24 42 Q22 35 22 28Z" fill={color} fillOpacity="0.2"/>
+      {/* highlight on bead */}
+      <circle cx="22" cy="18" r="2" fill="rgba(255,255,255,0.4)"/>
+    </svg>
+  )
+}
+
+function IconBowl({ color, bg }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      <ellipse cx="32" cy="60" rx="18" ry="4" fill="rgba(0,0,0,0.3)"/>
+      {/* bowl body */}
+      <path d="M10 32 Q10 56 32 56 Q54 56 54 32Z" fill={bg}/>
+      <path d="M10 32 Q10 56 32 56 Q54 56 54 32Z" fill={color} fillOpacity="0.25"/>
+      {/* rim ellipse */}
+      <ellipse cx="32" cy="32" rx="22" ry="8" fill={bg}/>
+      <ellipse cx="32" cy="32" rx="22" ry="8" fill={color} fillOpacity="0.55"/>
+      <ellipse cx="32" cy="32" rx="22" ry="8" stroke={color} strokeWidth="1.5" fill="none"/>
+      {/* food surface */}
+      <ellipse cx="32" cy="32" rx="16" ry="5" fill={color} fillOpacity="0.7"/>
+      {/* paw print on bowl face */}
+      <circle cx="32" cy="46" r="3.5" fill={color} fillOpacity="0.38"/>
+      <circle cx="26" cy="43" r="2" fill={color} fillOpacity="0.32"/>
+      <circle cx="38" cy="43" r="2" fill={color} fillOpacity="0.32"/>
+      <circle cx="29" cy="41" r="1.6" fill={color} fillOpacity="0.28"/>
+      <circle cx="35" cy="41" r="1.6" fill={color} fillOpacity="0.28"/>
+      {/* bowl shine */}
+      <ellipse cx="42" cy="38" rx="4" ry="2" fill="rgba(255,255,255,0.12)" transform="rotate(-30 42 38)"/>
+    </svg>
+  )
+}
+
+function IconFish({ color, bg }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      {/* tail */}
+      <path d="M46 32 L58 20 L60 32 L58 44Z" fill={color} fillOpacity="0.85"/>
+      {/* body */}
+      <ellipse cx="28" cy="32" rx="20" ry="14" fill={bg}/>
+      <ellipse cx="28" cy="32" rx="20" ry="14" fill={color} fillOpacity="0.8"/>
+      {/* dorsal fin */}
+      <path d="M20 19 Q28 11 36 19" fill={color} fillOpacity="0.6"/>
+      {/* scales */}
+      {[[18,28],[26,24],[18,36],[26,38],[34,30]].map(([x,y],i) => (
+        <ellipse key={i} cx={x} cy={y} rx={4} ry={3} stroke="rgba(255,255,255,0.22)" strokeWidth="1" fill="none"/>
+      ))}
+      {/* belly shimmer */}
+      <ellipse cx="26" cy="37" rx="12" ry="5" fill="rgba(255,255,255,0.1)" transform="rotate(-10 26 37)"/>
+      {/* eye */}
+      <circle cx="10" cy="28" r="4.5" fill="rgba(0,0,0,0.5)"/>
+      <circle cx="10" cy="28" r="2.8" fill="rgba(255,255,255,0.85)"/>
+      <circle cx="9" cy="27" r="1.2" fill="rgba(0,0,0,0.9)"/>
+      <circle cx="9.5" cy="26.5" r="0.5" fill="rgba(255,255,255,0.7)"/>
+      {/* highlight */}
+      <ellipse cx="20" cy="24" rx="6" ry="3.5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 20 24)"/>
+    </svg>
+  )
+}
+
+function IconBottle({ color, bg }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+      <ellipse cx="32" cy="62" rx="11" ry="3" fill="rgba(0,0,0,0.3)"/>
+      {/* nipple tip */}
+      <rect x="29" y="6" width="6" height="9" rx="3" fill={bg}/>
+      <rect x="29" y="6" width="6" height="9" rx="3" fill={color} fillOpacity="0.75"/>
+      {/* neck ring */}
+      <rect x="25" y="14" width="14" height="5" rx="2" fill={bg}/>
+      <rect x="25" y="14" width="14" height="5" rx="2" fill={color} fillOpacity="0.9"/>
+      {/* neck */}
+      <rect x="26" y="18" width="12" height="10" rx="2" fill={bg}/>
+      <rect x="26" y="18" width="12" height="10" rx="2" fill={color} fillOpacity="0.45"/>
+      {/* body */}
+      <rect x="18" y="27" width="28" height="30" rx="10" fill={bg}/>
+      <rect x="18" y="27" width="28" height="30" rx="10" fill={color} fillOpacity="0.45"/>
+      <rect x="18" y="27" width="28" height="30" rx="10" stroke={color} strokeWidth="1.5" fill="none" strokeOpacity="0.6"/>
+      {/* measure lines */}
+      {[36, 42, 48].map(y => (
+        <line key={y} x1="21" y1={y} x2="27" y2={y} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
+      ))}
+      {/* bow loops */}
+      <path d="M26 22 Q20 17 22 12" stroke={color} strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <path d="M38 22 Q44 17 42 12" stroke={color} strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      {/* bow knot */}
+      <circle cx="32" cy="22" r="3.5" fill={color}/>
+      <circle cx="32" cy="22" r="2" fill="rgba(255,255,255,0.3)"/>
+      {/* body shine */}
+      <rect x="36" y="31" width="5" height="18" rx="2.5" fill="rgba(255,255,255,0.14)"/>
+    </svg>
+  )
+}
+
+function BasketIcon({ groupId, color, bg }) {
+  switch (groupId) {
+    case 'orange': return <IconYarn    color={color} bg={bg}/>
+    case 'gray':   return <IconCatBed  color={color} bg={bg} dark={false}/>
+    case 'black':  return <IconCatBed  color={color} bg={bg} dark={true}/>
+    case 'siamese':return <IconFeather color={color} bg={bg}/>
+    case 'calico': return <IconBowl    color={color} bg={bg}/>
+    case 'spotted':return <IconFish    color={color} bg={bg}/>
+    case 'kitten': return <IconBottle  color={color} bg={bg}/>
+    default:       return null
+  }
+}
+
 // ── Game menu tile ───────────────────────────────────────────────────────────
 const GAME_TILES = [
   {
@@ -279,7 +450,7 @@ function GamesMenu({ onSelect }) {
   )
 }
 
-// ── Basket cushion ───────────────────────────────────────────────────────────
+// ── Basket ───────────────────────────────────────────────────────────────────
 function Basket({ group, isTarget, placedCount, onSelect }) {
   const [hovered, setHovered] = useState(false)
   const active = isTarget && hovered
@@ -293,54 +464,57 @@ function Basket({ group, isTarget, placedCount, onSelect }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 6,
+        gap: 5,
         cursor: isTarget ? 'pointer' : 'default',
-        transition: 'transform 0.15s',
-        transform: active ? 'scale(1.06)' : 'scale(1)',
+        transition: 'transform 0.15s, filter 0.15s',
+        transform: active ? 'scale(1.1) translateY(-3px)' : 'scale(1)',
+        filter: active
+          ? `drop-shadow(0 0 10px ${group.cushionGlow}) drop-shadow(0 0 4px ${group.borderColor})`
+          : isTarget
+          ? 'none'
+          : 'none',
+        opacity: isTarget ? 1 : 1,
       }}
     >
+      {/* Icon */}
       <div style={{
+        width: 64, height: 64,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative',
-        width: 90,
-        height: 72,
-        borderRadius: 14,
-        background: `radial-gradient(ellipse at 50% 40%, ${group.cushionGlow}, ${group.cushionColor} 70%)`,
-        border: `2px solid ${active ? group.borderColor : 'rgba(255,255,255,0.08)'}`,
-        boxShadow: active
-          ? `0 0 20px ${group.cushionGlow}, 0 0 8px ${group.borderColor}`
-          : `0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)`,
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
       }}>
-        {/* Cushion stitch lines */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', pointerEvents: 'none' }}>
-          {[0.3, 0.5, 0.7].map(y => (
-            <div key={y} style={{
-              position: 'absolute', left: '10%', right: '10%',
-              top: `${y * 100}%`, height: 1,
-              background: 'rgba(255,255,255,0.06)',
-            }} />
-          ))}
-        </div>
-        {/* Pip progress */}
-        <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 1 }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: i < placedCount ? group.borderColor : 'rgba(255,255,255,0.12)',
-              boxShadow: i < placedCount ? `0 0 6px ${group.cushionGlow}` : 'none',
-              transition: 'background 0.3s, box-shadow 0.3s',
-            }} />
-          ))}
-        </div>
+        <BasketIcon groupId={group.id} color={group.borderColor} bg={group.cushionColor}/>
+        {/* Glow ring underneath on hover */}
+        {active && (
+          <div style={{
+            position: 'absolute',
+            bottom: -4, left: '50%', transform: 'translateX(-50%)',
+            width: 40, height: 8,
+            borderRadius: '50%',
+            background: group.cushionGlow,
+            filter: 'blur(6px)',
+            pointerEvents: 'none',
+          }}/>
+        )}
       </div>
+
+      {/* Pip progress dots */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: i < placedCount ? group.borderColor : 'rgba(255,255,255,0.12)',
+            boxShadow: i < placedCount ? `0 0 5px ${group.cushionGlow}` : 'none',
+            transition: 'background 0.3s, box-shadow 0.3s',
+          }}/>
+        ))}
+      </div>
+
+      {/* Label */}
       <span style={{
-        fontSize: 11,
+        fontSize: 10,
         fontFamily: "'Outfit', sans-serif",
-        color: active ? group.borderColor : 'rgba(255,255,255,0.45)',
-        letterSpacing: '0.08em',
+        color: active ? group.borderColor : 'rgba(255,255,255,0.4)',
+        letterSpacing: '0.1em',
         textTransform: 'uppercase',
         transition: 'color 0.15s',
         fontWeight: active ? 600 : 400,
