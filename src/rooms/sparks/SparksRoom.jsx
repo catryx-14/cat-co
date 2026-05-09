@@ -3,6 +3,7 @@ import RoomMark from '../../shared/components/RoomMark.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 
 // ─── tag system ────────────────────────────────────────────────────────
+/* TODO — move to user-configurable database tags when settings page is built */
 const TAGS = {
   'neural-physio': { label: 'Neural Physio', hue: [272, 88, 48], gem: '#8a2be2', gemDark: '#4b0d8f' },
   'hub':           { label: 'Hub',           hue: [42,  98, 52], gem: '#f0b400', gemDark: '#9c6a00' },
@@ -503,7 +504,8 @@ function ListView({ sparks, onClick }) {
 function ViewToggle({ value, onChange }) {
   return (
     <div style={{ display: 'inline-flex', borderRadius: 999, padding: 3, border: '1px solid rgba(232,201,140,0.18)' }}>
-      {[{ k: 'constellation', icon: '✶', label: 'Constellation' }, { k: 'list', icon: '≡', label: 'List' }].map(o => (
+      {/* NIGHT GARDEN THEME VALUE: 'constellation' label was 'Constellation' */}
+      {[{ k: 'constellation', icon: '✶', label: 'Active' }, { k: 'list', icon: '≡', label: 'List' }].map(o => (
         <button key={o.k} onClick={() => onChange(o.k)} style={{
           background: value === o.k ? 'rgba(232,201,140,0.10)' : 'transparent',
           border: 0, color: value === o.k ? 'var(--candle-soft)' : 'var(--ink-soft)',

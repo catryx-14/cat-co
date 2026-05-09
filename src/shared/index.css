@@ -1,4 +1,5 @@
 :root {
+  /* ── Night Garden base palette ─────────────────────────────────────── */
   --night-1: #131e44;
   --night-2: #19264f;
   --night-3: #1f2d5e;
@@ -15,6 +16,51 @@
   --ink: #ffffff;
   --ink-soft: rgba(255,255,255,0.78);
   --ink-faint: rgba(255,255,255,0.5);
+
+  /* ── MVP Design Tokens ─────────────────────────────────────────────── */
+  /* Structure is permanent, skin is swappable. All night garden values   */
+  /* are documented below before their MVP defaults.                      */
+
+  /* NIGHT GARDEN THEME VALUE: dark navy body gradient —
+     linear-gradient(180deg, #08102a 0%, #0f1a3a 20%, #16204a 45%, #14233f 70%, #0a1530 100%) fixed
+     html/body base: #0b1020 */
+  --color-background: #0b1020;
+
+  /* NIGHT GARDEN THEME VALUE: gold candle — #e8c98c */
+  --color-accent-primary: #e8c98c;
+
+  /* NIGHT GARDEN THEME VALUE: white — #ffffff */
+  --color-text-primary: #ffffff;
+
+  /* NIGHT GARDEN THEME VALUE: rgba(255,255,255,0.78) */
+  --color-text-secondary: rgba(255, 255, 255, 0.78);
+
+  /* NIGHT GARDEN THEME VALUE: rgba(255,255,255,0.5) */
+  --color-text-dim: rgba(255, 255, 255, 0.5);
+
+  /* NIGHT GARDEN THEME VALUE: gold hairline — rgba(232,201,140,0.28) */
+  --color-border: rgba(232, 201, 140, 0.28);
+
+  /* NIGHT GARDEN THEME VALUE: sapphire blue — #3a78d8 (lantern-01 / Energy Tracker) */
+  --color-accent-energy: #3a78d8;
+
+  /* NIGHT GARDEN THEME VALUE: ruby/coral — #e35a4a (lantern-07 / Sparks) */
+  --color-accent-sparks: #e35a4a;
+
+  /* NIGHT GARDEN THEME VALUE: deep crimson — #a8132a (lantern-02 / First Aid) */
+  --color-accent-firstaid: #a8132a;
+
+  /* NIGHT GARDEN THEME VALUE: emerald — #2a8a5a (lantern-04 / Games) */
+  --color-accent-games: #2a8a5a;
+
+  /* NIGHT GARDEN THEME VALUE: amethyst — #7a4ad8 (lantern-03 / Library) */
+  --color-accent-library: #7a4ad8;
+
+  /* NIGHT GARDEN THEME VALUE: display/title font was Italiana, serif */
+  /* NIGHT GARDEN THEME VALUE: hero font was 'Cormorant Garamond', Georgia, serif italic */
+  --font-primary: "Crimson Pro", Georgia, serif;
+  --font-display: "Crimson Pro", Georgia, serif;
+  --font-hero: "Crimson Pro", Georgia, serif;
 }
 
 * { box-sizing: border-box; }
@@ -65,6 +111,22 @@ body {
       rgba(232, 201, 140, calc(0.02 + var(--w) * 0.05)) 0%, transparent 35%);
   transition: background 1.2s ease;
 }
+/* NIGHT GARDEN THEME VALUE — BOKEH
+   Bokeh is night garden skin. Removed from MVP (all pages).
+   Full bokeh implementation documented here for Phase 2 restoration.
+
+   #bokeh-layer: position fixed, mix-blend-mode screen, opacity 0.55
+   .bokeh-dot: 16–32 orbs, diameter 55–100px, filter blur ~17% of size
+   Jewel palette (r,g,b): [180,40,220] deep purple, [220,60,160] magenta,
+     [40,100,220] sapphire, [160,30,200] deep violet, [60,180,200] teal,
+     [220,100,40] amber, [200,40,120] ruby
+   Alpha per orb: 0.22–0.28
+   Drift animation: bezier path 70–110s duration, 34–62px displacement
+   ThresholdAmbientBokeh (Threshold-specific): 22 orbs, size 30–120px,
+     colors #5FAFA7 teal, #E8B87C amber, #E39AAA rose, #B29AD8 lavender,
+     #7CB78E sage, #F0D080 gold, #a6d6ff sky; opacity 0.15–0.37,
+     animation thresholdOrbFloat 10–24s, dx/dy ±15px
+*/
 .bokeh {
   mix-blend-mode: screen;
   opacity: .55;

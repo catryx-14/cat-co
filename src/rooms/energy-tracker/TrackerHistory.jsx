@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { loadAllEntries } from '../../shared/lib/db.js'
-import meltdownIcon from '../../assets/icons/Aris Shutdown.png'
-import siFlowIcon   from '../../assets/icons/Aris Flow.jpg'
+/* NIGHT GARDEN THEME VALUE — SI FLOW / SHUTDOWN ICONS
+   Icons were cat photos: Aris Flow.jpg (243KB) and Aris Shutdown.png (2.2MB).
+   Used in DayCell as <img src={icon} className="cal-icon"> inside .cal-icon-wrap.
+   CSS classes: .cal-icon-wrap--siflow and .cal-icon-wrap--meltdown
+   Image files preserved at: src/assets/icons/Aris Flow.jpg and Aris Shutdown.png
+   Restore: re-import below and pass to CalIcon as src prop
+*/
+import meltdownIcon from '../../assets/icons/Aris Shutdown.png'  // preserved — not deleted
+import siFlowIcon   from '../../assets/icons/Aris Flow.jpg'       // preserved — not deleted
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -63,7 +70,15 @@ function ptAt(t) {
   return [CX + R * Math.cos(rad), CY + R * Math.sin(rad)]
 }
 
-// 4-point sparkle: tips at N/E/S/W, pinch points at diagonals
+/* NIGHT GARDEN THEME VALUE — ARC POINT SHAPES (sparkle stars)
+   4-point sparkle function: tips at N/E/S/W, pinch points at diagonals
+   sparkle(outer, inner) → SVG path string
+   Sizes: large [7.0, 1.5], medium [4.2, 1.0], small [2.6, 0.65]
+   Hot white core: large r=1.5, medium r=0.9 (rgba(255,252,220,0.82))
+   Centre-lighten factor: Math.pow(Math.sin(Math.PI * t), 2) * 0.45 toward warm cream
+   Brightness nudge: 0.78 + ((i * 13) % 7) * 0.032
+   Restore by: changing ArcPoint to use the sparkle path instead of circle
+*/
 function sparkle(outer, inner) {
   const i = +(inner / Math.SQRT2).toFixed(3)
   const o = +outer.toFixed(3)
@@ -101,51 +116,80 @@ const FUTURE_DOTS = [0, 0.13, 0.25, 0.38, 0.50, 0.62, 0.75, 0.87, 1.0].map(t => 
 // Past empty day — very dim grey dots
 const PAST_DOTS = FUTURE_DOTS.map(s => ({ t: s.t, op: +(s.op * 0.4).toFixed(3) }))
 
+// ArcPoint — swappable component. MVP default: dot/pip. Night garden: sparkle star.
+// shape prop: 'dot' (MVP default) | 'sparkle' (night garden)
+function ArcPoint({ x, y, size, color, opacity, shape = 'dot' }) {
+  if (shape === 'sparkle') {
+    const [outer, inner] = DIMS[size] ?? DIMS.medium
+    return (
+      <g transform={`translate(${x},${y})`} opacity={opacity}>
+        <path d={sparkle(outer, inner)} fill={color} />
+      </g>
+    )
+  }
+  // MVP default: simple pip
+  const r = size === 'large' ? 2.2 : size === 'medium' ? 1.6 : size === 'small' ? 1.1 : 1.0
+  return <circle cx={x} cy={y} r={r} fill={color} opacity={opacity} />
+}
+
 function ArcStars({ stars, color, live = false }) {
   return stars.map((s, i) => {
     const [x, y] = ptAt(s.t)
     if (s.type === 'dot' || !s.type) {
       return <circle key={i} cx={x} cy={y} r={s.r ?? 1.2} fill={color} opacity={s.op} />
     }
-    const [outer, inner] = DIMS[s.type]
     // Centre stars lighten toward warm cream; ends stay base colour
     const centreFactor = live ? Math.pow(Math.sin(Math.PI * s.t), 2) * 0.45 : 0
     const fill = live ? lighten(color, centreFactor) : color
-    // Small fixed-seed brightness nudge so adjacent stars aren't identical
     const nudge = live ? 0.78 + ((i * 13) % 7) * 0.032 : 1
     return (
-      <g key={i} transform={`translate(${x},${y})`} opacity={+(s.op * nudge).toFixed(3)}>
-        <path d={sparkle(outer, inner)} fill={fill} />
-        {/* Hot white core on large/medium — sells the "real point of light" */}
-        {live && s.type !== 'small' && (
-          <circle cx={0} cy={0} r={s.type === 'large' ? 1.5 : 0.9}
-            fill="rgba(255,252,220,0.82)" />
-        )}
-      </g>
+      <ArcPoint
+        key={i}
+        x={x} y={y}
+        size={s.type}
+        color={fill}
+        opacity={+(s.op * nudge).toFixed(3)}
+        shape="dot"
+      />
     )
   })
 }
 
 // ── Week separator ────────────────────────────────────────────────────────────
 
+/* NIGHT GARDEN THEME VALUE — LENS FLARE WEEK SEPARATOR
+   SVG sparkle at centre: sparkle(5.0, 1.2) fill rgba(244,212,158,0.82)
+   Hot white core: circle r=0.9 fill rgba(255,252,225,0.95)
+   feGaussianBlur stdDeviation=1.6 with feMerge for glow
+   Lines: .week-sep-line--l and .week-sep-line--r extending from centre sparkle
+   Restore: replace the plain div below with the sparkle SVG version
+*/
 function WeekSep() {
   return (
     <div className="week-sep" aria-hidden="true">
       <div className="week-sep-line week-sep-line--l" />
-      <svg viewBox="-7 -7 14 14" width="14" height="14" style={{ flexShrink: 0, overflow: 'visible' }}>
-        <defs>
-          <filter id="wsd-glow" x="-250%" y="-250%" width="600%" height="600%">
-            <feGaussianBlur stdDeviation="1.6" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        <g filter="url(#wsd-glow)">
-          <path d={sparkle(5.0, 1.2)} fill="rgba(244,212,158,0.82)" />
-          <circle cx="0" cy="0" r="0.9" fill="rgba(255,252,225,0.95)" />
-        </g>
-      </svg>
+      <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
       <div className="week-sep-line week-sep-line--r" />
     </div>
+  )
+}
+
+// ── CalIcon — swappable icon slot ─────────────────────────────────────────────
+// MVP default: coloured pip. Night garden: cat photo (src prop).
+// shape: 'pip' (MVP) | 'image' (night garden). color: pip fill color.
+function CalIcon({ shape = 'pip', src, alt, color = 'rgba(255,255,255,0.6)' }) {
+  if (shape === 'image' && src) {
+    return <img src={src} className="cal-icon" alt={alt} />
+  }
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 8, height: 8,
+      borderRadius: '50%',
+      background: color,
+      boxShadow: `0 0 4px ${color}`,
+      flexShrink: 0,
+    }} />
   )
 }
 
@@ -258,12 +302,12 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfM
           <div className={`cal-icons${hasMelt && hasSI ? ' cal-icons--pair' : ''}`}>
             {hasMelt && (
               <span className="cal-icon-wrap cal-icon-wrap--meltdown">
-                <img src={meltdownIcon} className="cal-icon" alt="meltdown" />
+                <CalIcon shape="pip" color="rgba(168, 19, 42, 0.85)" />
               </span>
             )}
             {hasSI && (
               <span className="cal-icon-wrap cal-icon-wrap--siflow">
-                <img src={siFlowIcon} className="cal-icon" alt="SI flow" />
+                <CalIcon shape="pip" color="rgba(58, 120, 216, 0.85)" />
               </span>
             )}
           </div>

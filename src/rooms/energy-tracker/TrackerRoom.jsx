@@ -329,7 +329,8 @@ function Regulation({ values, onChange, recovery, onRecovery, goodSigns, onGood 
   return (
     <section className="reg-section">
       <div className="ledger-head">
-        <div className="ledger-title">tending</div>
+        {/* NIGHT GARDEN THEME VALUE: section title was "tending" */}
+        <div className="ledger-title">regulation</div>
         <label className="recovery-toggle">
           <input type="checkbox" checked={recovery} onChange={e => onRecovery(e.target.checked)} />
           <span>recovery sleep <i>(beyond regular sleep)</i></span>
@@ -1576,7 +1577,8 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
         </div>
         {tab !== 'settings' && (
           <div className="room-tabs">
-            {['today', 'horizon', 'history'].map(t => (
+            {/* HORIZON TAB — DEFERRED: 'horizon' tab removed from MVP. Restore by adding 'horizon' back to this array. */}
+            {['today', 'history'].map(t => (
               <div key={t}
                    className={`room-tab ${tab === t ? 'active' : ''}`}
                    onClick={() => handleTabChange(t)}>
@@ -1616,7 +1618,9 @@ export default function TrackerRoom({ onHome, session, settings, onThresholdsCha
       }}>
         <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} />
       </div>
-      {tab === 'horizon' && <div className="placeholder">horizon — coming next</div>}
+      {/* HORIZON TAB — DEFERRED: horizon view removed from MVP. Code preserved below.
+          To restore: add 'horizon' back to tab array and uncomment this line:
+          tab === 'horizon' && <div className="placeholder">horizon — coming next</div> */}
       {tab === 'history' && !editDate && (
         <TrackerHistory
           settings={settings}

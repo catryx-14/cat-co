@@ -5,11 +5,12 @@ import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
+// NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
 import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
 // ── Room registry (nav + routing) ───────────────────────────────────────────
 const ROOMS = [
-  { key: 'tracker',     name: 'Energy Tracker', sub: 'today · horizon · history', tone: 'warm'   },
+  { key: 'tracker',     name: 'Energy Tracker', sub: 'today · history', tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
   { key: 'sparks',      name: 'Sparks',          sub: 'hold them gently',          tone: 'rose'   },
   { key: 'physio',      name: 'First Aid',        sub: 'gentle attention',          tone: 'teal'   },
   { key: 'games',       name: 'Games',            sub: 'a soft place to drift',     tone: 'purple' },
@@ -17,9 +18,44 @@ const ROOMS = [
   { key: 'more-lights', name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple' },
 ]
 
+/* NIGHT GARDEN LANTERN POSITIONS — DO NOT DISCARD
+   Exact arc coordinates, hard-won. Preserved here for Phase 2 restoration.
+
+   DESKTOP arc (default — viewport >= 768px, height >= 790px):
+     almanac:  xPct 8,  topStyle '-15vh', chain '42vh',                   size 100, sway 1.4, delay 0.0
+     sparks:   xPct 28, topStyle '0',     chain 'calc(27vh + 130px)',      size 92,  sway 0.9, delay 1.6
+     neural:   xPct 50, topStyle '0',     chain 'calc(27vh + 220px)',      size 96,  sway 1.7, delay 0.6
+                        chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)'
+     games:    xPct 74, topStyle '0',     chain 'calc(27vh + 130px)',      size 94,  sway 1.0, delay 2.4
+     threads:  xPct 92, topStyle '-13vh', chain '40vh',                   size 90,  sway 1.3, delay 3.1
+
+   SHORT viewport (height < 790px):
+     almanac:  xPct 8,  topStyle '-10vh', chain '33vh',                   size 80, sway 1.4, delay 0.0
+     sparks:   xPct 28, topStyle '0',     chain 'calc(23vh + 104px)',      size 74, sway 0.9, delay 1.6
+     neural:   xPct 50, topStyle '0',     chain 'calc(23vh + 180px)',      size 78, sway 1.7, delay 0.6
+                        chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)'
+     games:    xPct 74, topStyle '0',     chain 'calc(23vh + 104px)',      size 76, sway 1.0, delay 2.4
+     threads:  xPct 92, topStyle '-10vh', chain '31vh',                   size 72, sway 1.3, delay 3.1
+
+   MOBILE (viewport < 768px):
+     almanac:  xPct 10, topStyle '-8vh',  chain '27vh',                   size 60, sway 1.2, delay 0.0
+     sparks:   xPct 30, topStyle '-2vh',  chain '27vh',                   size 64, sway 0.8, delay 1.4
+     neural:   xPct 52, topStyle '0',     chain '39vh',                   size 60, sway 1.6, delay 0.7
+     games:    xPct 74, topStyle '-2vh',  chain '27vh',                   size 62, sway 1.0, delay 2.1
+     threads:  xPct 88, topStyle '-8vh',  chain '25vh',                   size 56, sway 1.4, delay 2.8
+
+   Lantern SVGs: /assets/lantern-01.svg (almanac), /assets/lantern-07.svg (sparks),
+     /assets/lantern-02.svg (neural), /assets/lantern-04.svg (games), /assets/lantern-03.svg (threads)
+   Glow colors: almanac #3a78d8/#86b6ff, sparks #e35a4a/#ffb098, neural #a8132a/#ff7888,
+     games #2a8a5a/#88e2b4, threads #7a4ad8/#c8a8ff
+   Chain: 1.2px wide, linear-gradient gold rgba(244,212,158,0.95)→rgba(232,184,124,0.7)
+   Sway animation: thresholdLanternSway, 11–13s ease-in-out
+*/
+
 // ── Lantern config (Threshold hub) ───────────────────────────────────────────
+/* NIGHT GARDEN THEME — LANTERNS */
 const LANTERN_ROOMS = [
-  { id: 'almanac', name: 'Energy Tracker', sub: 'today · horizon · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     },
+  { id: 'almanac', name: 'Energy Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
   { id: 'sparks',  name: 'Sparks',          sub: 'hold them gently',          glow: '#e35a4a', glow2: '#ffb098', svg: '/assets/lantern-07.svg', roomKey: 'sparks'      },
   { id: 'neural',  name: 'First Aid',        sub: 'gentle attention',          glow: '#a8132a', glow2: '#ff7888', svg: '/assets/lantern-02.svg', roomKey: 'physio'      },
   { id: 'games',   name: 'Games',            sub: 'a soft place to drift',     glow: '#2a8a5a', glow2: '#88e2b4', svg: '/assets/lantern-04.svg', roomKey: 'games'       },
@@ -70,8 +106,108 @@ function useViewport() {
   return vp
 }
 
+// ── Threshold hero text — swappable component ────────────────────────────────
+// MVP default text. Night garden theme will override via text prop.
+function ThresholdHeroText({ isMobile }) {
+  return (
+    <div style={{
+      position: 'fixed',
+      left: isMobile ? 28 : 48,
+      bottom: isMobile ? 32 : 52,
+      zIndex: 8,
+      pointerEvents: 'none',
+      maxWidth: isMobile ? 260 : 360,
+    }}>
+      <div>
+        <div style={{
+          fontFamily: 'var(--font-hero)',
+          fontStyle: 'normal',
+          fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
+          color: '#f2f0e6',
+          lineHeight: 1.15,
+          letterSpacing: '-0.01em',
+        }}>
+          A place to think
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-hero)',
+          fontStyle: 'italic',
+          fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
+          color: '#c4b5d4',
+          lineHeight: 1.15,
+          letterSpacing: '-0.01em',
+          marginBottom: isMobile ? 14 : 20,
+        }}>
+          out loud.
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-hero)',
+          fontStyle: 'normal',
+          fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
+          color: 'var(--color-text-dim)',
+          lineHeight: 1.65,
+        }}>
+          A personal hub for exploring what it means to be autistic — the mechanisms, the patterns, the daily navigation. Built to catch the thoughts before they disappear.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Threshold nav grid — 2×3 MVP room picker (replaces lantern arc for MVP) ───
+// Row 1: Energy Tracker | First Aid
+// Row 2: Sparks         | Games
+// Row 3: Library        | More Rooms
+function ThresholdNavLinks({ onPick, isMobile }) {
+  const links = [
+    { key: 'tracker',     name: 'Energy Tracker' },
+    { key: 'physio',      name: 'First Aid'       },
+    { key: 'sparks',      name: 'Sparks'          },
+    { key: 'games',       name: 'Games'           },
+    { key: 'library',     name: 'Library'         },
+    { key: 'more-lights', name: 'More Rooms'      },
+  ]
+  return (
+    <nav style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: isMobile ? 10 : 12,
+      width: '100%',
+    }}>
+      {links.map(l => (
+        <button key={l.key} onClick={() => onPick(l.key)} style={{
+          background: 'transparent',
+          border: '1px solid var(--color-border)',
+          borderRadius: 4,
+          color: 'var(--color-text-secondary)',
+          fontFamily: 'var(--font-primary)',
+          fontSize: isMobile ? 14 : 16,
+          letterSpacing: '0.06em',
+          padding: isMobile ? '10px 12px' : '11px 20px',
+          cursor: 'pointer',
+          transition: 'color 200ms, border-color 200ms',
+          whiteSpace: 'nowrap',
+          textAlign: 'center',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+        >
+          {l.name}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
 // ── Threshold atmosphere ─────────────────────────────────────────────────────
 
+/* NIGHT GARDEN THEME — MOON
+   ThresholdMoon: position fixed, top clamp(130px, calc(7.5vw+46px), 152px), left 50%,
+   size clamp(196px, 26vw, 370px), opacity 0.52
+   SVG: halo radialGradient rgba(225,238,252,0.6)→transparent, body cx42% cy40%
+   #f8f4e8→#8ea0b0, texture cx60% cy55% rgba(150,170,190,0)→rgba(110,130,160,0.32)
+   Craters: 4 circles rgba(130,150,175,0.2–0.3) at (46,46)r1.7, (55,53)r2.1, (51,44)r1.0, (44,55)r1.3
+*/
 function ThresholdMoon() {
   return (
     <div style={{
@@ -167,6 +303,16 @@ function ThresholdStarField() {
   )
 }
 
+/* NIGHT GARDEN THEME — FOREST FRAME
+   ThresholdForestFrame: position fixed SVG, viewBox 0 0 1600 1000, zIndex 1
+   - 70 grass tufts: seed 314, y 880–990, height 12–38px, stroke rgba(60,80,90,0.7)
+   - 46 flower blooms: seed 1729, y 860–990, r 3–8px, 5-petal ellipse,
+     palette ['#e8d8f0','#f4e0e6','#dfe8f4','#f0e6c8','#e0d4ec'], center #fff7d0
+   - Left/right haze: radialGradient rgba(20,28,48,0.85)→transparent
+   - Ground fog linearGradient rgba(8,14,36,0.75)→transparent
+   - Floor fade: rect x0 y640 width1600 height360
+   - Flower patches: 3 ellipses with t-flowerPatch radialGradient rgba(38,28,55,0.6)
+*/
 function ThresholdForestFrame() {
   const grassTufts = useMemo(() => {
     let s = 314
@@ -249,6 +395,13 @@ function ThresholdForestFrame() {
   )
 }
 
+/* NIGHT GARDEN THEME — AMBIENT BOKEH (see also atmosphere.js NIGHT GARDEN comment)
+   ThresholdAmbientBokeh: 22 orbs, position fixed zIndex 2, overflow hidden
+   Colors: #5FAFA7 teal, #E8B87C amber, #E39AAA rose, #B29AD8 lavender,
+     #7CB78E sage, #F0D080 gold, #a6d6ff sky
+   Size: 30–120px diameter. Opacity: 0.15–0.37. Blur: size * 0.05px
+   Animation: thresholdOrbFloat, duration 10–24s, dx/dy ±15px
+*/
 function ThresholdAmbientBokeh() {
   const orbs = useMemo(() => {
     let s = 555
@@ -286,6 +439,12 @@ function ThresholdAmbientBokeh() {
   )
 }
 
+/* NIGHT GARDEN THEME — FIREFLIES (shooting stars on Threshold)
+   ThresholdFireflies: 28 fireflies, position fixed zIndex 2
+   Size: 2–4.5px. Colors: #fff4c0 (15% chance) or #fdd874
+   boxShadow: 3× and 6× size glow in same hue
+   Animation: thresholdFirefly, duration 7–16s, dx ±50px, dy -(15–65)px upward
+*/
 function ThresholdFireflies() {
   const flies = useMemo(() => {
     let s = 2024
@@ -337,14 +496,13 @@ function ThresholdDateBar() {
     <div id="date-bar" style={{
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
       gap: 'clamp(16px, 3vw, 36px)',
-      margin: 'clamp(28px, 4vw, 52px) auto 0',
-      maxWidth: 760,
-      padding: '0 24px',
+      margin: 'clamp(20px, 3vw, 32px) 0 0',
+      position: 'relative',
+      zIndex: 6,
     }}>
       <div className="goldrule" style={{
-        flex: 1, height: 1, maxWidth: 240,
+        flex: 1, height: 1,
         background: 'linear-gradient(90deg, rgba(232,184,124,0) 0%, rgba(232,184,124,0.6) 40%, rgba(244,212,158,0.95) 100%)',
         boxShadow: '0 0 8px rgba(244,212,158,0.4)',
       }} />
@@ -361,7 +519,7 @@ function ThresholdDateBar() {
         {tod} · {dayAbbrev} · {hh}:{mm}
       </div>
       <div className="goldrule" style={{
-        flex: 1, height: 1, maxWidth: 240,
+        flex: 1, height: 1,
         background: 'linear-gradient(90deg, rgba(244,212,158,0.95) 0%, rgba(232,184,124,0.6) 60%, rgba(232,184,124,0) 100%)',
         boxShadow: '0 0 8px rgba(244,212,158,0.4)',
       }} />
@@ -523,16 +681,16 @@ function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, dela
   )
 }
 
-function ThresholdMoreLightsPortal({ isMobile, isShort, onPick }) {
+/* NIGHT GARDEN THEME VALUE: More Lights portal label was "More Lights" with Italiana font,
+   and subtitle "more rooms this way" in Cormorant Garamond italic.
+   Icon: circle_frame_celestial_path.png with gold glow on hover. */
+function ThresholdMoreRoomsPortal({ isMobile, isShort, onPick }) {
   const [hover, setHover] = useState(false)
-  const size = isMobile ? 64 : isShort ? 80 : 96
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label="More Lights — more rooms this way"
+    <button
+      type="button"
+      aria-label="More Rooms — see all rooms"
       onClick={() => onPick('more-lights')}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick('more-lights') } }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -541,177 +699,155 @@ function ThresholdMoreLightsPortal({ isMobile, isShort, onPick }) {
         bottom: isMobile ? 28 : isShort ? 36 : 44,
         zIndex: 8,
         cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 18,
-        flexDirection: 'row-reverse',
+        background: 'transparent',
+        border: '1px solid var(--color-border)',
+        borderRadius: 4,
+        color: hover ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+        fontFamily: 'var(--font-primary)',
+        fontSize: isMobile ? 14 : 16,
+        letterSpacing: '0.06em',
+        padding: '8px 20px',
+        transition: 'color 200ms, border-color 200ms',
         outline: 'none',
       }}>
-      <div style={{
-        width: size, height: size, flexShrink: 0,
-        filter: hover
-          ? 'drop-shadow(0 0 8px rgba(244,212,158,0.6)) drop-shadow(0 0 20px rgba(244,212,158,0.3))'
-          : 'drop-shadow(0 0 3px rgba(244,212,158,0.25))',
-        transition: 'filter 300ms',
-      }}>
-        <img src={circleFrameImg} alt="" draggable={false}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', userSelect: 'none' }} />
-      </div>
-      <div style={{ textAlign: 'right', pointerEvents: 'none' }}>
-        <div style={{
-          fontFamily: 'Italiana, serif',
-          fontSize: isMobile ? 15 : 18,
-          color: hover ? '#fff4d0' : '#e8dfc0',
-          letterSpacing: 1.5,
-          textShadow: hover
-            ? '0 0 18px rgba(244,212,158,0.8), 0 1px 6px rgba(0,0,0,0.9)'
-            : '0 1px 6px rgba(0,0,0,0.9), 0 0 14px rgba(0,0,0,0.7)',
-          transition: 'color 280ms, text-shadow 280ms',
-        }}>More Lights</div>
-        <div style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontSize: 12,
-          color: hover ? '#d6c8b5' : '#c4b89a',
-          letterSpacing: 0.3,
-          marginTop: 1,
-          textShadow: '0 1px 5px rgba(0,0,0,0.85)',
-          transition: 'color 280ms',
-        }}>more rooms this way</div>
-      </div>
-    </div>
+      More Rooms
+    </button>
   )
 }
 
 // ── HubView — The Threshold landing page ─────────────────────────────────────
 function HubView({ onPick }) {
-  const { mobile: isMobile, short: isShort } = useViewport()
-  const layout = useMemo(() => lanternLayout(isMobile, isShort), [isMobile, isShort])
-  const [, setHovered] = useState(null)
+  const { mobile: isMobile } = useViewport()
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
 
-      {/* ── Atmospheric layers (position:fixed, pointer-events:none) ── */}
-      <ThresholdMoon />
+      {/* Starfield background */}
+      {/* NIGHT GARDEN THEME: add ThresholdMoon, ThresholdForestFrame, ThresholdAmbientBokeh, ThresholdFireflies here */}
       <ThresholdStarField />
-      <ThresholdForestFrame />
-      <ThresholdAmbientBokeh />
-      <ThresholdFireflies />
 
-      {/* · the threshold · — floats in open sky above the moon */}
+      {/* ── Top: subtitle + logo ── */}
       <div style={{
-        position: 'fixed',
-        top: 20,
-        left: 0, right: 0,
         textAlign: 'center',
-        zIndex: 6,
-        pointerEvents: 'none',
-        fontFamily: "'Cormorant Garamond', Georgia, serif",
-        fontStyle: 'italic',
-        fontSize: 'clamp(11px, 1.1vw, 13px)',
-        letterSpacing: 8,
-        textTransform: 'lowercase',
-        color: '#c9b48a',
-        textShadow: '0 0 14px rgba(232,184,124,0.35)',
-      }}>
-        · the threshold ·
-      </div>
-
-      {/* ── Hero block — title centred on moon face ── */}
-      {/* No z-index here so gold rules (inside) are in root stacking context at z:auto,
-          letting lanterns (z:5) layer in front of them */}
-      <div style={{
+        padding: isMobile ? '24px 24px 0' : '36px 48px 0',
         position: 'relative',
-        textAlign: 'center',
-        padding: isMobile ? '22px 18px 0' : '84px 24px 0',
-        pointerEvents: 'none',
+        zIndex: 6,
+        flexShrink: 0,
       }}>
 
-        {/* Cat [logo] Co. — own stacking context (z:6) keeps title above lanterns */}
+        {/* · the threshold · */}
+        {/* NIGHT GARDEN THEME VALUE: night garden copy — "· the threshold ·" */}
         <div style={{
-          position: 'relative',
-          zIndex: 6,
-          fontFamily: 'Italiana, serif',
-          fontSize: 'clamp(52px, 7.5vw, 110px)',
-          margin: '8px 0 2px',
+          fontFamily: 'var(--font-primary)',
+          fontStyle: 'italic',
+          fontSize: 'clamp(11px, 1.1vw, 13px)',
+          letterSpacing: 8,
+          textTransform: 'lowercase',
+          color: 'var(--color-text-dim)',
+          marginBottom: isMobile ? 10 : 14,
+          pointerEvents: 'none',
+        }}>
+          · the threshold ·
+        </div>
+
+        {/* Cat [logo] Co. — cat ampersand SVG is permanent structure */}
+        {/* NIGHT GARDEN THEME VALUE: title was Italiana, serif with gold gradient:
+            linear-gradient(180deg, #fff4c9 0%, #f3d98f 18%, #e8b87c 38%, #b8832e 56%, #8a5d28 72%, #d9a655 88%, #f3d98f 100%)
+            filter: drop-shadow(0 1px 0 rgba(90,58,24,0.55)) drop-shadow(0 0 36px rgba(242,205,140,0.34)) */}
+        <div style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'clamp(48px, 7vw, 100px)',
           letterSpacing: 2,
           lineHeight: 1,
-          background: 'linear-gradient(180deg, #fff4c9 0%, #f3d98f 18%, #e8b87c 38%, #b8832e 56%, #8a5d28 72%, #d9a655 88%, #f3d98f 100%)',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          color: 'transparent',
-          filter: 'drop-shadow(0 1px 0 rgba(90,58,24,0.55)) drop-shadow(0 0 36px rgba(242,205,140,0.34))',
+          color: 'var(--color-accent-primary)',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.18em',
           width: '100%',
+          pointerEvents: 'none',
         }}>
           <span>Cat</span>
-          <img src="/assets/logo.png" alt="and"
-            draggable={false}
-            style={{
-              height: '0.92em',
-              width: 'auto',
-              display: 'inline-block',
-              verticalAlign: 'middle',
-              transform: 'translateY(-0.04em)',
-              filter: 'drop-shadow(0 0 18px rgba(242,205,140,0.45))',
-              userSelect: 'none',
-            }} />
+          <img src="/assets/logo.png" alt="and" draggable={false} style={{
+            height: '0.92em', width: 'auto',
+            display: 'inline-block', verticalAlign: 'middle',
+            transform: 'translateY(-0.04em)',
+            filter: 'drop-shadow(0 0 18px rgba(242,205,140,0.45))',
+            userSelect: 'none',
+          }} />
           <span>Co.</span>
         </div>
 
-        {/* Date / time bar */}
-        <ThresholdDateBar />
       </div>
 
-      {/* ── Hanging lanterns — each directly position:fixed to avoid pointer-events:none parent bug on iOS ── */}
-      {layout.map((L) => {
-        const room = LANTERN_ROOMS.find(r => r.id === L.id)
-        return (
-          <ThresholdHangingLantern
-            key={L.id}
-            room={room}
-            xPct={L.xPct}
-            topStyle={L.topStyle}
-            chain={L.chain}
-            chainClipTop={L.chainClipTop}
-            size={L.size}
-            sway={L.sway}
-            delay={L.delay}
-            onPick={(key) => { setHovered(key); onPick(key) }}
-          />
-        )
-      })}
+      {/* ── Full-width date/time divider ── */}
+      <ThresholdDateBar />
 
-      {/* Hero text — fixed bottom-left */}
+      {/* ── Two-column content area: hero text (left) + room grid (right) ── */}
+      {/* NIGHT GARDEN THEME — LANTERNS: restore ThresholdHangingLantern arc in place of this section */}
       <div style={{
-        position: 'fixed',
-        left: isMobile ? 28 : 48,
-        bottom: isMobile ? 32 : isShort ? 42 : 52,
-        zIndex: 8,
-        pointerEvents: 'none',
-        maxWidth: isMobile ? 260 : 360,
+        flex: 1,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: 'center',
+        padding: isMobile ? '32px 28px 28px' : '40px 60px',
+        gap: isMobile ? 36 : 60,
+        position: 'relative',
+        zIndex: 6,
+        minHeight: 0,
       }}>
-        <div style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontSize: isMobile ? 18 : 22,
-          color: '#e8dfc0',
-          lineHeight: 1.65,
-          textShadow: '0 0 40px rgba(0,0,20,1), 0 2px 4px rgba(0,0,0,0.9)',
-        }}>
-          This is a liminal space.<br />
-          a soft place to set your day down,<br />
-          and small lights for the way ahead.
-        </div>
-      </div>
 
-      {/* More Lights portal — fixed bottom-right */}
-      <ThresholdMoreLightsPortal isMobile={isMobile} isShort={isShort} onPick={(key) => { setHovered(key); onPick(key) }} />
+        {/* Left: hero text */}
+        {/* NIGHT GARDEN THEME VALUE: hero text was "This is a liminal space. / a soft place to set your day down, / and small lights for the way ahead." */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-hero)',
+              fontStyle: 'normal',
+              fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
+              color: '#f2f0e6',
+              lineHeight: 1.15,
+              letterSpacing: '-0.01em',
+            }}>
+              A place to think
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-hero)',
+              fontStyle: 'italic',
+              fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
+              color: '#c4b5d4',
+              lineHeight: 1.15,
+              letterSpacing: '-0.01em',
+              marginBottom: isMobile ? 14 : 20,
+            }}>
+              out loud.
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-hero)',
+              fontStyle: 'normal',
+              fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
+              color: 'var(--color-text-dim)',
+              lineHeight: 1.65,
+            }}>
+              A personal hub for exploring what it means to be autistic — the mechanisms, the patterns, the daily navigation. Built to catch the thoughts before they disappear.
+            </div>
+          </div>
+        </div>
+
+        {/* Right: 2×3 room grid */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: isMobile ? 'stretch' : 'center' }}>
+          <div style={{ width: isMobile ? '100%' : 'clamp(280px, 38vw, 460px)' }}>
+            <ThresholdNavLinks onPick={onPick} isMobile={isMobile} />
+          </div>
+        </div>
+
+      </div>
 
     </div>
   )
@@ -766,8 +902,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
           <h2 className="room-title">{room ? room.name : '—'}</h2>
         </div>
       </div>
+      {/* NIGHT GARDEN THEME VALUE: placeholder text was "this room hasn't been built yet — return to the threshold and choose another lantern." */}
       <div className="placeholder">
-        this room hasn't been built yet — return to the threshold and choose another lantern.
+        Coming Soon!
       </div>
     </>
   )
@@ -831,18 +968,11 @@ function HubApp({ session }) {
     }
   }, [view])
 
-  // Manage old bokeh/haze layers
+  // NIGHT GARDEN THEME VALUE: bokeh was shown in all rooms (display block, opacity 0.55)
+  // and hidden only on hub. MVP removes bokeh from all pages — keep layer hidden always.
   useEffect(() => {
     const bokeh = document.getElementById('bokeh-layer')
-    if (bokeh) {
-      if (view === 'hub') {
-        bokeh.style.display = 'none'
-      } else {
-        bokeh.style.display = 'block'
-        bokeh.style.opacity = '0.55'
-        if (window.__rebuildBokeh) window.__rebuildBokeh(window.__warmth ?? 0.7)
-      }
-    }
+    if (bokeh) bokeh.style.display = 'none'
   }, [view])
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)

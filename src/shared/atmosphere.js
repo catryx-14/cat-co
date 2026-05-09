@@ -1,8 +1,8 @@
 export function initAtmosphere() {
   window.__warmth = 0.7;
   initStars();
-  buildBokeh(0.7);
-  window.__rebuildBokeh = buildBokeh;
+  /* NIGHT GARDEN THEME VALUE — bokeh disabled for MVP.
+     Restore by calling: buildBokeh(0.7); window.__rebuildBokeh = buildBokeh; */
 }
 
 function initStars() {

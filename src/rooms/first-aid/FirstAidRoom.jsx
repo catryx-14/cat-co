@@ -15,6 +15,7 @@ const STAGES = {
   CARDS:    "cards",
 };
 
+/* TODO — move to database when settings page is built */
 const states = [
   { id: "a", label: "I'm overwhelmed — everything is too much", mechanism: "sensory_flooding"       },
   { id: "c", label: "I feel activated and angry",               mechanism: "sympathetic_activation" },
