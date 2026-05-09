@@ -1523,7 +1523,7 @@ const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct'
 const HIST_DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 // ─── TrackerRoom shell ───
-export default function TrackerRoom({ onHome, session, settings, onThresholdsChange, initialTab, roomName = 'Energy Tracker' }) {
+export default function TrackerRoom({ onHome, session, settings, onThresholdsChange, initialTab, roomName = 'Capacity Tracker' }) {
   const [tab, setTab] = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey, setTodayResetKey] = useState(0)

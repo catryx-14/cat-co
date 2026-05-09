@@ -10,7 +10,7 @@ import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
 // ── Room registry (nav + routing) ───────────────────────────────────────────
 const ROOMS = [
-  { key: 'tracker',     name: 'Energy Tracker', sub: 'today · history', tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
+  { key: 'tracker',     name: 'Capacity Tracker', sub: 'today · history', tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
   { key: 'sparks',      name: 'Sparks',          sub: 'hold them gently',          tone: 'rose'   },
   { key: 'physio',      name: 'First Aid',        sub: 'gentle attention',          tone: 'teal'   },
   { key: 'games',       name: 'Games',            sub: 'a soft place to drift',     tone: 'purple' },
@@ -55,7 +55,7 @@ const ROOMS = [
 // ── Lantern config (Threshold hub) ───────────────────────────────────────────
 /* NIGHT GARDEN THEME — LANTERNS */
 const LANTERN_ROOMS = [
-  { id: 'almanac', name: 'Energy Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
+  { id: 'almanac', name: 'Capacity Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
   { id: 'sparks',  name: 'Sparks',          sub: 'hold them gently',          glow: '#e35a4a', glow2: '#ffb098', svg: '/assets/lantern-07.svg', roomKey: 'sparks'      },
   { id: 'neural',  name: 'First Aid',        sub: 'gentle attention',          glow: '#a8132a', glow2: '#ff7888', svg: '/assets/lantern-02.svg', roomKey: 'physio'      },
   { id: 'games',   name: 'Games',            sub: 'a soft place to drift',     glow: '#2a8a5a', glow2: '#88e2b4', svg: '/assets/lantern-04.svg', roomKey: 'games'       },
@@ -155,12 +155,12 @@ function ThresholdHeroText({ isMobile }) {
 }
 
 // ── Threshold nav grid — 2×3 MVP room picker (replaces lantern arc for MVP) ───
-// Row 1: Energy Tracker | First Aid
+// Row 1: Capacity Tracker | First Aid
 // Row 2: Sparks         | Games
 // Row 3: Library        | More Rooms
 function ThresholdNavLinks({ onPick, isMobile }) {
   const links = [
-    { key: 'tracker',     name: 'Energy Tracker' },
+    { key: 'tracker',     name: 'Capacity Tracker' },
     { key: 'physio',      name: 'First Aid'       },
     { key: 'sparks',      name: 'Sparks'          },
     { key: 'games',       name: 'Games'           },
@@ -884,7 +884,7 @@ function Rail({ inRoom, current, onPick, onHome }) {
 function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Energy Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
+    return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Capacity Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
