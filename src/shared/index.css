@@ -363,6 +363,7 @@ body {
   display: block;
   padding: 0 56px 80px;
   overflow-y: auto;
+  overflow-x: hidden;
   opacity: 1;
 }
 .view-fade.is-hub {
@@ -692,6 +693,10 @@ body {
   }
   .rail::before { display: none; }
   .rail.expanded {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    overflow: visible !important;
     position: fixed;
     bottom: 0; left: 0; right: 0;
     width: 100% !important;
@@ -715,6 +720,41 @@ body {
     margin: 0 10px;
     flex-shrink: 0;
     cursor: pointer;
+  }
+  /* home button: pulled out of absolute flow, fixed 56px column */
+  .rail.expanded .rail-threshold-btn {
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    display: flex !important;
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    height: 56px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    padding: 4px 2px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    filter: none !important;
+    opacity: 1 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .rail.expanded .rail-threshold-btn::after {
+    content: "home";
+    font-family: "Cagliostro", serif;
+    font-size: 8px !important;
+    color: var(--candle-soft);
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+  }
+  .rail.expanded .rail-threshold-icon {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain;
   }
   .rail.expanded .rail-nav {
     position: static !important;
@@ -747,7 +787,6 @@ body {
     white-space: normal;
     word-break: break-word;
   }
-  .rail.expanded .rail-threshold-btn { display: none !important; }
   /* push room content above the bottom bar */
   .view-fade:not(.is-hub) { padding-bottom: 74px; }
 
