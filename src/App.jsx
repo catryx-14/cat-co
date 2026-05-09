@@ -3,6 +3,7 @@ import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
+import GamesRoom from './rooms/games/GamesRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 // NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
@@ -894,6 +895,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   }
   if (roomKey === 'physio') {
     return <FirstAidRoom onHome={onHome} />
+  }
+  if (roomKey === 'games') {
+    return <GamesRoom roomName={room?.name ?? 'Games'} />
   }
   return (
     <>
