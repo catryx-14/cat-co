@@ -35,6 +35,93 @@ export async function loadAllEntries(userId) {
   return data ?? []
 }
 
+function _addOneDay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const next = new Date(y, m - 1, d + 1)
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+}
+
+// Fills any calendar gaps before targetDateStr with system-generated default rows.
+// When includeTarget is true, also fills targetDateStr itself if missing (for past-day views).
+// Returns the count of rows created.
+export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStartDate }, { includeTarget = false } = {}) {
+  const { data: anchor, error: e1 } = await supabase
+    .from('energy_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .lt('date', targetDateStr)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (e1) throw e1
+  if (!anchor) return 0
+
+  const gapDates = []
+  let cursor = _addOneDay(anchor.date)
+  while (cursor < targetDateStr) { gapDates.push(cursor); cursor = _addOneDay(cursor) }
+  if (includeTarget) gapDates.push(targetDateStr)
+  if (gapDates.length === 0) return 0
+
+  const { data: existing, error: e2 } = await supabase
+    .from('energy_entries')
+    .select('date')
+    .eq('user_id', userId)
+    .gte('date', gapDates[0])
+    .lte('date', gapDates[gapDates.length - 1])
+  if (e2) throw e2
+  const existingDates = new Set((existing ?? []).map(r => r.date))
+
+  const missingDates = gapDates.filter(d => !existingDates.has(d))
+  if (missingDates.length === 0) return 0
+
+  // Chain from anchor. SI Flow carryover from the anchor reaches the first gap day only —
+  // it was legitimately earned, but gap days earn nothing new so nothing travels further.
+  let prevClosing = anchor.entry_data.closingBalance ?? 0
+  let prevSleep = anchor.entry_data.sleepReset ?? 0
+  let incomingCarryover = anchor.entry_data.siFlowCarryoverBonus ?? anchor.entry_data.carryoverBonus ?? 0
+  let isFirstGap = true
+
+  for (const ds of gapDates) {
+    const opening = Math.round(Math.max(0, prevClosing - prevSleep + (isFirstGap ? incomingCarryover : 0)))
+    const taxApplies = ds >= taxStartDate
+    const autisticTax = taxApplies ? taxValue : 0
+    const peak = Math.round(opening + autisticTax)
+    const closing = peak
+
+    if (!existingDates.has(ds)) {
+      await saveEntry({
+        dateStr: ds,
+        entryData: {
+          date: ds,
+          openingBalance: opening,
+          peakDebit: peak,
+          closingBalance: closing,
+          livedExperience: closing,
+          autisticTax,
+          sleepReset: 0,
+          siFlowCarryoverBonus: 0,
+          totalSICredit: 0,
+          events: [],
+          regulation: { sensoryComfort: 0, audioVisual: 0, environment: 0, bodyRest: 0, recoverySleep: false },
+          warningSign: { skin: false, vision: false, thought: false, sunny: false, crisisResponse: false },
+          meltdown: false,
+          flowActivity: false,
+          isSystemGenerated: true,
+        },
+        peakDebit: peak,
+        userId,
+      })
+    }
+
+    prevClosing = closing
+    prevSleep = 0
+    isFirstGap = false
+  }
+
+  await recalculateFromDate(userId, anchor.entry_data.date)
+  return missingDates.length
+}
+
 export async function saveEntry({ dateStr, entryData, peakDebit, userId }) {
   const { error } = await supabase
     .from('energy_entries')

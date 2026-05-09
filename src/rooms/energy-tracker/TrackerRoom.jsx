@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
-import { loadEntry, loadAllEntries, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, recalculateFromDate, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { loadEntry, fillGapsBefore, loadAllEntries, dbToInternal, internalToDb, saveEntry, saveThresholds, recalculateAllEntries, recalculateFromDate, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
@@ -894,12 +894,14 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [siCarryIn, setSiCarryIn] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
+  const [hasEstimatedGaps, setHasEstimatedGaps] = useState(false)
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey])
 
   useEffect(() => {
     async function init() {
       try {
+        await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: !isToday })
         const existing = await loadEntry(dateStr, session.user.id)
         if (existing) {
           const state = dbToInternal(existing)
@@ -913,6 +915,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
               setOpeningBalance(Math.round(Math.max(0, closing - sleep + carryover)))
               setSiCarryIn(carryover)
               setYesterdayClosing(closing)
+              setHasEstimatedGaps(!!d.isSystemGenerated)
             }
           } else {
             setOpeningBalance(state.openingBalance)
@@ -934,6 +937,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
             setOpeningBalance(Math.max(0, closing - sleep + carryover))
             setSiCarryIn(carryover)
             setYesterdayClosing(closing)
+            setHasEstimatedGaps(!!d.isSystemGenerated)
           }
         }
       } catch (err) {
@@ -1036,6 +1040,16 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           <button className="back-link" onClick={onBack}>← back to history</button>
           <div className="history-edit-date">{formatDateStr(dateStr)}</div>
         </>
+      )}
+      {hasEstimatedGaps && userEvents.length === 0 && (
+        <div style={{
+          padding: '8px 14px', marginBottom: 8,
+          background: 'rgba(11,16,32,0.82)', borderRadius: 6,
+          color: 'var(--ink-faint)', fontSize: 13, fontStyle: 'italic',
+          textAlign: 'center',
+        }}>
+          the previous day has no entries — numbers are estimated defaults
+        </div>
       )}
       <Sky
         userEvents={userEvents}
@@ -1189,6 +1203,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [openingBalance, setOpeningBalance] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
+  const [gapsFilled, setGapsFilled] = useState(0)
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1202,6 +1217,8 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     setSaveStatus('')
     async function init() {
       try {
+        const filled = await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: true })
+        if (filled > 0) setGapsFilled(filled)
         const existing = await loadEntry(dateStr, session.user.id)
         if (existing) {
           const state = dbToInternal(existing)
@@ -1300,6 +1317,21 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         <span className="hed-date-label">{dateLabel}</span>
         {saveStatus && <span className="hed-status">{saveStatus}</span>}
       </div>
+
+      {gapsFilled > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 14px', margin: '4px 0 8px',
+          background: 'rgba(232,201,140,0.07)', borderRadius: 6,
+          color: 'var(--ink-faint)', fontSize: 13, fontStyle: 'italic',
+        }}>
+          <span>{gapsFilled === 1 ? 'the previous day has no entries' : `the previous ${gapsFilled} days have no entries`} — numbers are estimated defaults</span>
+          <button onClick={() => setGapsFilled(0)} style={{
+            background: 'none', border: 'none', color: 'var(--ink-faint)',
+            cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 0 0 12px',
+          }}>×</button>
+        </div>
+      )}
 
       <WeekStrip
         weekStart={weekStart}
