@@ -902,14 +902,6 @@ function CatSortGame({ onBack }) {
               ✦ ×{streak} streak
             </div>
           )}
-          <div style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
-            fontSize: 26, color: '#e8c98c',
-            animation: scoreFlash ? 'scoreFlash 0.35s ease' : 'none',
-            minWidth: 48, textAlign: 'right',
-          }}>
-            {score}
-          </div>
         </div>
       </div>
 
