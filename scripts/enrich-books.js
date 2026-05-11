@@ -44,7 +44,7 @@ Return this exact JSON structure:
   "tropes": [],
   "series_status": "complete / ongoing / standalone / unknown",
   "cliffhanger_type": "standalone / cliffhanger / resolved-but-continues / unknown",
-  "mood_tags": [],
+  "vibe_tags": ["pick only from: slow burn, dark, emotional, lighthearted, tense, witty, cozy, angsty, heartwarming, rich world-building, magical, dangerous, forbidden, possessive, funny"],
   "heat_level": "none / sweet / warm / steamy / explicit",
   "story_structure": "plot-driven / character-driven / balanced",
   "low_confidence": false
