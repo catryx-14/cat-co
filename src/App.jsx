@@ -4,6 +4,8 @@ import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import GamesRoom from './rooms/games/GamesRoom.jsx'
+import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
+import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 // NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
@@ -11,12 +13,11 @@ import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
 // ── Room registry (nav + routing) ───────────────────────────────────────────
 const ROOMS = [
-  { key: 'tracker',     name: 'Capacity Tracker', sub: 'today · history', tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
-  { key: 'sparks',      name: 'Sparks',          sub: 'hold them gently',          tone: 'rose'   },
-  { key: 'physio',      name: 'First Aid',        sub: 'gentle attention',          tone: 'teal'   },
-  { key: 'games',       name: 'Games',            sub: 'a soft place to drift',     tone: 'purple' },
-  { key: 'library',     name: 'Library',          sub: 'stories · collected things', tone: 'purple' },
-  { key: 'more-lights', name: 'More Lights',      sub: 'more rooms this way',        tone: 'purple' },
+  { key: 'tracker',     name: 'Capacity Tracker', sub: 'today · history',         tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
+  { key: 'sparks',      name: 'Sparks',           sub: 'hold them gently',         tone: 'rose'   },
+  { key: 'physio',      name: 'First Aid',         sub: 'gentle attention',         tone: 'teal'   },
+  { key: 'ef-suite',    name: 'Executive Suite',   sub: 'tools for doing things',   tone: 'blue'   },
+  { key: 'more-lights', name: 'More Lights',       sub: 'more rooms this way',      tone: 'purple' },
 ]
 
 /* NIGHT GARDEN LANTERN POSITIONS — DO NOT DISCARD
@@ -155,47 +156,47 @@ function ThresholdHeroText({ isMobile }) {
   )
 }
 
-// ── Threshold nav grid — 2×3 MVP room picker (replaces lantern arc for MVP) ───
+// ── Threshold nav grid — 2×2 + More Rooms (replaces lantern arc for MVP) ──────
 // Row 1: Capacity Tracker | First Aid
-// Row 2: Sparks         | Games
-// Row 3: Library        | More Rooms
+// Row 2: Sparks           | Executive Suite
+// Row 3: More Rooms (full width)
 function ThresholdNavLinks({ onPick, isMobile }) {
-  const links = [
-    { key: 'tracker',     name: 'Capacity Tracker' },
-    { key: 'physio',      name: 'First Aid'       },
-    { key: 'sparks',      name: 'Sparks'          },
-    { key: 'games',       name: 'Games'           },
-    { key: 'library',     name: 'Library'         },
-    { key: 'more-lights', name: 'More Rooms'      },
+  const mainLinks = [
+    { key: 'tracker',  name: 'Capacity Tracker' },
+    { key: 'physio',   name: 'First Aid'        },
+    { key: 'sparks',   name: 'Sparks'           },
+    { key: 'ef-suite', name: 'Executive Suite'  },
   ]
+  const btnStyle = {
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    borderRadius: 4,
+    color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font-primary)',
+    fontSize: isMobile ? 14 : 16,
+    letterSpacing: '0.06em',
+    padding: isMobile ? '10px 12px' : '11px 20px',
+    cursor: 'pointer',
+    transition: 'color 200ms, border-color 200ms',
+    whiteSpace: 'nowrap',
+    textAlign: 'center',
+  }
+  const onEnter = e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }
+  const onLeave = e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }
   return (
-    <nav style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: isMobile ? 10 : 12,
-      width: '100%',
-    }}>
-      {links.map(l => (
-        <button key={l.key} onClick={() => onPick(l.key)} style={{
-          background: 'transparent',
-          border: '1px solid var(--color-border)',
-          borderRadius: 4,
-          color: 'var(--color-text-secondary)',
-          fontFamily: 'var(--font-primary)',
-          fontSize: isMobile ? 14 : 16,
-          letterSpacing: '0.06em',
-          padding: isMobile ? '10px 12px' : '11px 20px',
-          cursor: 'pointer',
-          transition: 'color 200ms, border-color 200ms',
-          whiteSpace: 'nowrap',
-          textAlign: 'center',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
-        >
-          {l.name}
-        </button>
-      ))}
+    <nav style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 12, width: '100%' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12 }}>
+        {mainLinks.map(l => (
+          <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
+            onMouseEnter={onEnter} onMouseLeave={onLeave}>
+            {l.name}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => onPick('more-lights')} style={btnStyle}
+        onMouseEnter={onEnter} onMouseLeave={onLeave}>
+        More Rooms
+      </button>
     </nav>
   )
 }
@@ -897,7 +898,25 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <FirstAidRoom onHome={onHome} />
   }
   if (roomKey === 'games') {
-    return <GamesRoom roomName={room?.name ?? 'Games'} />
+    return <GamesRoom roomName="Games" />
+  }
+  if (roomKey === 'more-lights') {
+    return <MoreLightsRoom onRoom={onRoom} />
+  }
+  if (roomKey === 'ef-suite') {
+    return <EFSuiteRoom />
+  }
+  if (roomKey === 'library') {
+    return (
+      <>
+        <div className="room-header-wrap">
+          <div className="room-head">
+            <h2 className="room-title">Library</h2>
+          </div>
+        </div>
+        <div className="placeholder">Coming Soon!</div>
+      </>
+    )
   }
   return (
     <>

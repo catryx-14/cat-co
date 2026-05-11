@@ -302,6 +302,7 @@ body {
 .rail-nav-item.rose .dot   { background: var(--rose);   box-shadow: 0 0 6px rgba(201,138,160,0.6); }
 .rail-nav-item.teal .dot   { background: var(--teal);   box-shadow: 0 0 6px rgba(110,192,191,0.6); }
 .rail-nav-item.purple .dot { background: var(--soft-purple); box-shadow: 0 0 6px rgba(168,144,212,0.6); }
+.rail-nav-item.blue .dot   { background: var(--reg-blue);   box-shadow: 0 0 6px var(--reg-blue-glow); }
 .rail-nav-item:hover {
   background: rgba(232,201,140,0.06);
   color: var(--ink);
