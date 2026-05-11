@@ -116,6 +116,12 @@ const STORY_STRUCTURE_OPTIONS = [
   { value: 'balanced',         label: 'balanced'         },
 ]
 
+const APPROVED_VIBES = [
+  'slow burn', 'dark', 'emotional', 'lighthearted', 'tense',
+  'witty', 'cozy', 'angsty', 'heartwarming', 'rich world-building',
+  'magical', 'dangerous', 'forbidden', 'possessive', 'funny',
+]
+
 const EMPTY_FILTERS = {
   genre: '', tropes: [], heatLevel: '', seriesStatus: '',
   cliffhangerType: '', vibeTags: [], storyStructure: '', lowConfidenceOnly: false,
@@ -345,102 +351,148 @@ function TropeChip({ trope, onRemove, small = false }) {
   )
 }
 
-function TagInput({ label, value = [], onChange, placeholder = 'add...' }) {
-  const [input, setInput] = useState('')
-  function add() {
-    const trimmed = input.trim()
-    if (trimmed && !value.includes(trimmed)) onChange([...value, trimmed])
-    setInput('')
+// Searchable dropdown tag selector.
+// Options are sorted alphabetically; already-selected tags are excluded from the dropdown.
+// onAddToList(tag): if provided, shows "Add to list" at the bottom when search doesn't match
+//   any existing option — clicking adds to the book AND to the master options list.
+// getOptionColor(opt): optional fn returning a hex color string for dropdown item text.
+// renderChip(tag, onRemove): optional custom chip renderer; defaults to plain white chip.
+function ApprovedTagInput({ label, options = [], value = [], onChange, placeholder = 'search...', renderChip, onAddToList, getOptionColor }) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const inputRef = useRef(null)
+
+  const q = search.trim().toLowerCase()
+  const available = options
+    .filter(opt => !value.includes(opt) && (!q || opt.toLowerCase().includes(q)))
+    .sort((a, b) => a.localeCompare(b))
+
+  const canAddNew = !!onAddToList && !!search.trim()
+    && !options.some(o => o.toLowerCase() === search.trim().toLowerCase())
+    && !value.some(v => v.toLowerCase() === search.trim().toLowerCase())
+
+  function add(opt) {
+    if (!value.includes(opt)) onChange([...value, opt])
+    setSearch('')
+    inputRef.current?.focus()
   }
+
+  function handleAddToList() {
+    const tag = search.trim()
+    if (!tag) return
+    add(tag)
+    onAddToList(tag)
+    setOpen(false)
+  }
+
+  function remove(opt) {
+    onChange(value.filter(t => t !== opt))
+  }
+
+  const defaultChip = (tag, onRemove) => (
+    <span key={tag} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '3px 6px 3px 10px', borderRadius: 999,
+      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
+      color: 'rgba(255,255,255,0.65)', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+    }}>
+      {tag}
+      <button
+        onMouseDown={e => { e.preventDefault(); onRemove() }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 14, lineHeight: 1, padding: '0 1px', display: 'flex', alignItems: 'center' }}
+      >×</button>
+    </span>
+  )
+
+  const chipRenderer = renderChip ?? defaultChip
+  const showDropdown = open && (available.length > 0 || canAddNew)
+
   return (
     <div style={{ marginBottom: 16 }}>
       <AiFieldLabel>{label}</AiFieldLabel>
       {value.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-          {value.map(tag => (
-            <span key={tag} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 6px 3px 10px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
-              color: 'rgba(255,255,255,0.65)', fontFamily: "'Outfit', sans-serif", fontSize: 12,
-            }}>
-              {tag}
-              <button
-                onClick={() => onChange(value.filter(t => t !== tag))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 14, lineHeight: 1, padding: '0 1px', display: 'flex', alignItems: 'center' }}
-              >×</button>
-            </span>
-          ))}
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && add()}
-          placeholder={placeholder}
-          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.18)', borderRadius: 6, color: '#f2f0e6', fontFamily: "'Outfit', sans-serif", fontSize: 13, padding: '6px 10px' }}
-        />
-        <button onClick={add} style={{ padding: '6px 14px', background: 'rgba(232,201,140,0.08)', border: '1px solid rgba(232,201,140,0.28)', borderRadius: 6, color: '#e8c98c', fontFamily: "'Outfit', sans-serif", fontSize: 13, cursor: 'pointer' }}>add</button>
-      </div>
-    </div>
-  )
-}
-
-function TropeEditor({ value = [], onChange }) {
-  const [search, setSearch] = useState('')
-  const [open, setOpen] = useState(false)
-  const allTropes = TROPE_GROUPS.flatMap(g => g.tropes)
-  const available = allTropes.filter(t =>
-    !value.includes(t) && (!search || t.toLowerCase().includes(search.toLowerCase()))
-  )
-  function addTrope(trope) {
-    onChange([...value, trope])
-    setSearch('')
-  }
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <AiFieldLabel>Tropes</AiFieldLabel>
-      {value.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-          {value.map(trope => (
-            <TropeChip key={trope} trope={trope} onRemove={() => onChange(value.filter(t => t !== trope))} />
-          ))}
+          {value.map(tag => chipRenderer(tag, () => remove(tag)))}
         </div>
       )}
       <div style={{ position: 'relative' }}>
         <input
+          ref={inputRef}
           value={search}
           onChange={e => { setSearch(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="add a trope..."
+          onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setSearch('') } }}
+          placeholder={placeholder}
           style={{ ...INPUT_STYLE, fontSize: 13, padding: '7px 11px', cursor: 'text' }}
         />
-        {open && available.length > 0 && (
+        {showDropdown && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
             background: '#0d1530', border: '1px solid rgba(232,201,140,0.22)',
             borderRadius: 6, maxHeight: 220, overflowY: 'auto', zIndex: 100,
           }}>
-            {available.slice(0, 30).map(trope => {
-              const color = getTropeColor(trope)
-              return (
-                <div
-                  key={trope}
-                  onMouseDown={e => { e.preventDefault(); addTrope(trope) }}
-                  style={{ padding: '7px 12px', cursor: 'pointer', color: color || 'rgba(255,255,255,0.6)', fontFamily: "'Outfit', sans-serif", fontSize: 13, transition: 'background 0.1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  {trope}
-                </div>
-              )
-            })}
+            {available.map(opt => (
+              <div
+                key={opt}
+                onMouseDown={e => { e.preventDefault(); add(opt) }}
+                style={{
+                  padding: '7px 12px', cursor: 'pointer',
+                  color: getOptionColor ? (getOptionColor(opt) || 'rgba(255,255,255,0.6)') : 'rgba(255,255,255,0.6)',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 13, transition: 'background 0.1s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                {opt}
+              </div>
+            ))}
+            {canAddNew && (
+              <div
+                onMouseDown={e => { e.preventDefault(); handleAddToList() }}
+                style={{
+                  padding: '7px 12px', cursor: 'pointer',
+                  color: '#e8c98c', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  borderTop: available.length > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,201,140,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                + Add "{search.trim()}" to list
+              </div>
+            )}
+          </div>
+        )}
+        {open && !showDropdown && search && (
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+            background: '#0d1530', border: '1px solid rgba(232,201,140,0.22)',
+            borderRadius: 6, padding: '8px 12px', zIndex: 100,
+            color: 'rgba(255,255,255,0.3)', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+          }}>
+            no matches
           </div>
         )}
       </div>
     </div>
+  )
+}
+
+function TropeEditor({ options = [], value = [], onChange, onAddToList }) {
+  return (
+    <ApprovedTagInput
+      label="Tropes"
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder="search tropes..."
+      onAddToList={onAddToList}
+      getOptionColor={getTropeColor}
+      renderChip={(trope, onRemove) => (
+        <TropeChip key={trope} trope={trope} onRemove={onRemove} />
+      )}
+    />
   )
 }
 
@@ -688,7 +740,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
 
 // ── Book drawer ───────────────────────────────────────────────────────────────
 
-function BookDrawer({ book, onClose, onSave, savedFlash }) {
+function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeOptions, vibeOptions, onAddToMasterList }) {
   const attr = book?.attributes || {}
 
   // Personal fields
@@ -855,11 +907,13 @@ function BookDrawer({ book, onClose, onSave, savedFlash }) {
         />
 
         {/* Sub-genres */}
-        <TagInput
+        <ApprovedTagInput
           label="Sub-genres"
+          options={subGenreOptions}
           value={aiSubGenres}
-          placeholder="add sub-genre..."
+          placeholder="search sub-genres..."
           onChange={v => { setAiSubGenres(v); scheduleSave({ sub_genres: v }) }}
+          onAddToList={tag => onAddToMasterList('sub_genres', tag)}
         />
 
         {/* Series + Ending — side by side */}
@@ -888,16 +942,20 @@ function BookDrawer({ book, onClose, onSave, savedFlash }) {
 
         {/* Tropes */}
         <TropeEditor
+          options={tropeOptions}
           value={aiTropes}
           onChange={v => { setAiTropes(v); scheduleSave({ tropes: v }) }}
+          onAddToList={tag => onAddToMasterList('tropes', tag)}
         />
 
         {/* Vibe + Heat + Structure */}
-        <TagInput
+        <ApprovedTagInput
           label="Vibe tags"
+          options={vibeOptions}
           value={aiVibeTags}
-          placeholder="add vibe tag..."
+          placeholder="search vibe tags..."
           onChange={v => { setAiVibeTags(v); scheduleSave({ vibe_tags: v }) }}
+          onAddToList={tag => onAddToMasterList('vibe_tags', tag)}
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <SelectField
@@ -977,6 +1035,9 @@ export default function BookPileRoom({ onBack }) {
   const [filters,        setFilters]        = useState(EMPTY_FILTERS)
   const [filtersOpen,    setFiltersOpen]    = useState(false)
   const [tropeLogic,     setTropeLogic]     = useState('AND')
+  const [extraSubGenres, setExtraSubGenres] = useState([])
+  const [extraTropes,    setExtraTropes]    = useState([])
+  const [extraVibes,     setExtraVibes]     = useState([])
   const flashTimer = useRef(null)
 
   useEffect(() => {
@@ -1003,6 +1064,28 @@ export default function BookPileRoom({ onBack }) {
     books.forEach(b => (b.attributes?.vibe_tags || []).forEach(t => s.add(t)))
     return [...s].sort()
   }, [books])
+
+  // Master option lists for drawer tag editors — seeded from DB data, growable within session
+  const subGenreOptions = useMemo(() => {
+    const s = new Set(extraSubGenres)
+    books.forEach(b => (b.attributes?.sub_genres || []).forEach(t => { if (t) s.add(t) }))
+    return [...s].sort()
+  }, [books, extraSubGenres])
+
+  const tropeOptions = useMemo(() => {
+    const base = TROPE_GROUPS.flatMap(g => g.tropes)
+    return [...new Set([...base, ...extraTropes])].sort((a, b) => a.localeCompare(b))
+  }, [extraTropes])
+
+  const vibeOptions = useMemo(() => {
+    return [...new Set([...APPROVED_VIBES, ...extraVibes])].sort((a, b) => a.localeCompare(b))
+  }, [extraVibes])
+
+  function addToMasterList(field, tag) {
+    if (field === 'sub_genres') setExtraSubGenres(p => [...p, tag])
+    else if (field === 'tropes') setExtraTropes(p => [...p, tag])
+    else if (field === 'vibe_tags') setExtraVibes(p => [...p, tag])
+  }
 
   function updateFilter(key, value) {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -1156,7 +1239,16 @@ export default function BookPileRoom({ onBack }) {
 
       {/* Drawer */}
       {selectedBook && (
-        <BookDrawer book={selectedBook} onClose={() => setSelectedBookId(null)} onSave={handleSave} savedFlash={savedFlash} />
+        <BookDrawer
+          book={selectedBook}
+          onClose={() => setSelectedBookId(null)}
+          onSave={handleSave}
+          savedFlash={savedFlash}
+          subGenreOptions={subGenreOptions}
+          tropeOptions={tropeOptions}
+          vibeOptions={vibeOptions}
+          onAddToMasterList={addToMasterList}
+        />
       )}
     </div>
   )
