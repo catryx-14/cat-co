@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../../shared/lib/supabase.js'
+import { enrichBook } from '../../shared/lib/enrichBook.js'
 import ScribblePanel from './ScribblePanel.jsx'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -123,6 +124,21 @@ const APPROVED_VIBES = [
   'magical', 'dangerous', 'forbidden', 'possessive', 'funny',
 ]
 
+const FORMAT_OPTIONS = [
+  { value: 'kindle — owned',  label: 'kindle — owned'   },
+  { value: 'kindle unlimited', label: 'kindle unlimited' },
+  { value: 'audible',          label: 'audible'          },
+  { value: 'physical',         label: 'physical'         },
+  { value: 'wishlist',         label: 'wishlist'         },
+]
+
+const STATUS_DISPLAY_OPTIONS = [
+  { label: 'to read', int: 3 },
+  { label: 'reading', int: 1 },
+  { label: 'read',    int: 2 },
+  { label: 'dnf',     int: 4 },
+]
+
 const EMPTY_FILTERS = {
   genre: '', tropes: [], heatLevel: '', seriesStatus: '',
   cliffhangerType: '', vibeTags: [], storyStructure: '', lowConfidenceOnly: false,
@@ -165,7 +181,7 @@ function RatingDots({ rating }) {
   )
 }
 
-function BookRow({ book, isSelected, onClick }) {
+function BookRow({ book, isSelected, onClick, isEnriching }) {
   const attr = book.attributes || {}
   const series = attr.series_name
     ? `${attr.series_name}${attr.series_number != null ? ` #${attr.series_number}` : ''}`
@@ -200,7 +216,12 @@ function BookRow({ book, isSelected, onClick }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0, paddingTop: 2 }}>
           <RatingDots rating={attr.goodreads_rating} />
-          {book.needs_review && (
+          {isEnriching && (
+            <span style={{ fontSize: 11, color: 'rgba(110,192,191,0.5)', fontFamily: "'Outfit', sans-serif", fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+              scribbling...
+            </span>
+          )}
+          {!isEnriching && book.needs_review && (
             <span style={{ fontSize: 11, color: 'rgba(232,201,140,0.45)', fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>
               · needs sorting
             </span>
@@ -739,20 +760,159 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
   )
 }
 
+// ── Add Book modal ────────────────────────────────────────────────────────────
+
+function AddBookModal({ onClose, onAdd }) {
+  const [title,       setTitle]       = useState('')
+  const [author,      setAuthor]      = useState('')
+  const [seriesName,  setSeriesName]  = useState('')
+  const [status,      setStatus]      = useState('to_read')
+  const [submitting,  setSubmitting]  = useState(false)
+
+  const STATUS_OPTS = [
+    { value: 'to_read', label: 'to read' },
+    { value: 'reading', label: 'reading' },
+    { value: 'read',    label: 'read'    },
+    { value: 'dnf',     label: 'dnf'     },
+  ]
+
+  async function handleSubmit() {
+    if (!title.trim() || !author.trim() || submitting) return
+    setSubmitting(true)
+    await onAdd(title.trim(), author.trim(), seriesName.trim(), status)
+    onClose()
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(8,16,42,0.65)', zIndex: 349, backdropFilter: 'blur(3px)' }} />
+      <div style={{
+        position: 'fixed',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 'min(440px, calc(100vw - 32px))',
+        background: 'linear-gradient(180deg, #0e1838 0%, #131f48 100%)',
+        border: '1px solid rgba(232,201,140,0.22)',
+        borderRadius: 12,
+        padding: '28px 28px 24px',
+        zIndex: 350,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 20 }}>
+          Add book
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <FieldLabel>Title</FieldLabel>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="book title..."
+            autoFocus
+            style={{ ...INPUT_STYLE, cursor: 'text' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <FieldLabel>Author</FieldLabel>
+          <input
+            value={author}
+            onChange={e => setAuthor(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="author name..."
+            style={{ ...INPUT_STYLE, cursor: 'text' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <FieldLabel>
+            Series{' '}
+            <span style={{ fontWeight: 400, fontSize: 10, color: 'rgba(255,255,255,0.22)', textTransform: 'none', letterSpacing: 0 }}>
+              (optional)
+            </span>
+          </FieldLabel>
+          <input
+            value={seriesName}
+            onChange={e => setSeriesName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="series name..."
+            style={{ ...INPUT_STYLE, cursor: 'text' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <FieldLabel>Status</FieldLabel>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {STATUS_OPTS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setStatus(opt.value)}
+                style={{
+                  flex: 1, padding: '8px 4px', borderRadius: 6,
+                  border: `1px solid ${status === opt.value ? 'rgba(232,201,140,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                  background: status === opt.value ? 'rgba(232,201,140,0.1)' : 'transparent',
+                  color: status === opt.value ? '#e8c98c' : 'rgba(255,255,255,0.35)',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer',
+                  transition: 'all 0.12s', letterSpacing: '0.03em',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '9px 18px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.35)', fontFamily: "'Outfit', sans-serif", fontSize: 13, cursor: 'pointer' }}
+          >
+            cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!title.trim() || !author.trim() || submitting}
+            style={{
+              padding: '9px 20px', borderRadius: 7,
+              border: `1px solid ${!title.trim() || !author.trim() ? 'rgba(232,201,140,0.15)' : 'rgba(232,201,140,0.45)'}`,
+              background: !title.trim() || !author.trim() ? 'transparent' : 'rgba(232,201,140,0.1)',
+              color: !title.trim() || !author.trim() ? 'rgba(232,201,140,0.3)' : '#e8c98c',
+              fontFamily: "'Outfit', sans-serif", fontSize: 13,
+              cursor: !title.trim() || !author.trim() ? 'not-allowed' : 'pointer',
+              transition: 'all 0.12s',
+            }}
+          >
+            {submitting ? 'adding...' : 'add & enrich'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ── Book drawer ───────────────────────────────────────────────────────────────
 
-function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeOptions, vibeOptions, onAddToMasterList }) {
+function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeOptions, vibeOptions, onAddToMasterList, onDelete }) {
   const attr = book?.attributes || {}
 
+  // Editable header fields
+  const [drawerTitle,  setDrawerTitle]  = useState(book?.title ?? '')
+  const [drawerAuthor, setDrawerAuthor] = useState(attr.author ?? '')
+  const [drawerSeries, setDrawerSeries] = useState(attr.series_name ?? '')
+  const [drawerSeriesNum, setDrawerSeriesNum] = useState(attr.series_number != null ? String(attr.series_number) : '')
+
   // Personal fields
-  const [myRating,       setMyRating]       = useState(attr.my_rating ?? '')
-  const [wouldReread,    setWouldReread]     = useState(attr.would_reread ?? '')
-  const [readingCap,     setReadingCap]      = useState(attr.capacity_rating ?? '')
-  const [format,         setFormat]          = useState(attr.format ?? '')
-  const [howIHaveIt,     setHowIHaveIt]      = useState(attr.how_i_have_it ?? '')
-  const [thingsToKnow,   setThingsToKnow]    = useState(attr.things_to_know ?? [])
-  const [whyStopped,     setWhyStopped]      = useState(attr.why_stopped ?? '')
-  const [notes,          setNotes]           = useState(book?.notes ?? '')
+  const [myRating,     setMyRating]     = useState(attr.my_rating ?? '')
+  const [wouldReread,  setWouldReread]  = useState(attr.would_reread ?? '')
+  const [readingCap,   setReadingCap]   = useState(attr.capacity_rating ?? '')
+  const [format,       setFormat]       = useState(
+    Array.isArray(attr.format) ? attr.format
+    : (['kindle — owned','kindle unlimited','audible','physical','wishlist'].includes(attr.how_i_have_it) ? [attr.how_i_have_it] : [])
+  )
+  const [thingsToKnow, setThingsToKnow] = useState(attr.things_to_know ?? [])
+  const [whyStopped,   setWhyStopped]   = useState(attr.why_stopped ?? '')
+  const [notes,        setNotes]        = useState(book?.notes ?? '')
 
   // AI fields
   const [aiSummary,        setAiSummary]        = useState(attr.summary ?? '')
@@ -769,17 +929,28 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
   const [confirmValidate, setConfirmValidate] = useState(false)
   const [validated,       setValidated]       = useState(false)
 
+  // Status / delete / date
+  const [bookStatus,    setBookStatus]    = useState(book?.status ?? 3)
+  const [dateRead,      setDateRead]      = useState(attr.date_read ?? '')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+
   const pendingRef = useRef({ attrs: {}, top: {} })
   const timerRef   = useRef(null)
 
   useEffect(() => {
     if (!book) return
     const a = book.attributes || {}
+    setDrawerTitle(book.title ?? '')
+    setDrawerAuthor(a.author ?? '')
+    setDrawerSeries(a.series_name ?? '')
+    setDrawerSeriesNum(a.series_number != null ? String(a.series_number) : '')
     setMyRating(a.my_rating ?? '')
     setWouldReread(a.would_reread ?? '')
     setReadingCap(a.capacity_rating ?? '')
-    setFormat(a.format ?? '')
-    setHowIHaveIt(a.how_i_have_it ?? '')
+    setFormat(
+      Array.isArray(a.format) ? a.format
+      : (['kindle-owned','kindle-unlimited','audible','physical','wishlist'].includes(a.how_i_have_it) ? [a.how_i_have_it] : [])
+    )
     setThingsToKnow(a.things_to_know ?? [])
     setWhyStopped(a.why_stopped ?? '')
     setNotes(book.notes ?? '')
@@ -794,6 +965,9 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
     setAiStoryStructure(a.story_structure ?? '')
     setConfirmValidate(false)
     setValidated(false)
+    setBookStatus(book.status ?? 3)
+    setDateRead(a.date_read ?? '')
+    setDeleteConfirm(false)
     pendingRef.current = { attrs: {}, top: {} }
     clearTimeout(timerRef.current)
   }, [book?.id])
@@ -845,17 +1019,74 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
           <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
-            <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 21, color: '#f2f0e6', lineHeight: 1.25, marginBottom: 4 }}>
-              {book.title}
+            <input
+              value={drawerTitle}
+              onChange={e => setDrawerTitle(e.target.value)}
+              onBlur={e => { const v = e.target.value.trim(); if (v) scheduleSave({}, { title: v }) }}
+              style={{
+                display: 'block', width: '100%', boxSizing: 'border-box',
+                background: 'none', border: 'none', borderBottom: '1px solid transparent',
+                fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 21,
+                color: '#f2f0e6', lineHeight: 1.25, marginBottom: 4,
+                padding: '0 0 1px', outline: 'none', cursor: 'text',
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={e => e.currentTarget.style.borderBottomColor = 'rgba(232,201,140,0.3)'}
+              onBlurCapture={e => e.currentTarget.style.borderBottomColor = 'transparent'}
+            />
+            <input
+              value={drawerAuthor}
+              onChange={e => setDrawerAuthor(e.target.value)}
+              onBlur={e => { const v = e.target.value.trim(); if (v) scheduleSave({ author: v }) }}
+              style={{
+                display: 'block', width: '100%', boxSizing: 'border-box',
+                background: 'none', border: 'none', borderBottom: '1px solid transparent',
+                fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                color: 'rgba(255,255,255,0.5)', lineHeight: 1.4,
+                padding: '0 0 1px', outline: 'none', cursor: 'text',
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={e => e.currentTarget.style.borderBottomColor = 'rgba(232,201,140,0.3)'}
+              onBlurCapture={e => e.currentTarget.style.borderBottomColor = 'transparent'}
+            />
+            <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'baseline' }}>
+              <input
+                value={drawerSeries}
+                onChange={e => setDrawerSeries(e.target.value)}
+                onBlur={e => scheduleSave({ series_name: e.target.value.trim() || null })}
+                placeholder="series name"
+                style={{
+                  flex: 1, minWidth: 0, background: 'none', border: 'none',
+                  borderBottom: '1px solid transparent',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  color: 'rgba(255,255,255,0.3)', fontStyle: 'italic',
+                  padding: '0 0 1px', outline: 'none', cursor: 'text',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => e.currentTarget.style.borderBottomColor = 'rgba(232,201,140,0.3)'}
+                onBlurCapture={e => e.currentTarget.style.borderBottomColor = 'transparent'}
+              />
+              <input
+                value={drawerSeriesNum}
+                onChange={e => setDrawerSeriesNum(e.target.value)}
+                onBlur={e => {
+                  const v = e.target.value.trim()
+                  const parsed = v === '' ? null : isNaN(Number(v)) ? v : Number(v)
+                  scheduleSave({ series_number: parsed })
+                }}
+                placeholder="#"
+                style={{
+                  width: 36, background: 'none', border: 'none',
+                  borderBottom: '1px solid transparent',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  color: 'rgba(255,255,255,0.3)', fontStyle: 'italic',
+                  padding: '0 0 1px', outline: 'none', cursor: 'text',
+                  transition: 'border-color 0.15s', textAlign: 'right',
+                }}
+                onFocus={e => e.currentTarget.style.borderBottomColor = 'rgba(232,201,140,0.3)'}
+                onBlurCapture={e => e.currentTarget.style.borderBottomColor = 'transparent'}
+              />
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
-              {attr.author}{attr.additional_authors ? `, ${attr.additional_authors}` : ''}
-            </div>
-            {series && (
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 3, fontStyle: 'italic' }}>
-                {series}
-              </div>
-            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
             <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 22, padding: '0 2px', lineHeight: 1, transition: 'color 0.15s' }}
@@ -866,6 +1097,26 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'rgba(136,226,180,0.75)', letterSpacing: '0.05em' }}>saved ✓</div>
             )}
           </div>
+        </div>
+
+        {/* Status */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {STATUS_DISPLAY_OPTIONS.map(opt => (
+            <button
+              key={opt.int}
+              onClick={() => { setBookStatus(opt.int); scheduleSave({}, { status: opt.int }) }}
+              style={{
+                flex: 1, padding: '6px 4px', borderRadius: 6,
+                border: `1px solid ${bookStatus === opt.int ? 'rgba(232,201,140,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                background: bookStatus === opt.int ? 'rgba(232,201,140,0.1)' : 'transparent',
+                color: bookStatus === opt.int ? '#e8c98c' : 'rgba(255,255,255,0.35)',
+                fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer',
+                transition: 'all 0.12s', letterSpacing: '0.02em',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         <div style={{ height: 1, background: 'rgba(232,201,140,0.12)', marginBottom: 18 }} />
@@ -995,9 +1246,48 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
           onChange={v => {
             setMyRating(v)
             const parsed = v === 'dnf' ? 'dnf' : v ? Number(v) : null
-            scheduleSave({ my_rating: parsed })
+            const attrChanges = { my_rating: parsed }
+            const topChanges  = {}
+            if (parsed && parsed !== 'dnf' && (bookStatus === 1 || bookStatus === 3)) {
+              setBookStatus(2)
+              topChanges.status = 2
+            }
+            scheduleSave(attrChanges, topChanges)
           }}
         />
+        {/* Date read */}
+        <div style={{ marginBottom: 16 }}>
+          <FieldLabel>Date read</FieldLabel>
+          <input
+            value={dateRead}
+            onChange={e => { setDateRead(e.target.value); scheduleSave({ date_read: e.target.value || null }) }}
+            placeholder="YYYY-MM-DD"
+            style={{ ...INPUT_STYLE, cursor: 'text', fontSize: 13 }}
+          />
+        </div>
+
+        {/* Re-read */}
+        {bookStatus === 2 && (
+          <button
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0]
+              const newCount = Number(attr.read_count ?? 1) + 1
+              setDateRead(today)
+              scheduleSave({ read_count: newCount, date_read: today })
+            }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.25)', fontFamily: "'Outfit', sans-serif",
+              fontSize: 12, letterSpacing: '0.03em', padding: '0 0 18px',
+              display: 'block', transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+          >
+            ↺ I re-read this
+          </button>
+        )}
+
         <SelectField label="Would reread" value={wouldReread}
           options={[{ value: 'yes', label: 'yes' }, { value: 'maybe', label: 'maybe' }, { value: 'no', label: 'no' }]}
           onChange={v => { setWouldReread(v); scheduleSave({ would_reread: v || null }) }}
@@ -1006,19 +1296,68 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
           options={[{ value: 'low-spoons', label: 'low-spoons' }, { value: 'medium', label: 'medium' }, { value: 'high-focus', label: 'high-focus' }]}
           onChange={v => { setReadingCap(v); scheduleSave({ capacity_rating: v || null }) }}
         />
-        <SelectField label="Format" value={format}
-          options={[{ value: 'ebook', label: 'ebook' }, { value: 'audiobook', label: 'audiobook' }, { value: 'print', label: 'print' }, { value: 'fanfic-only', label: 'fanfic only' }]}
-          onChange={v => { setFormat(v); scheduleSave({ format: v || null }) }}
-        />
-        <SelectField label="How I have it" value={howIHaveIt}
-          options={[{ value: 'kindle-owned', label: 'kindle — owned' }, { value: 'kindle-unlimited', label: 'kindle unlimited' }, { value: 'audible', label: 'audible' }, { value: 'physical', label: 'physical' }, { value: 'wishlist', label: 'wishlist' }]}
-          onChange={v => { setHowIHaveIt(v); scheduleSave({ how_i_have_it: v || null }) }}
-        />
+        <div style={{ marginBottom: 16 }}>
+          <FieldLabel>Format</FieldLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {FORMAT_OPTIONS.map(opt => {
+              const active = format.includes(opt.value)
+              return (
+                <button key={opt.value} onClick={() => {
+                  const next = active ? format.filter(v => v !== opt.value) : [...format, opt.value]
+                  setFormat(next)
+                  scheduleSave({ format: next })
+                }} style={{
+                  padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
+                  border: `1px solid ${active ? 'rgba(232,201,140,0.5)' : 'rgba(255,255,255,0.14)'}`,
+                  background: active ? 'rgba(232,201,140,0.1)' : 'transparent',
+                  color: active ? '#e8c98c' : 'rgba(255,255,255,0.4)',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12, transition: 'all 0.15s',
+                }}>
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <ThingsToKnow value={thingsToKnow} onChange={v => { setThingsToKnow(v); scheduleSave({ things_to_know: v }) }} />
-        {book.status === 4 && (
+        {bookStatus === 4 && (
           <TextareaField label="Why I stopped" value={whyStopped} onChange={v => { setWhyStopped(v); scheduleSave({ why_stopped: v || null }) }} placeholder="what happened..." />
         )}
         <TextareaField label="My notes" value={notes} onChange={v => { setNotes(v); scheduleSave({}, { notes: v || null }) }} placeholder="anything you want to remember..." rows={4} />
+
+        {/* Delete */}
+        <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {deleteConfirm ? (
+            <>
+              <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 12, lineHeight: 1.55 }}>
+                Remove <em>{book.title}</em> from your library? This can't be undone.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setDeleteConfirm(false)}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer' }}
+                >
+                  cancel
+                </button>
+                <button
+                  onClick={() => onDelete(book.id)}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(220,80,80,0.35)', background: 'rgba(220,80,80,0.08)', color: 'rgba(220,120,120,0.8)', fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer' }}
+                >
+                  remove
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontFamily: "'Outfit', sans-serif", fontSize: 11, letterSpacing: '0.04em', padding: 0, transition: 'color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(220,100,100,0.6)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
+            >
+              remove from library
+            </button>
+          )}
+        </div>
       </div>
     </>
   )
@@ -1040,6 +1379,8 @@ export default function BookPileRoom({ onBack }) {
   const [extraTropes,    setExtraTropes]    = useState([])
   const [extraVibes,     setExtraVibes]     = useState([])
   const [scribbleOpen,   setScribbleOpen]   = useState(false)
+  const [addBookOpen,    setAddBookOpen]    = useState(false)
+  const [enrichingIds,   setEnrichingIds]   = useState(new Set())
   const flashTimer = useRef(null)
 
   useEffect(() => {
@@ -1154,6 +1495,51 @@ export default function BookPileRoom({ onBack }) {
     }
   }
 
+  async function handleAddBook(title, author, seriesName, status) {
+    const statusMap = { to_read: 3, reading: 1, read: 2, dnf: 4 }
+    const statusInt = statusMap[status] ?? 3
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData?.session?.user?.id ?? null
+
+    const { data: newBook, error } = await supabase
+      .from('inventory_items')
+      .insert({
+        title,
+        status: statusInt,
+        inventory_id: 1,
+        user_id: userId,
+        needs_review: false,
+        tags: [],
+        attributes: { author, series_name: seriesName || null, source: 'manual', ai_enriched: false, format: ['kindle — owned'] },
+      })
+      .select()
+      .single()
+
+    if (error || !newBook) { console.error('[BookPile] add failed:', error); return null }
+
+    setBooks(prev => [...prev, newBook].sort((a, b) => a.title.localeCompare(b.title)))
+    setEnrichingIds(prev => new Set([...prev, newBook.id]))
+
+    enrichBook(newBook.id, { title, author, series_name: seriesName }).then(({ success, attrs }) => {
+      setEnrichingIds(prev => { const s = new Set(prev); s.delete(newBook.id); return s })
+      if (success && attrs) {
+        setBooks(prev => prev.map(b =>
+          b.id === newBook.id ? { ...b, attributes: attrs, needs_review: false } : b
+        ))
+      }
+    })
+
+    return newBook
+  }
+
+  async function handleDelete(bookId) {
+    const { error } = await supabase.from('inventory_items').delete().eq('id', bookId)
+    if (!error) {
+      setBooks(prev => prev.filter(b => b.id !== bookId))
+      setSelectedBookId(null)
+    }
+  }
+
   return (
     <div style={{
       paddingTop: 0,
@@ -1181,6 +1567,21 @@ export default function BookPileRoom({ onBack }) {
           }}
         >
           ⌥ filter{filterCount > 0 ? ` (${filterCount})` : ''}
+        </button>
+        <button
+          onClick={() => setAddBookOpen(true)}
+          style={{
+            padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
+            fontFamily: "'Outfit', sans-serif", fontSize: 13, letterSpacing: '0.03em',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.5)',
+            transition: 'all 0.15s', whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+        >
+          + add book
         </button>
       </div>
 
@@ -1231,6 +1632,7 @@ export default function BookPileRoom({ onBack }) {
             <BookRow
               key={book.id} book={book}
               isSelected={book.id === selectedBookId}
+              isEnriching={enrichingIds.has(book.id)}
               onClick={() => setSelectedBookId(book.id === selectedBookId ? null : book.id)}
             />
           ))
@@ -1248,6 +1650,15 @@ export default function BookPileRoom({ onBack }) {
           tropeOptions={tropeOptions}
           vibeOptions={vibeOptions}
           onAddToMasterList={addToMasterList}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Add book modal */}
+      {addBookOpen && (
+        <AddBookModal
+          onClose={() => setAddBookOpen(false)}
+          onAdd={handleAddBook}
         />
       )}
 
@@ -1257,6 +1668,7 @@ export default function BookPileRoom({ onBack }) {
         onToggle={() => setScribbleOpen(o => !o)}
         books={books}
         filteredCount={filtered.length}
+        onAddBook={handleAddBook}
       />
     </div>
   )

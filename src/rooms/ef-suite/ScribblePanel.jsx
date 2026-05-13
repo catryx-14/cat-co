@@ -21,6 +21,24 @@ const TOOLS = [
     name: 'web_search',
   },
   {
+    name: 'add_to_library',
+    description: "Add a book to Cat's library. Use this when Cat explicitly asks to add a book, save a recommendation, or put something on her TBR. Always say out loud what you're about to add and to which status before calling this tool — confirm first, then add.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        title:       { type: 'string' },
+        author:      { type: 'string' },
+        series_name: { type: 'string', description: 'Series name if known' },
+        status: {
+          type: 'string',
+          enum: ['to_read', 'reading', 'read', 'dnf'],
+          description: 'Default to to_read unless Cat specifies otherwise',
+        },
+      },
+      required: ['title', 'author'],
+    },
+  },
+  {
     name: 'search_library',
     description: "Search Cat's book library. Use this whenever Cat asks about her books, authors, ratings, series, recommendations, or anything related to her reading history. Always use this tool rather than guessing — it returns real data from her actual library.",
     input_schema: {
@@ -164,7 +182,7 @@ function getTimeOfDay() {
 
 // ── ScribblePanel ─────────────────────────────────────────────────────────────
 
-export default function ScribblePanel({ open, onToggle, books, filteredCount }) {
+export default function ScribblePanel({ open, onToggle, books, filteredCount, onAddBook }) {
   const [displayMessages, setDisplayMessages] = useState([])
   const [conversation,    setConversation]    = useState([])
   const [input,           setInput]           = useState('')
@@ -463,6 +481,15 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount }) 
     }
   }
 
+  // ── Tool handlers ───────────────────────────────────────────────────────────
+
+  async function executeAddBookTool({ title, author, series_name = '', status = 'to_read' }) {
+    if (!onAddBook) return JSON.stringify({ error: 'Library management unavailable' })
+    const result = await onAddBook(title, author, series_name, status)
+    if (result) return JSON.stringify({ success: true, title, author, status })
+    return JSON.stringify({ success: false, error: 'Failed to add book' })
+  }
+
   // ── Tool-use conversation loop ──────────────────────────────────────────────
 
   async function runConversationTurn(messages, maxTokens = 1024) {
@@ -478,17 +505,20 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount }) 
         messages: current,
       })
 
-      const libraryToolCalls = res.content.filter(b => b.type === 'tool_use' && b.name === 'search_library')
+      const ourToolCalls = res.content.filter(b =>
+        b.type === 'tool_use' && (b.name === 'search_library' || b.name === 'add_to_library')
+      )
 
-      if (libraryToolCalls.length === 0) {
+      if (ourToolCalls.length === 0) {
         const text = res.content.filter(b => b.type === 'text').map(b => b.text).join('').trim()
         return { text, finalMessages: [...current, { role: 'assistant', content: res.content }] }
       }
 
-      const toolResults = libraryToolCalls.map(block => ({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: executeLibraryTool(block.input),
+      const toolResults = await Promise.all(ourToolCalls.map(async block => {
+        const content = block.name === 'add_to_library'
+          ? await executeAddBookTool(block.input)
+          : executeLibraryTool(block.input)
+        return { type: 'tool_result', tool_use_id: block.id, content }
       }))
 
       current = [
