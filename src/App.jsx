@@ -883,7 +883,7 @@ function Rail({ inRoom, current, onPick, onHome }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey, efSuiteResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
     return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Capacity Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
@@ -904,7 +904,7 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <MoreLightsRoom onRoom={onRoom} />
   }
   if (roomKey === 'ef-suite') {
-    return <EFSuiteRoom />
+    return <EFSuiteRoom key={efSuiteResetKey} />
   }
   if (roomKey === 'library') {
     return (
@@ -1000,11 +1000,15 @@ function HubApp({ session }) {
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)
   const [trackerResetKey, setTrackerResetKey] = useState(0)
+  const [efSuiteResetKey, setEfSuiteResetKey] = useState(0)
 
   const goRoom = (key) => {
     if (key === 'tracker') {
       setTrackerInitTab(null)
       setTrackerResetKey(k => k + 1)
+    }
+    if (key === 'ef-suite') {
+      setEfSuiteResetKey(k => k + 1)
     }
     setView(key)
   }
@@ -1023,7 +1027,7 @@ function HubApp({ session }) {
           <div className={fadeClass} key={view}>
             {view === 'hub'
               ? <HubView onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} trackerResetKey={trackerResetKey} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} trackerResetKey={trackerResetKey} efSuiteResetKey={efSuiteResetKey} />}
           </div>
         </main>
       </div>

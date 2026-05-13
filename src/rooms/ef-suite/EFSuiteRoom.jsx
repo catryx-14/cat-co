@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import SuiteCard from '../../shared/components/SuiteCard.jsx'
 import BookPileRoom from './BookPileRoom.jsx'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+
+function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}
 
 const SUITE_ROOMS = [
   {
@@ -47,6 +54,9 @@ export default function EFSuiteRoom() {
       <div className="room-header-wrap">
         <div className="room-head">
           <h2 className="room-title">{title}</h2>
+          {activeRoom === 'book-pile' && (
+            <RoomMark date={todayDisplayStr()} onSettings={() => {}} />
+          )}
         </div>
       </div>
       {activeRoom === 'book-pile'

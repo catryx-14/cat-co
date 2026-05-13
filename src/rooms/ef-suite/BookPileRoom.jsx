@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../../shared/lib/supabase.js'
+import ScribblePanel from './ScribblePanel.jsx'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -831,13 +832,13 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(8,16,42,0.5)', zIndex: 49, backdropFilter: 'blur(2px)' }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(8,16,42,0.5)', zIndex: 249, backdropFilter: 'blur(2px)' }} />
       <div style={{
         position: 'fixed', right: 0, top: 0, bottom: 0,
         width: 'clamp(320px, 42vw, 520px)',
         background: 'linear-gradient(180deg, #0e1838 0%, #131f48 60%, #0f1a3a 100%)',
         borderLeft: '1px solid rgba(232,201,140,0.22)',
-        zIndex: 50, overflowY: 'auto', padding: '24px 28px 56px',
+        zIndex: 250, overflowY: 'auto', padding: '24px 28px 56px',
         display: 'flex', flexDirection: 'column',
       }}>
 
@@ -1038,6 +1039,7 @@ export default function BookPileRoom({ onBack }) {
   const [extraSubGenres, setExtraSubGenres] = useState([])
   const [extraTropes,    setExtraTropes]    = useState([])
   const [extraVibes,     setExtraVibes]     = useState([])
+  const [scribbleOpen,   setScribbleOpen]   = useState(false)
   const flashTimer = useRef(null)
 
   useEffect(() => {
@@ -1153,15 +1155,13 @@ export default function BookPileRoom({ onBack }) {
   }
 
   return (
-    <div style={{ padding: '0 0 80px' }}>
-      {/* Back */}
-      <div style={{ padding: '8px 0 20px' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 13, fontFamily: "'Outfit', sans-serif", letterSpacing: '0.05em', padding: 0, transition: 'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
-        >← executive suite</button>
-      </div>
-
+    <div style={{
+      paddingTop: 0,
+      paddingBottom: 80,
+      paddingLeft: 0,
+      paddingRight: scribbleOpen ? 416 : 72,
+      transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    }}>
       {/* Search + filter toggle */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
         <input
@@ -1250,6 +1250,14 @@ export default function BookPileRoom({ onBack }) {
           onAddToMasterList={addToMasterList}
         />
       )}
+
+      {/* Scribble */}
+      <ScribblePanel
+        open={scribbleOpen}
+        onToggle={() => setScribbleOpen(o => !o)}
+        books={books}
+        filteredCount={filtered.length}
+      />
     </div>
   )
 }
