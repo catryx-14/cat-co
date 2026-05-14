@@ -41,10 +41,10 @@ function _addOneDay(dateStr) {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
 }
 
-// Fills any calendar gaps before targetDateStr with system-generated default rows.
+// Fills any calendar gaps before targetDateStr with system-generated zero-event entries.
 // When includeTarget is true, also fills targetDateStr itself if missing (for past-day views).
-// Returns the count of rows created.
-export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStartDate }, { includeTarget = false } = {}) {
+// Returns the array of dates that were newly created (missed days).
+export async function fillGapsBefore(targetDateStr, userId, _settings, { includeTarget = false } = {}) {
   const { data: anchor, error: e1 } = await supabase
     .from('energy_entries')
     .select('*')
@@ -54,13 +54,13 @@ export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStart
     .limit(1)
     .maybeSingle()
   if (e1) throw e1
-  if (!anchor) return 0
+  if (!anchor) return []
 
   const gapDates = []
   let cursor = _addOneDay(anchor.date)
   while (cursor < targetDateStr) { gapDates.push(cursor); cursor = _addOneDay(cursor) }
   if (includeTarget) gapDates.push(targetDateStr)
-  if (gapDates.length === 0) return 0
+  if (gapDates.length === 0) return []
 
   const { data: existing, error: e2 } = await supabase
     .from('energy_entries')
@@ -72,21 +72,16 @@ export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStart
   const existingDates = new Set((existing ?? []).map(r => r.date))
 
   const missingDates = gapDates.filter(d => !existingDates.has(d))
-  if (missingDates.length === 0) return 0
+  if (missingDates.length === 0) return []
 
-  // Chain from anchor. SI Flow carryover from the anchor reaches the first gap day only —
-  // it was legitimately earned, but gap days earn nothing new so nothing travels further.
+  // Formula 1: each missed day opening = previous closing − 5 (sleep always automatic)
   let prevClosing = anchor.entry_data.closingBalance ?? 0
-  let prevSleep = anchor.entry_data.sleepReset ?? 0
-  let incomingCarryover = anchor.entry_data.siFlowCarryoverBonus ?? anchor.entry_data.carryoverBonus ?? 0
-  let isFirstGap = true
 
   for (const ds of gapDates) {
-    const opening = Math.round(Math.max(0, prevClosing - prevSleep + (isFirstGap ? incomingCarryover : 0)))
-    const taxApplies = ds >= taxStartDate
-    const autisticTax = taxApplies ? taxValue : 0
-    const peak = Math.round(opening + autisticTax)
-    const closing = peak
+    const opening = Math.max(0, prevClosing - 5)
+    // Zero events, zero regulation — sleep deduction already applied in opening
+    const peak = opening
+    const closing = opening
 
     if (!existingDates.has(ds)) {
       await saveEntry({
@@ -97,10 +92,9 @@ export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStart
           peakDebit: peak,
           closingBalance: closing,
           livedExperience: closing,
-          autisticTax,
-          sleepReset: 0,
-          siFlowCarryoverBonus: 0,
-          totalSICredit: 0,
+          activeRegulation: 0,
+          siFlowBonus: 0,
+          autisticTax: 0,
           events: [],
           regulation: { sensoryComfort: 0, audioVisual: 0, environment: 0, bodyRest: 0, recoverySleep: false },
           warningSign: { skin: false, vision: false, thought: false, sunny: false, crisisResponse: false },
@@ -114,12 +108,9 @@ export async function fillGapsBefore(targetDateStr, userId, { taxValue, taxStart
     }
 
     prevClosing = closing
-    prevSleep = 0
-    isFirstGap = false
   }
 
-  await recalculateFromDate(userId, anchor.entry_data.date)
-  return missingDates.length
+  return missingDates
 }
 
 export async function saveEntry({ dateStr, entryData, peakDebit, userId }) {
@@ -171,7 +162,6 @@ export function dbToInternal(row) {
       av: d.regulation?.audioVisual ?? 0,
       env: d.regulation?.environment ?? 0,
       body: d.regulation?.bodyRest ?? 0,
-      sleep: d.sleepReset ?? 0,
     },
     recovery: d.regulation?.recoverySleep ?? false,
     warning: {
@@ -194,7 +184,8 @@ export function dbToInternal(row) {
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
                                 warning, goodSigns, settings, yesterdayClosing, meltdown }) {
   const { taxValue, thresholds, taxStartDate } = settings
-  const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
+  // Autistic tax cancelled by any flow or SI Flow event
+  const anyFlow = userEvents.some(e => !e.cancelled && (e.flow || e.siFlow != null)) || goodSigns.flow
   const taxApplies = dateStr >= taxStartDate && !anyFlow
 
   let evPoints = 0
@@ -203,12 +194,17 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     evPoints += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
   }
   const taxPoints = taxApplies ? taxValue : 0
+
+  // Formula 2: Peak
   const peakDebit = Math.round(openingBalance + evPoints + taxPoints)
-  const nonSleepReg = (regulation.sensory || 0) + (regulation.av || 0) +
-                      (regulation.env || 0) + (regulation.body || 0)
+
+  // Formula 3: Active Regulation (no sleep — sleep is always automatic)
+  const activeRegulation = (regulation.sensory || 0) + (regulation.av || 0) +
+                           (regulation.env || 0) + (regulation.body || 0)
+
   const events = userEvents.map(e => {
     const cost = (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
-    const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.3) : null
+    const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.2) : null
     return {
       summary: e.text,
       emotional: e.E || 0,
@@ -224,10 +220,17 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     }
   })
 
-  const totalSICredit = events.reduce((sum, e) => sum + (e.siFlowCredit ?? 0), 0)
-  const closingBalance = Math.round(Math.max(0, peakDebit - nonSleepReg - totalSICredit))
+  // Formula 4: SI Flow Bonus = SI Flow event cost × 20%, rounded
+  const siFlowBonus = Math.round(
+    events.reduce((sum, e) => {
+      if (!e.siFlow) return sum
+      return sum + (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
+    }, 0) * 0.2
+  )
+
+  // Formula 5: Lived Experience / Closing Balance
+  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
   const livedExperience = closingBalance
-  const siFlowCarryoverBonus = Math.round(totalSICredit * 0.5)
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
 
   const entryData = {
@@ -235,17 +238,16 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     openingBalance: Math.round(openingBalance),
     closingBalance,
     peakDebit,
+    activeRegulation,
+    siFlowBonus,
     autisticTax: taxPoints,
-    sleepReset: regulation.sleep || 0,
     flowActivity: goodSigns.flow,
     yellowThreshold: thresholds.yellow,
     criticalThreshold: thresholds.critical,
     yesterdayClosing: yesterdayClosing ?? 0,
     delayedReactionSource: false,
     delayedReactionRealized: false,
-    totalSICredit,
     livedExperience,
-    siFlowCarryoverBonus,
     events,
     regulation: {
       sensoryComfort: regulation.sensory || 0,
@@ -287,18 +289,19 @@ export function yesterdayDateStr() {
 
 function _recomputeEntry(d, openingBalance) {
   let evPoints = 0
-  let totalSICredit = 0
+  let siFlowCost = 0
   for (const e of d.events ?? []) {
-    evPoints += (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
-    totalSICredit += e.siFlowCredit ?? 0
+    const cost = (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
+    evPoints += cost
+    if (e.siFlow) siFlowCost += cost
   }
   const autisticTax = d.autisticTax ?? 0
   const peakDebit = Math.round(openingBalance + evPoints + autisticTax)
-  const nonSleepReg = (d.regulation?.sensoryComfort || 0) + (d.regulation?.audioVisual || 0) +
-                      (d.regulation?.environment || 0) + (d.regulation?.bodyRest || 0)
-  const closingBalance = Math.round(Math.max(0, peakDebit - nonSleepReg - totalSICredit))
-  const siFlowCarryoverBonus = Math.round(totalSICredit * 0.5)
-  return { openingBalance: Math.round(openingBalance), peakDebit, closingBalance, siFlowCarryoverBonus }
+  const activeRegulation = (d.regulation?.sensoryComfort || 0) + (d.regulation?.audioVisual || 0) +
+                           (d.regulation?.environment || 0) + (d.regulation?.bodyRest || 0)
+  const siFlowBonus = Math.round(siFlowCost * 0.2)
+  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
+  return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance }
 }
 
 // Recalculate all entries in chronological order, cascading closing→opening chain.
@@ -309,33 +312,31 @@ export async function recalculateAllEntries(userId) {
   )
 
   let prevClosing = null
-  let prevSleepReset = 0
-  let prevCarryoverBonus = 0
 
   for (const entry of sorted) {
     const d = entry.entry_data
+    // Formula 1: opening = previous closing − 5; first entry preserves its stored opening
     const openingBalance = prevClosing !== null
-      ? Math.round(Math.max(0, prevClosing - prevSleepReset + prevCarryoverBonus))
+      ? Math.max(0, prevClosing - 5)
       : Math.round(d.openingBalance ?? 0)
 
-    const { peakDebit, closingBalance, siFlowCarryoverBonus } = _recomputeEntry(d, openingBalance)
+    const { peakDebit, activeRegulation, siFlowBonus, closingBalance } = _recomputeEntry(d, openingBalance)
 
     await saveEntry({
       dateStr: d.date,
-      entryData: { ...d, openingBalance, peakDebit, closingBalance, livedExperience: closingBalance, siFlowCarryoverBonus },
+      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience: closingBalance },
       peakDebit,
       userId,
     })
 
     prevClosing = closingBalance
-    prevSleepReset = d.sleepReset ?? 0
-    prevCarryoverBonus = siFlowCarryoverBonus
   }
 
   return sorted.length
 }
 
 // Recalculate all entries after fromDateStr (exclusive), using fromDateStr's saved closing as anchor.
+// Only called for historical edits — today's saves never cascade.
 export async function recalculateFromDate(userId, fromDateStr) {
   const entries = await loadAllEntries(userId)
   const sorted = [...entries].sort((a, b) =>
@@ -348,26 +349,23 @@ export async function recalculateFromDate(userId, fromDateStr) {
   const subsequent = sorted.filter(e => e.entry_data.date > fromDateStr)
   if (subsequent.length === 0) return 0
 
+  // Formula 1: each subsequent day opening = previous closing − 5
   let prevClosing = anchor.entry_data.closingBalance ?? 0
-  let prevSleepReset = anchor.entry_data.sleepReset ?? 0
-  let prevCarryoverBonus = anchor.entry_data.siFlowCarryoverBonus ?? anchor.entry_data.carryoverBonus ?? 0
 
   for (const entry of subsequent) {
     const d = entry.entry_data
-    const openingBalance = Math.round(Math.max(0, prevClosing - prevSleepReset + prevCarryoverBonus))
+    const openingBalance = Math.max(0, prevClosing - 5)
 
-    const { peakDebit, closingBalance, siFlowCarryoverBonus } = _recomputeEntry(d, openingBalance)
+    const { peakDebit, activeRegulation, siFlowBonus, closingBalance } = _recomputeEntry(d, openingBalance)
 
     await saveEntry({
       dateStr: d.date,
-      entryData: { ...d, openingBalance, peakDebit, closingBalance, livedExperience: closingBalance, siFlowCarryoverBonus },
+      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience: closingBalance },
       peakDebit,
       userId,
     })
 
     prevClosing = closingBalance
-    prevSleepReset = d.sleepReset ?? 0
-    prevCarryoverBonus = siFlowCarryoverBonus
   }
 
   return subsequent.length

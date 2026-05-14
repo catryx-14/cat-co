@@ -17,7 +17,6 @@ const REG_CHANNELS = [
   { k: 'av',      name: 'audio / visual',  cap: 5 },
   { k: 'env',     name: 'environment',     cap: 6 },
   { k: 'body',    name: 'body / rest',     cap: 5 },
-  { k: 'sleep',   name: 'sleep reset',     cap: 5 },
 ]
 
 const WARNING_SIGNS = [
@@ -154,7 +153,11 @@ function EventRow({ e, onUpdate, onDelete }) {
                 {['present', 'pulled'].map(opt => (
                   <button key={opt}
                     className={`event-si-btn ${draft.siFlow === opt ? 'active' : ''}`}
-                    onClick={() => setDraft(d => ({ ...d, siFlow: d.siFlow === opt ? null : opt }))}>
+                    onClick={() => setDraft(d => {
+                      const next = d.siFlow === opt ? null : opt
+                      // SI Flow implies Flow — auto-enable flow when SI Flow is selected
+                      return { ...d, siFlow: next, flow: next != null ? true : d.flow }
+                    })}>
                     {opt}
                   </button>
                 ))}
@@ -263,7 +266,12 @@ function Composer({ onAdd }) {
             {['present', 'pulled'].map(opt => (
               <button key={opt}
                 className={`event-si-btn ${siFlow === opt ? 'active' : ''}`}
-                onClick={() => setSiFlow(s => s === opt ? null : opt)}>
+                onClick={() => {
+                  const next = siFlow === opt ? null : opt
+                  setSiFlow(next)
+                  // SI Flow implies Flow — auto-enable flow when SI Flow is selected
+                  if (next != null) setFlow(true)
+                }}>
                 {opt}
               </button>
             ))}
@@ -745,7 +753,7 @@ function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick 
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus }) {
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus }) {
   const [expanding, setExpanding] = useState(null)
 
   function handleOrbClick(key) {
@@ -757,6 +765,7 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
     }, 380)
   }
   const { taxValue, taxStartDate } = settings
+  // Tax cancelled by flow or SI Flow on any non-cancelled event
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
@@ -769,15 +778,24 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
     axisSums.X += e.X || 0
   }
   const evPts = axisSums.E + axisSums.S + axisSums.V + axisSums.X
-  const peak = openingBalance + evPts + taxPoints
-  const nonSleepReg = nonSleepRegTotal(regulation)
 
-  const totalSICredit = userEvents.reduce((sum, e) => {
-    if (!e.siFlow || e.cancelled) return sum
-    return sum + ((e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)) * 0.3
-  }, 0)
+  // Formula 2: Peak
+  const peak = openingBalance + evPts + taxPoints
+
+  // Formula 3: Active Regulation (no sleep)
+  const activeReg = nonSleepRegTotal(regulation)
+
+  // Formula 4: SI Flow Bonus = SI Flow event cost × 20%, rounded
+  const siFlowBonus = Math.round(
+    userEvents.reduce((sum, e) => {
+      if (!e.siFlow || e.cancelled) return sum
+      return sum + (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    }, 0) * 0.2
+  )
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
-  const livedExperience = Math.max(0, peak - nonSleepReg - totalSICredit)
+
+  // Formula 5: Lived Experience = Peak − Active Regulation − SI Flow Bonus
+  const livedExperience = Math.max(0, peak - activeReg - siFlowBonus)
 
   const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
 
@@ -802,10 +820,10 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
     <div className="sky-detail sky-detail--le">
       <span>{Math.round(peak)} peak</span>
       <span className="sky-det-sep">·</span>
-      <span>{Math.round(nonSleepReg)} reg</span>
+      <span>{Math.round(activeReg)} reg</span>
       {siFlowActive && <>
         <span className="sky-det-sep">·</span>
-        <span style={{ color: '#5abf7a' }}>−{Math.round(totalSICredit)} SI</span>
+        <span style={{ color: '#5abf7a' }}>−{siFlowBonus} SI</span>
       </>}
     </div>
   )
@@ -826,7 +844,7 @@ function Sky({ userEvents, regulation, openingBalance, siCarryIn = 0, settings, 
 
   const peakStr = String(Math.round(peak))
   const leStr   = String(Math.round(livedExperience))
-  const regStr  = String(Math.round(nonSleepReg))
+  const regStr  = String(Math.round(activeReg))
 
   if (drillThrough) {
     return (
@@ -886,37 +904,34 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const isToday = dateStr === todayDateStr()
   const [loading, setLoading] = useState(true)
   const [userEvents, setUserEvents] = useState([])
-  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
+  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0 })
   const [recovery, setRecovery] = useState(false)
   const [warning, setWarning] = useState({ skin: false, vision: false, thought: false, other: false })
   const [goodSigns, setGoodSigns] = useState({ flow: false, crisis: false })
   const [meltdown, setMeltdown] = useState(false)
   const [openingBalance, setOpeningBalance] = useState(0)
-  const [siCarryIn, setSiCarryIn] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
-  const [hasEstimatedGaps, setHasEstimatedGaps] = useState(false)
+  const [missedDays, setMissedDays] = useState([])
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey])
 
   useEffect(() => {
     async function init() {
       try {
-        await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: !isToday })
+        const gaps = await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: !isToday })
+        if (gaps.length > 0) setMissedDays(gaps)
+
         const existing = await loadEntry(dateStr, session.user.id)
         if (existing) {
           const state = dbToInternal(existing)
           if (isToday) {
             const yest = await loadEntry(yesterdayDateStr(), session.user.id)
             if (yest) {
-              const d = yest.entry_data
-              const closing = d.closingBalance ?? 0
-              const sleep = d.sleepReset ?? 0
-              const carryover = d.siFlowCarryoverBonus ?? d.carryoverBonus ?? 0
-              setOpeningBalance(Math.round(Math.max(0, closing - sleep + carryover)))
-              setSiCarryIn(carryover)
+              const closing = yest.entry_data.closingBalance ?? 0
+              // Formula 1: opening = previous closing − 5
+              setOpeningBalance(Math.max(0, closing - 5))
               setYesterdayClosing(closing)
-              setHasEstimatedGaps(!!d.isSystemGenerated)
             }
           } else {
             setOpeningBalance(state.openingBalance)
@@ -931,14 +946,10 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         } else if (isToday) {
           const yest = await loadEntry(yesterdayDateStr(), session.user.id)
           if (yest) {
-            const d = yest.entry_data
-            const closing = d.closingBalance ?? 0
-            const sleep = d.sleepReset ?? 0
-            const carryover = d.siFlowCarryoverBonus ?? d.carryoverBonus ?? 0
-            setOpeningBalance(Math.max(0, closing - sleep + carryover))
-            setSiCarryIn(carryover)
+            const closing = yest.entry_data.closingBalance ?? 0
+            // Formula 1: opening = previous closing − 5
+            setOpeningBalance(Math.max(0, closing - 5))
             setYesterdayClosing(closing)
-            setHasEstimatedGaps(!!d.isSystemGenerated)
           }
         }
       } catch (err) {
@@ -984,7 +995,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
       })
       await saveEntry({ dateStr, entryData, peakDebit, userId: session.user.id })
-      await recalculateFromDate(session.user.id, dateStr)
+      // Cascade only for historical edits — today's saves never cascade
+      if (!isToday) await recalculateFromDate(session.user.id, dateStr)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (err) {
@@ -1042,21 +1054,28 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           <div className="history-edit-date">{formatDateStr(dateStr)}</div>
         </>
       )}
-      {hasEstimatedGaps && userEvents.length === 0 && (
+      {missedDays.length > 0 && (
         <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '8px 14px', marginBottom: 8,
-          background: 'rgba(11,16,32,0.82)', borderRadius: 6,
+          background: 'rgba(232,201,140,0.07)', borderRadius: 6,
           color: 'var(--ink-faint)', fontSize: 13, fontStyle: 'italic',
-          textAlign: 'center',
         }}>
-          the previous day has no entries — numbers are estimated defaults
+          <span>
+            {missedDays.length === 1
+              ? `missed day filled in: ${missedDays[0]}`
+              : `missed days filled in: ${missedDays.join(', ')}`} — sleep deduction applied, no events
+          </span>
+          <button onClick={() => setMissedDays([])} style={{
+            background: 'none', border: 'none', color: 'var(--ink-faint)',
+            cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 0 0 12px',
+          }}>×</button>
         </div>
       )}
       <Sky
         userEvents={userEvents}
         regulation={regulation}
         openingBalance={openingBalance}
-        siCarryIn={siCarryIn}
         settings={settings}
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
@@ -1132,11 +1151,11 @@ function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns
   }
   const peak = openingBalance + axisSums.E + axisSums.S + axisSums.V + axisSums.X + taxPoints
   const reg  = nonSleepRegTotal(regulation)
-  const siCredit = userEvents.reduce((sum, e) => {
+  const siFlowBonus = Math.round(userEvents.reduce((sum, e) => {
     if (!e.siFlow || e.cancelled) return sum
-    return sum + ((e.E||0)+(e.S||0)+(e.V||0)+(e.X||0)) * 0.3
-  }, 0)
-  return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siCredit)), reg: Math.round(reg) }
+    return sum + (e.E||0)+(e.S||0)+(e.V||0)+(e.X||0)
+  }, 0) * 0.2)
+  return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siFlowBonus)), reg: Math.round(reg) }
 }
 
 const HED_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
@@ -1196,7 +1215,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [allEntries, setAllEntries] = useState(null)
   const [loading, setLoading]       = useState(true)
   const [userEvents, setUserEvents] = useState([])
-  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
+  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0 })
   const [recovery, setRecovery]     = useState(false)
   const [warning, setWarning]       = useState({ skin: false, vision: false, thought: false, other: false })
   const [goodSigns, setGoodSigns]   = useState({ flow: false, crisis: false })
@@ -1204,7 +1223,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [openingBalance, setOpeningBalance] = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
-  const [gapsFilled, setGapsFilled] = useState(0)
+  const [missedDays, setMissedDays] = useState([])
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1218,8 +1237,8 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     setSaveStatus('')
     async function init() {
       try {
-        const filled = await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: true })
-        if (filled > 0) setGapsFilled(filled)
+        const gaps = await fillGapsBefore(dateStr, session.user.id, settings, { includeTarget: true })
+        if (gaps.length > 0) setMissedDays(gaps)
         const existing = await loadEntry(dateStr, session.user.id)
         if (existing) {
           const state = dbToInternal(existing)
@@ -1234,7 +1253,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         } else {
           setOpeningBalance(0); setYesterdayClosing(0)
           setUserEvents([])
-          setRegulation({ sensory: 0, av: 0, env: 0, body: 0, sleep: 5 })
+          setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
           setRecovery(false)
           setWarning({ skin: false, vision: false, thought: false, other: false })
           setGoodSigns({ flow: false, crisis: false })
@@ -1319,15 +1338,19 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         {saveStatus && <span className="hed-status">{saveStatus}</span>}
       </div>
 
-      {gapsFilled > 0 && (
+      {missedDays.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '8px 14px', margin: '4px 0 8px',
           background: 'rgba(232,201,140,0.07)', borderRadius: 6,
           color: 'var(--ink-faint)', fontSize: 13, fontStyle: 'italic',
         }}>
-          <span>{gapsFilled === 1 ? 'the previous day has no entries' : `the previous ${gapsFilled} days have no entries`} — numbers are estimated defaults</span>
-          <button onClick={() => setGapsFilled(0)} style={{
+          <span>
+            {missedDays.length === 1
+              ? `missed day filled in: ${missedDays[0]}`
+              : `missed days filled in: ${missedDays.join(', ')}`} — sleep deduction applied, no events
+          </span>
+          <button onClick={() => setMissedDays([])} style={{
             background: 'none', border: 'none', color: 'var(--ink-faint)',
             cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 0 0 12px',
           }}>×</button>

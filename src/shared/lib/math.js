@@ -17,14 +17,9 @@ export function regWordOf(pct) {
   return 'full'
 }
 
-// Sum of non-sleep regulation channels
+// Sum of active regulation channels — sleep excluded (always automatic, never manually entered)
 export function nonSleepRegTotal(reg) {
   return (reg.sensory || 0) + (reg.av || 0) + (reg.env || 0) + (reg.body || 0)
-}
-
-// Total including sleep (for display)
-export function fullRegTotal(reg) {
-  return nonSleepRegTotal(reg) + (reg.sleep || 0)
 }
 
 // Points from all non-cancelled user events
@@ -37,45 +32,37 @@ export function eventPoints(userEvents) {
   return total
 }
 
-// True if any event has flow:true → autistic tax cancels
+// True if any non-cancelled event has flow or SI Flow set — either cancels autistic tax
 export function anyFlowEvent(userEvents) {
-  return userEvents.some(e => e.flow)
+  return userEvents.some(e => !e.cancelled && (e.flow || e.siFlow != null))
 }
 
+// Formula 1: Opening Balance = previous day's closing − 5 (sleep is always automatic)
+export function computeOpeningBalance(prevClosing) {
+  return Math.max(0, prevClosing - 5)
+}
+
+// Formula 2: Peak = Opening + event points + autistic tax (if applicable)
 export function computePeakDebit({ openingBalance, userEvents, taxValue, taxApplies }) {
   return openingBalance + eventPoints(userEvents) + (taxApplies ? taxValue : 0)
 }
 
-export function computeClosingBalance(peakDebit, reg) {
-  return Math.max(0, peakDebit - nonSleepRegTotal(reg))
+// Formula 4: SI Flow Bonus = SI Flow event cost × 20%, rounded to nearest whole number
+export function computeSIFlowBonus(userEvents) {
+  let cost = 0
+  for (const e of userEvents) {
+    if (e.cancelled || !e.siFlow) continue
+    cost += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+  }
+  return Math.round(cost * 0.2)
 }
 
-export function computeTomorrowOpening(closingBalance, sleepReset) {
-  return Math.max(0, closingBalance - (sleepReset || 0))
+// Formula 5: Lived Experience / Closing Balance = Peak − Active Regulation − SI Flow Bonus
+export function computeLivedExperience(peakDebit, activeRegulation, siFlowBonus) {
+  return Math.max(0, peakDebit - activeRegulation - siFlowBonus)
 }
 
-// Is the autistic tax active for this date?
+// Is the autistic tax active? Cancelled by flow or SI Flow on any non-cancelled event.
 export function taxActive(dateStr, taxStartDate, userEvents) {
   return dateStr >= taxStartDate && !anyFlowEvent(userEvents)
-}
-
-// SI flow credit for a single event (30% of event cost if siFlow is set)
-export function computeEventSICredit(event) {
-  if (!event.siFlow || event.cancelled) return 0
-  return ((event.E || 0) + (event.S || 0) + (event.V || 0) + (event.X || 0)) * 0.3
-}
-
-// Total SI credit across all events
-export function computeTotalSICredit(userEvents) {
-  return userEvents.reduce((sum, e) => sum + computeEventSICredit(e), 0)
-}
-
-// Lived experience = peakDebit − nonSleepReg − totalSICredit
-export function computeLivedExperience(peakDebit, nonSleepReg, totalSICredit) {
-  return Math.max(0, peakDebit - nonSleepReg - totalSICredit)
-}
-
-// Carryover bonus added to tomorrow's opening balance
-export function computeCarryoverBonus(totalSICredit) {
-  return totalSICredit * 0.5
 }
