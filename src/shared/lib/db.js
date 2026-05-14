@@ -228,9 +228,10 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     }, 0) * 0.2
   )
 
-  // Formula 5: Lived Experience / Closing Balance
-  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
-  const livedExperience = closingBalance
+  // Closing Balance carries forward — SI Flow bonus does NOT reduce the chain
+  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation))
+  // Lived Experience is display-only — SI Flow bonus visible here but not in the carry-forward
+  const livedExperience = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
 
   const entryData = {
@@ -300,8 +301,11 @@ function _recomputeEntry(d, openingBalance) {
   const activeRegulation = (d.regulation?.sensoryComfort || 0) + (d.regulation?.audioVisual || 0) +
                            (d.regulation?.environment || 0) + (d.regulation?.bodyRest || 0)
   const siFlowBonus = Math.round(siFlowCost * 0.2)
-  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
-  return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance }
+  // Closing Balance carries forward — SI Flow bonus does NOT reduce the chain
+  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation))
+  // Lived Experience is display-only — SI Flow bonus visible here but not in carry-forward
+  const livedExperience = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
+  return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
 }
 
 // Recalculate all entries in chronological order, cascading closing→opening chain.
@@ -320,11 +324,11 @@ export async function recalculateAllEntries(userId) {
       ? Math.max(0, prevClosing - 5)
       : Math.round(d.openingBalance ?? 0)
 
-    const { peakDebit, activeRegulation, siFlowBonus, closingBalance } = _recomputeEntry(d, openingBalance)
+    const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } = _recomputeEntry(d, openingBalance)
 
     await saveEntry({
       dateStr: d.date,
-      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience: closingBalance },
+      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience },
       peakDebit,
       userId,
     })
@@ -356,11 +360,11 @@ export async function recalculateFromDate(userId, fromDateStr) {
     const d = entry.entry_data
     const openingBalance = Math.max(0, prevClosing - 5)
 
-    const { peakDebit, activeRegulation, siFlowBonus, closingBalance } = _recomputeEntry(d, openingBalance)
+    const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } = _recomputeEntry(d, openingBalance)
 
     await saveEntry({
       dateStr: d.date,
-      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience: closingBalance },
+      entryData: { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience },
       peakDebit,
       userId,
     })
