@@ -103,7 +103,12 @@ export function computeSIFlowBonus(userEvents) {
   return Math.round(cost * 0.2)
 }
 
-// Formula 5: Lived Experience / Closing Balance = Peak − Active Regulation − SI Flow Bonus
+// Formula 3: Closing Balance = Peak − Active Regulation (carries forward to next day)
+export function computeClosingBalance(peakDebit, activeRegulation) {
+  return Math.round(Math.max(0, peakDebit - activeRegulation))
+}
+
+// Formula 5: Lived Experience = Peak − Active Regulation − SI Flow Bonus (display only, not carried forward)
 export function computeLivedExperience(peakDebit, activeRegulation, siFlowBonus) {
   return Math.max(0, peakDebit - activeRegulation - siFlowBonus)
 }

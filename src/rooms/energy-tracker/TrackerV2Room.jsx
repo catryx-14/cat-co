@@ -21,7 +21,7 @@ import {
   internalToDb,
 } from '../../shared/lib/db-v2.js'
 import { saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
-import { computeDisplayValues, taxActive } from '../../shared/lib/math.js'
+import { computeDisplayValues, computeOpeningBalance, taxActive } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
@@ -849,7 +849,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
             const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
             if (yest) {
               const closing = yest.entry_data.closingBalance ?? 0
-              setOpeningBalance(Math.max(0, closing - 5))
+              setOpeningBalance(computeOpeningBalance(closing))
               setYesterdayClosing(closing)
             }
           } else {

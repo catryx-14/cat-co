@@ -12,7 +12,12 @@
 
 import { supabase } from './supabase.js'
 import { dbToInternal, internalToDb } from './db.js'
-import { computeDisplayValues } from './math.js'
+import {
+  computeDisplayValues,
+  computeOpeningBalance,
+  computeClosingBalance,
+  computeLivedExperience,
+} from './math.js'
 
 // ── Conversion helpers ─────────────────────────────────────────────────────
 
@@ -221,26 +226,10 @@ export async function saveEntryV2({ dateStr, entryData, peakDebit: _ignored, use
 // ── Cascade recalculation ─────────────────────────────────────────────────
 
 function _recomputeFromEntryData(entryData, openingBalance) {
-  let evPoints = 0
-  let siFlowCost = 0
-  for (const e of entryData.events ?? []) {
-    const cost = (e.emotional || 0) + (e.sensory || 0) + (e.predictability || 0) +
-                 (e.masking || 0) + (e.ef || 0)
-    if (!e.cancelled) {
-      evPoints += cost
-      if (e.siFlow) siFlowCost += cost
-    }
-  }
-  const autisticTax = entryData.autisticTax ?? 0
-  const peakDebit = Math.round(openingBalance + evPoints + autisticTax)
-  const activeRegulation =
-    (entryData.regulation?.sensoryComfort || 0) +
-    (entryData.regulation?.audioVisual || 0) +
-    (entryData.regulation?.environment || 0) +
-    (entryData.regulation?.bodyRest || 0)
-  const siFlowBonus = Math.round(siFlowCost * 0.2)
-  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation))
-  const livedExperience = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
+  // Delegate to computeDisplayValues — one formula for cascade recalculation too
+  const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
+    computeDisplayValues(entryData)
+  const closingBalance = computeClosingBalance(peakDebit, activeRegulation)
   return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
 }
 
@@ -262,7 +251,7 @@ export async function recalculateFromDateV2(userId, fromDateStr) {
 
   for (const entry of subsequent) {
     const d = entry.entry_data
-    const openingBalance = Math.max(0, prevClosing - 5)
+    const openingBalance = computeOpeningBalance(prevClosing)
     const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } =
       _recomputeFromEntryData(d, openingBalance)
 
