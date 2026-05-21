@@ -1264,7 +1264,8 @@ body {
 }
 .axis-E { --axis-color: #d97a6c; --axis-glow: rgba(217,122,108,0.6); }
 .axis-S { --axis-color: #d9a86c; --axis-glow: rgba(217,168,108,0.6); }
-.axis-V { --axis-color: #a890d4; --axis-glow: rgba(168,144,212,0.6); }
+.axis-P { --axis-color: #a890d4; --axis-glow: rgba(168,144,212,0.6); }
+.axis-M { --axis-color: #7ab3d4; --axis-glow: rgba(122,179,212,0.6); }
 .axis-X { --axis-color: #6ec0bf; --axis-glow: rgba(110,192,191,0.6); }
 .axis.lit .pip.on {
   background: var(--axis-color);
@@ -1385,7 +1386,8 @@ body {
 .composer-axis .pip:hover { transform: scale(1.15); }
 .composer-axis.axis-E.lit .pip.on { background: #d97a6c; border-color: #d97a6c; box-shadow: 0 0 6px rgba(217,122,108,0.5); }
 .composer-axis.axis-S.lit .pip.on { background: #d9a86c; border-color: #d9a86c; box-shadow: 0 0 6px rgba(217,168,108,0.5); }
-.composer-axis.axis-V.lit .pip.on { background: #a890d4; border-color: #a890d4; box-shadow: 0 0 6px rgba(168,144,212,0.5); }
+.composer-axis.axis-P.lit .pip.on { background: #a890d4; border-color: #a890d4; box-shadow: 0 0 6px rgba(168,144,212,0.5); }
+.composer-axis.axis-M.lit .pip.on { background: #7ab3d4; border-color: #7ab3d4; box-shadow: 0 0 6px rgba(122,179,212,0.5); }
 .composer-axis.axis-X.lit .pip.on { background: #6ec0bf; border-color: #6ec0bf; box-shadow: 0 0 6px rgba(110,192,191,0.5); }
 
 .bucket-pick {

@@ -949,15 +949,14 @@ function HubApp({ session }) {
       .then(setSettings)
       .catch(err => {
         console.error('failed to load settings', err)
-        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 12, critical: 22 }, taxStartDate: '2000-01-01' })
+        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
       })
   }, [])
 
-  const updateThresholds = ({ yellow, critical, leYellow, leCritical }) => {
+  const updateThresholds = ({ leYellow, leCritical }) => {
     setSettings(prev => ({
       ...prev,
-      thresholds: { yellow, critical },
-      livedExperienceThresholds: { yellow: leYellow ?? 12, critical: leCritical ?? 22 },
+      livedExperienceThresholds: { yellow: leYellow ?? 15, critical: leCritical ?? 30 },
     }))
   }
 

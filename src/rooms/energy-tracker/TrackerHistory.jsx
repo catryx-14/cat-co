@@ -257,14 +257,14 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfM
   useEffect(() => () => clearTimeout(tipTimer.current), [])
 
   const d = entry?.entry_data
-  const peak = d?.peakDebit ?? 0
+  const leVal = d?.livedExperience ?? d?.closingBalance ?? 0
   const isPastEmpty = !isFuture && !entry
 
   let stars, starColor, glowClass = ''
   if (entry) {
     stars = ARC_STARS
-    starColor = peakColor(peak, thresholds)
-    glowClass = peakGlowClass(peak, thresholds)
+    starColor = peakColor(leVal, thresholds)
+    glowClass = peakGlowClass(leVal, thresholds)
   } else if (isFuture) {
     stars = FUTURE_DOTS
     starColor = '#c9a460'
@@ -367,7 +367,7 @@ function buildMonthWeeks(year, month) {
 
 export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth }) {
   const [entries, setEntries] = useState(null)
-  const { thresholds } = settings
+  const thresholds = settings.livedExperienceThresholds
 
   useEffect(() => {
     loadAllEntries(session.user.id)

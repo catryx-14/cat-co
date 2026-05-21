@@ -6,10 +6,11 @@ import { loadEntry, fillGapsBefore, loadAllEntries, dbToInternal, internalToDb, 
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
 const AXIS_DEFS = [
-  { k: 'E', name: 'emotional', meaning: 'how strong was the emotional charge of this event?' },
-  { k: 'S', name: 'sensory',   meaning: 'how loud was the sensory load — sound, light, touch, demand on the body?' },
-  { k: 'V', name: 'veracity',  meaning: 'did things go the way they were supposed to? did people / systems follow through as expected?' },
-  { k: 'X', name: 'EF',        meaning: 'how much executive function did this cost — planning, switching, holding it together?' },
+  { k: 'E', name: 'emotional',      meaning: 'how strong was the emotional charge of this event?' },
+  { k: 'S', name: 'sensory',        meaning: 'how loud was the sensory load — sound, light, touch, demand on the body?' },
+  { k: 'P', name: 'predictability', meaning: 'did things go as expected? did people, systems, or situations behave the way they should?' },
+  { k: 'M', name: 'masking',        meaning: 'the cost of performing a version of yourself that isn\'t what\'s actually happening — managing a social situation while something else is going on inside' },
+  { k: 'X', name: 'EF',             meaning: 'how much executive function did this cost — planning, switching, holding it together?' },
 ]
 
 const REG_CHANNELS = [
@@ -207,7 +208,7 @@ function EventRow({ e, onUpdate, onDelete }) {
 // ─── Composer ───
 function Composer({ onAdd }) {
   const [text, setText] = useState('')
-  const [axes, setAxes] = useState({ E: 0, S: 0, V: 0, X: 0 })
+  const [axes, setAxes] = useState({ E: 0, S: 0, P: 0, M: 0, X: 0 })
   const [delayed, setDelayed] = useState(false)
   const [flow, setFlow] = useState(false)
   const [siFlow, setSiFlow] = useState(null)
@@ -215,7 +216,7 @@ function Composer({ onAdd }) {
 
   const set = (k, v) => setAxes(a => ({ ...a, [k]: a[k] === v ? 0 : v }))
   function reset() {
-    setText(''); setAxes({ E: 0, S: 0, V: 0, X: 0 })
+    setText(''); setAxes({ E: 0, S: 0, P: 0, M: 0, X: 0 })
     setDelayed(false); setFlow(false); setSiFlow(null); setBucket(nowBucket())
   }
   function save() {
@@ -769,15 +770,16 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
   const taxPoints = taxApplies ? taxValue : 0
 
-  const axisSums = { E: 0, S: 0, V: 0, X: 0 }
+  const axisSums = { E: 0, S: 0, P: 0, M: 0, X: 0 }
   for (const e of userEvents) {
     if (e.cancelled) continue
     axisSums.E += e.E || 0
     axisSums.S += e.S || 0
-    axisSums.V += e.V || 0
+    axisSums.P += e.P || 0
+    axisSums.M += e.M || 0
     axisSums.X += e.X || 0
   }
-  const evPts = axisSums.E + axisSums.S + axisSums.V + axisSums.X
+  const evPts = axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X
 
   // Formula 2: Peak
   const peak = openingBalance + evPts + taxPoints
@@ -789,7 +791,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   const siFlowBonus = Math.round(
     userEvents.reduce((sum, e) => {
       if (!e.siFlow || e.cancelled) return sum
-      return sum + (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+      return sum + (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
     }, 0) * 0.2
   )
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
@@ -802,8 +804,9 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   const PEAK_BREAKDOWN = [
     { k: 'E', name: 'emotional' },
     { k: 'S', name: 'sensory' },
+    { k: 'P', name: 'predictability' },
+    { k: 'M', name: 'masking' },
     { k: 'X', name: 'EF' },
-    { k: 'V', name: 'veracity' },
   ]
 
   const peakDetail = (
@@ -970,7 +973,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         id: 'autistic-tax',
         bucket: 'evening',
         text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
-        E: 0, S: applies ? settings.taxValue : 0, V: 0, X: 0,
+        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
         delayed: false, flow: false, cancelled: !applies,
         system: true,
       }]
@@ -1144,16 +1147,16 @@ function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns
   const { taxValue, taxStartDate } = settings
   const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !goodSigns.flow
   const taxPoints = taxApplies ? taxValue : 0
-  const axisSums = { E: 0, S: 0, V: 0, X: 0 }
+  const axisSums = { E: 0, S: 0, P: 0, M: 0, X: 0 }
   for (const e of userEvents) {
     if (e.cancelled) continue
-    axisSums.E += e.E||0; axisSums.S += e.S||0; axisSums.V += e.V||0; axisSums.X += e.X||0
+    axisSums.E += e.E||0; axisSums.S += e.S||0; axisSums.P += e.P||0; axisSums.M += e.M||0; axisSums.X += e.X||0
   }
-  const peak = openingBalance + axisSums.E + axisSums.S + axisSums.V + axisSums.X + taxPoints
+  const peak = openingBalance + axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X + taxPoints
   const reg  = nonSleepRegTotal(regulation)
   const siFlowBonus = Math.round(userEvents.reduce((sum, e) => {
     if (!e.siFlow || e.cancelled) return sum
-    return sum + (e.E||0)+(e.S||0)+(e.V||0)+(e.X||0)
+    return sum + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
   }, 0) * 0.2)
   return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siFlowBonus)), reg: Math.round(reg) }
 }
@@ -1177,11 +1180,11 @@ function WeekStrip({ weekStart, selectedDate, entryMap, thresholds, todayStr, on
         {days.map((day, i) => {
           const ds = hedToDateStr(day)
           const entry = entryMap[ds]
-          const peak  = entry?.entry_data?.peakDebit ?? 0
+          const leVal = entry?.entry_data?.livedExperience ?? entry?.entry_data?.closingBalance ?? 0
           const isSelected = ds === selectedDate
           const isToday    = ds === todayStr
           const isFuture   = ds > todayStr
-          const color = entry ? hedPeakColor(peak, thresholds) : undefined
+          const color = entry ? hedPeakColor(leVal, thresholds) : undefined
 
           return (
             <button
@@ -1279,7 +1282,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
       const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
       return [{ id: 'autistic-tax', bucket: 'evening',
         text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
-        E: 0, S: applies ? settings.taxValue : 0, V: 0, X: 0,
+        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
         delayed: false, flow: false, cancelled: !applies, system: true }]
     })(),
   ]
@@ -1361,7 +1364,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         weekStart={weekStart}
         selectedDate={dateStr}
         entryMap={entryMap}
-        thresholds={settings.thresholds}
+        thresholds={settings.livedExperienceThresholds}
         todayStr={todayStr}
         onSelect={handleSelectDate}
         onPrev={() => setWeekStart(d => hedAddDays(d, -7))}
@@ -1426,10 +1429,8 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
 
 // ─── ThresholdSettings ───
 function ThresholdSettings({ settings, onThresholdsChange }) {
-  const [yellow, setYellow] = useState(settings.thresholds.yellow)
-  const [critical, setCritical] = useState(settings.thresholds.critical)
-  const [leYellow, setLeYellow] = useState(settings.livedExperienceThresholds?.yellow ?? 12)
-  const [leCritical, setLeCritical] = useState(settings.livedExperienceThresholds?.critical ?? 22)
+  const [leYellow, setLeYellow] = useState(settings.livedExperienceThresholds?.yellow ?? 15)
+  const [leCritical, setLeCritical] = useState(settings.livedExperienceThresholds?.critical ?? 30)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
 
@@ -1437,10 +1438,7 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
     setSaving(true)
     setStatus('')
     try {
-      const updated = {
-        yellow: Number(yellow), critical: Number(critical),
-        leYellow: Number(leYellow), leCritical: Number(leCritical),
-      }
+      const updated = { leYellow: Number(leYellow), leCritical: Number(leCritical) }
       await saveThresholds(updated)
       onThresholdsChange(updated)
       setStatus('saved')
@@ -1455,38 +1453,19 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
   return (
     <div className="settings-section">
       <div className="ledger-head">
-        <div className="ledger-title">thresholds</div>
-      </div>
-      <div className="settings-field-row">
-        <div>
-          <label>yellow threshold</label>
-          <div className="settings-field-desc">day reads as overcast above this</div>
-        </div>
-        <input type="number" className="settings-number-input" value={yellow} min={1} onChange={e => setYellow(e.target.value)} />
-      </div>
-      <div className="settings-field-row">
-        <div>
-          <label>critical threshold</label>
-          <div className="settings-field-desc">eclipse triggers at or above this</div>
-        </div>
-        <input type="number" className="settings-number-input" value={critical} min={1} onChange={e => setCritical(e.target.value)} />
-      </div>
-
-      <div className="settings-divider" />
-      <div className="ledger-head" style={{ marginTop: '20px' }}>
         <div className="ledger-title">lived experience thresholds</div>
       </div>
       <div className="settings-field-row">
         <div>
-          <label>lived experience yellow threshold</label>
-          <div className="settings-field-desc">day reads as caution above this</div>
+          <label>yellow threshold</label>
+          <div className="settings-field-desc">day reads as caution when lived experience reaches this number</div>
         </div>
         <input type="number" className="settings-number-input" value={leYellow} min={1} onChange={e => setLeYellow(e.target.value)} />
       </div>
       <div className="settings-field-row">
         <div>
-          <label>lived experience critical threshold</label>
-          <div className="settings-field-desc">day reads as critical above this</div>
+          <label>critical threshold</label>
+          <div className="settings-field-desc">day reads as critical when lived experience reaches this number</div>
         </div>
         <input type="number" className="settings-number-input" value={leCritical} min={1} onChange={e => setLeCritical(e.target.value)} />
       </div>

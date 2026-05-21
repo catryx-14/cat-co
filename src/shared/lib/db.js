@@ -9,7 +9,7 @@ export async function loadSettings() {
   return {
     taxValue: s.autistic_tax?.value ?? 3,
     thresholds: { yellow: stored.yellow ?? 15, critical: stored.critical ?? 30 },
-    livedExperienceThresholds: { yellow: stored.leYellow ?? 12, critical: stored.leCritical ?? 22 },
+    livedExperienceThresholds: { yellow: stored.leYellow ?? 15, critical: stored.leCritical ?? 30 },
     taxStartDate: s.tax_start_date?.date ?? '2000-01-01',
   }
 }
@@ -150,7 +150,8 @@ export function dbToInternal(row) {
       text: e.summary ?? '',
       E: e.emotional ?? 0,
       S: e.sensory ?? 0,
-      V: e.veracity ?? 0,
+      P: e.predictability ?? e.veracity ?? 0,
+      M: e.masking ?? 0,
       X: e.ef ?? 0,
       delayed: e.delayed ?? false,
       flow: e.flow ?? false,
@@ -191,7 +192,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
   let evPoints = 0
   for (const e of userEvents) {
     if (e.cancelled) continue
-    evPoints += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    evPoints += (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
   }
   const taxPoints = taxApplies ? taxValue : 0
 
@@ -203,13 +204,14 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
                            (regulation.env || 0) + (regulation.body || 0)
 
   const events = userEvents.map(e => {
-    const cost = (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    const cost = (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
     const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.2) : null
     return {
       summary: e.text,
       emotional: e.E || 0,
       sensory: e.S || 0,
-      veracity: e.V || 0,
+      predictability: e.P || 0,
+      masking: e.M || 0,
       ef: e.X || 0,
       delayed: e.delayed || false,
       flow: e.flow || false,
@@ -224,7 +226,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
   const siFlowBonus = Math.round(
     events.reduce((sum, e) => {
       if (!e.siFlow) return sum
-      return sum + (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
+      return sum + (e.emotional || 0) + (e.sensory || 0) + (e.predictability ?? e.veracity ?? 0) + (e.masking || 0) + (e.ef || 0)
     }, 0) * 0.2
   )
 
@@ -292,7 +294,7 @@ function _recomputeEntry(d, openingBalance) {
   let evPoints = 0
   let siFlowCost = 0
   for (const e of d.events ?? []) {
-    const cost = (e.emotional || 0) + (e.sensory || 0) + (e.veracity || 0) + (e.ef || 0)
+    const cost = (e.emotional || 0) + (e.sensory || 0) + (e.predictability ?? e.veracity ?? 0) + (e.masking || 0) + (e.ef || 0)
     evPoints += cost
     if (e.siFlow) siFlowCost += cost
   }

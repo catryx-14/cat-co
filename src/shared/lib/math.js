@@ -27,7 +27,7 @@ export function eventPoints(userEvents) {
   let total = 0
   for (const e of userEvents) {
     if (e.cancelled) continue
-    total += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    total += (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
   }
   return total
 }
@@ -52,7 +52,7 @@ export function computeSIFlowBonus(userEvents) {
   let cost = 0
   for (const e of userEvents) {
     if (e.cancelled || !e.siFlow) continue
-    cost += (e.E || 0) + (e.S || 0) + (e.V || 0) + (e.X || 0)
+    cost += (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
   }
   return Math.round(cost * 0.2)
 }
