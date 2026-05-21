@@ -659,13 +659,15 @@ function HistoryList({ session, onSelect }) {
 
 // ── Root component ─────────────────────────────────────────────────────────
 
-export default function TrackerV2Room({ onHome }) {
-  const [session,  setSession]  = useState(null)
-  const [settings, setSettings] = useState(null)
+export default function TrackerV2Room({ onHome, session: sessionProp, settings: settingsProp }) {
+  const [session,  setSession]  = useState(sessionProp ?? null)
+  const [settings, setSettings] = useState(settingsProp ?? null)
   const [tab,      setTab]      = useState('today')   // 'today' | 'history'
   const [editDate, setEditDate] = useState(null)
 
+  // Only self-load if not passed as props (e.g. accessed via ?room=tracker-v2 directly)
   useEffect(() => {
+    if (sessionProp && settingsProp) return
     async function init() {
       const { data: { session: s } } = await supabase.auth.getSession()
       setSession(s)

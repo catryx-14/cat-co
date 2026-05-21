@@ -887,7 +887,8 @@ function Rail({ inRoom, current, onPick, onHome }) {
 function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey, efSuiteResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Capacity Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
+    // tracker-v2 branch: route the Capacity Tracker to the V2 test UI
+    return <TrackerV2Room onHome={onHome} session={session} settings={settings} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
