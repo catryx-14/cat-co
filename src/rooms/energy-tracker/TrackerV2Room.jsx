@@ -1,14 +1,16 @@
 /**
- * TrackerV2Room — Capacity Tracker backed by energy_events + energy_daily
+ * TrackerV2Room — Cat's exact tracker UI, backed by energy_events + energy_daily
  *
- * Test UI on the tracker-v2 branch.  Works exactly like the live tracker but
- * reads/writes the new normalised tables instead of the energy_entries JSON blob.
+ * Identical look and feel to TrackerRoom.  The only difference is the data layer:
+ * reads/writes energy_events + energy_daily instead of the energy_entries JSON blob.
  *
- * Access: add ?room=tracker-v2 to the app URL.
- * This file lives on the tracker-v2 branch — Cat's live tracker is unaffected.
+ * On the tracker-v2 branch, App.jsx routes the Capacity Tracker nav here.
+ * Master branch is unaffected.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 import {
   loadEntryV2,
@@ -18,17 +20,17 @@ import {
   dbToInternal,
   internalToDb,
 } from '../../shared/lib/db-v2.js'
-import { loadSettings } from '../../shared/lib/db.js'
+import { saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
 import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
 
-// ── Constants (same as live tracker) ──────────────────────────────────────
+// ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
 const AXIS_DEFS = [
-  { k: 'E', name: 'emotional',      label: 'E' },
-  { k: 'S', name: 'sensory',        label: 'S' },
-  { k: 'P', name: 'predictability', label: 'P' },
-  { k: 'M', name: 'masking',        label: 'M' },
-  { k: 'X', name: 'EF',             label: 'X' },
+  { k: 'E', name: 'emotional',      meaning: 'how strong was the emotional charge of this event?' },
+  { k: 'S', name: 'sensory',        meaning: 'how loud was the sensory load — sound, light, touch, demand on the body?' },
+  { k: 'P', name: 'predictability', meaning: 'did things go as expected? did people, systems, or situations behave the way they should?' },
+  { k: 'M', name: 'masking',        meaning: 'the cost of performing a version of yourself that isn\'t what\'s actually happening — managing a social situation while something else is going on inside' },
+  { k: 'X', name: 'EF',             meaning: 'how much executive function did this cost — planning, switching, holding it together?' },
 ]
 
 const REG_CHANNELS = [
@@ -39,35 +41,22 @@ const REG_CHANNELS = [
 ]
 
 const WARNING_SIGNS = [
-  { k: 'skin',    name: 'skin reactions' },
-  { k: 'vision',  name: 'vision reactions' },
-  { k: 'thought', name: 'thought reactions' },
-  { k: 'other',   name: 'other' },
+  { k: 'skin',    name: 'skin reactions',    glyph: '•' },
+  { k: 'vision',  name: 'vision reactions',  glyph: '◦' },
+  { k: 'thought', name: 'thought reactions', glyph: '◊' },
+  { k: 'other',   name: 'other',             glyph: '×' },
 ]
 
 const GOOD_SIGNS = [
-  { k: 'flow',   name: 'flow activity' },
-  { k: 'crisis', name: 'crisis recovery' },
+  { k: 'flow',   name: 'flow activity',   glyph: '~' },
+  { k: 'crisis', name: 'crisis recovery', glyph: '△' },
 ]
 
 const BUCKETS = ['late night', 'morning', 'midday', 'afternoon', 'evening', 'night']
 
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-}
-function yesterdayStr() {
-  const d = new Date(); d.setDate(d.getDate()-1)
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-}
-function fmtDate(s) {
-  const [y,m,d] = s.split('-').map(Number)
-  const mon = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][m-1]
-  return `${y} · ${mon} · ${String(d).padStart(2,'0')}`
-}
 function nowBucket() {
   const h = new Date().getHours()
-  if (h < 5) return 'late night'
+  if (h < 5)  return 'late night'
   if (h < 11) return 'morning'
   if (h < 14) return 'midday'
   if (h < 18) return 'afternoon'
@@ -75,385 +64,802 @@ function nowBucket() {
   return 'night'
 }
 
-// ── Inline styles ─────────────────────────────────────────────────────────
-
-const C = {
-  page:     { fontFamily: 'monospace', fontSize: 13, padding: 0, background: '#0f0f0f', color: '#e0e0e0', minHeight: '100vh' },
-  header:   { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#141414', borderBottom: '1px solid #222' },
-  title:    { fontSize: 16, fontWeight: 'bold', color: '#7eb8f7', flex: 1 },
-  badge:    { background: '#1e3a1e', color: '#4ade80', fontSize: 10, padding: '2px 6px', borderRadius: 3, letterSpacing: 0.5 },
-  btn:      { background: '#2a2a2a', border: '1px solid #444', color: '#ccc', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12 },
-  tabs:     { display: 'flex', borderBottom: '1px solid #222' },
-  tab:      { padding: '8px 20px', cursor: 'pointer', fontSize: 12, color: '#666', borderBottom: '2px solid transparent' },
-  tabA:     { color: '#7eb8f7', borderBottom: '2px solid #7eb8f7' },
-  body:     { padding: 16, maxWidth: 680 },
-
-  // Balance bar
-  balRow:   { display: 'flex', gap: 0, marginBottom: 16, background: '#1a1a1a', borderRadius: 6, overflow: 'hidden' },
-  balCell:  { flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid #222' },
-  balNum:   { fontSize: 22, fontWeight: 'bold', lineHeight: 1.1 },
-  balLbl:   { fontSize: 10, color: '#666', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  // Section
-  secHead:  { display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 20, marginBottom: 10 },
-  secTitle: { fontSize: 11, fontWeight: 'bold', color: '#aaa', textTransform: 'uppercase', letterSpacing: 1 },
-  secCount: { fontSize: 11, color: '#555' },
-
-  // Events
-  evRow:    { padding: '8px 0', borderBottom: '1px solid #1a1a1a' },
-  evTop:    { display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 3 },
-  evBucket: { color: '#555', fontSize: 11, minWidth: 72 },
-  evText:   { flex: 1, color: '#ddd' },
-  evPts:    { color: '#f4d49e', fontSize: 12 },
-  evAxes:   { display: 'flex', gap: 12, paddingLeft: 80, flexWrap: 'wrap' },
-  evAxis:   { display: 'flex', alignItems: 'center', gap: 4 },
-  evAxisLbl:{ color: '#555', fontSize: 11, width: 14 },
-  pip:      { width: 7, height: 7, borderRadius: 1, background: '#2a2a2a', cursor: 'pointer' },
-  pipOn:    { background: '#7eb8f7' },
-  evMeta:   { display: 'flex', gap: 8, paddingLeft: 80, marginTop: 4, flexWrap: 'wrap' },
-  evTag:    { fontSize: 10, padding: '1px 5px', borderRadius: 3, background: '#1a2a1a', color: '#4ade80' },
-  evTagSI:  { background: '#1a2040', color: '#7eb8f7' },
-  evTagDel: { background: '#2a2010', color: '#f4d49e' },
-  evTagCan: { background: '#2a1a1a', color: '#666' },
-  evEditBtn:{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, padding: '0 4px' },
-  evCancelled: { textDecoration: 'line-through', color: '#444' },
-
-  // Composer
-  compWrap: { marginTop: 10, background: '#141414', borderRadius: 6, padding: 10 },
-  compInput:{ width: '100%', background: '#1a1a1a', border: '1px solid #333', color: '#e0e0e0', padding: '6px 8px', borderRadius: 4, fontSize: 13, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace' },
-  compAxes: { display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' },
-  compMeta: { display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' },
-  compLabel:{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, color: '#888', cursor: 'pointer' },
-  compSave: { background: '#1e3a5a', border: 'none', color: '#7eb8f7', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12, marginLeft: 'auto' },
-  compSel:  { background: '#1a1a1a', border: '1px solid #333', color: '#888', fontSize: 11, padding: '2px 4px', borderRadius: 3 },
-  siBtnWrap:{ display: 'flex', gap: 4 },
-  siBtn:    { background: '#1a1a2a', border: '1px solid #333', color: '#666', fontSize: 10, padding: '2px 6px', borderRadius: 3, cursor: 'pointer' },
-  siBtnA:   { background: '#1a2040', border: '1px solid #7eb8f7', color: '#7eb8f7' },
-
-  // Regulation
-  regRow:   { display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
-  regChan:  { display: 'flex', flexDirection: 'column', gap: 4 },
-  regName:  { fontSize: 11, color: '#666', marginBottom: 2 },
-  regPips:  { display: 'flex', gap: 3 },
-  regPip:   { width: 10, height: 10, borderRadius: 2, background: '#2a2a2a', cursor: 'pointer' },
-  regPipOn: { background: '#2a9d8f' },
-
-  // Warning / good signs
-  signRow:  { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  signBtn:  { background: '#1a1a1a', border: '1px solid #333', color: '#555', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 11 },
-  signBtnA: { background: '#2d1a1a', border: '1px solid #f87171', color: '#f87171' },
-  goodBtnA: { background: '#1a2d1a', border: '1px solid #4ade80', color: '#4ade80' },
-
-  // Status
-  status:   { color: '#4ade80', fontSize: 11, marginLeft: 8 },
-  statusErr:{ color: '#f87171', fontSize: 11, marginLeft: 8 },
-
-  // Comparison banner
-  compare:  { margin: '16px 0 0', padding: '8px 12px', borderRadius: 6, fontSize: 11 },
-  compOk:   { background: '#1a2d1a', color: '#4ade80' },
-  compMiss: { background: '#2d1a1a', color: '#f87171' },
-
-  // History
-  histDay:  { display: 'flex', gap: 12, alignItems: 'baseline', padding: '6px 0', borderBottom: '1px solid #1a1a1a', cursor: 'pointer' },
-  histDate: { color: '#888', minWidth: 100, fontSize: 11 },
-  histNums: { display: 'flex', gap: 16, flex: 1 },
-  histNum:  { fontSize: 12 },
+function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
 }
 
-// ── Pip row (axis selectors) ────────────────────────────────────────────────
+function formatDateStr(dateStr) {
+  const [y, mo, day] = dateStr.split('-').map(Number)
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][mo - 1]
+  return `${y} · ${m} · ${String(day).padStart(2, '0')}`
+}
 
-function PipRow({ value, max = 6, onSet, color = '#7eb8f7', readOnly = false }) {
+// ─── AxisLabel ───
+function AxisLabel({ axisKey, className }) {
+  const [open, setOpen] = useState(false)
+  const def = AXIS_DEFS.find(a => a.k === axisKey)
   return (
-    <span style={{ display: 'flex', gap: 3 }}>
-      {Array.from({ length: max }, (_, i) => (
-        <span
-          key={i}
-          style={{ ...C.pip, ...(i < value ? { ...C.pipOn, background: color } : {}), cursor: readOnly ? 'default' : 'pointer' }}
-          onClick={readOnly ? undefined : () => onSet(i + 1 === value ? 0 : i + 1)}
-        />
-      ))}
+    <span className={`axis-label ${className || ''}`}
+          onClick={e => { e.stopPropagation(); setOpen(o => !o) }}>
+      {axisKey}
+      {open && (
+        <span className="axis-tip" onClick={e => e.stopPropagation()}>
+          <b>{def.name}</b>
+          <span>{def.meaning}</span>
+          <i className="dismiss" onClick={() => setOpen(false)}>tap to dismiss</i>
+        </span>
+      )}
     </span>
   )
 }
 
-// ── Composer ───────────────────────────────────────────────────────────────
-
-function Composer({ onAdd }) {
-  const [text,    setText]   = useState('')
-  const [axes,    setAxes]   = useState({ E: 0, S: 0, P: 0, M: 0, X: 0 })
-  const [delayed, setDelayed]= useState(false)
-  const [flow,    setFlow]   = useState(false)
-  const [siFlow,  setSiFlow] = useState(null)
-  const [bucket,  setBucket] = useState(nowBucket())
-
-  function reset() {
-    setText(''); setAxes({ E:0,S:0,P:0,M:0,X:0 }); setDelayed(false); setFlow(false); setSiFlow(null); setBucket(nowBucket())
-  }
-  function save() {
-    if (!text.trim()) return
-    onAdd({ id: 'e' + Date.now(), bucket, text: text.trim(), ...axes, delayed, flow, siFlow, cancelled: false })
-    reset()
-  }
-  function onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save() } }
-  function toggleSiFlow(opt) {
-    const next = siFlow === opt ? null : opt
-    setSiFlow(next)
-    if (next != null) setFlow(true)
-  }
-
-  const total = axes.E + axes.S + axes.P + axes.M + axes.X
-
-  return (
-    <div style={C.compWrap}>
-      <textarea
-        style={C.compInput}
-        placeholder="something happened…"
-        value={text}
-        onChange={e => setText(e.target.value)}
-        onKeyDown={onKey}
-        rows={2}
-      />
-      <div style={C.compAxes}>
-        {AXIS_DEFS.map(({ k, name, label }) => (
-          <div key={k} style={C.evAxis} title={name}>
-            <span style={{ ...C.evAxisLbl, color: axes[k] > 0 ? '#7eb8f7' : '#555' }}>{label}</span>
-            <PipRow value={axes[k]} onSet={v => setAxes(a => ({ ...a, [k]: v }))} />
-          </div>
-        ))}
-        {total > 0 && <span style={{ color: '#f4d49e', fontSize: 11, alignSelf: 'center' }}>{total}pts</span>}
-      </div>
-      <div style={C.compMeta}>
-        <select style={C.compSel} value={bucket} onChange={e => setBucket(e.target.value)}>
-          {BUCKETS.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-        <label style={C.compLabel}>
-          <input type="checkbox" checked={delayed} onChange={e => setDelayed(e.target.checked)} />
-          delayed
-        </label>
-        <label style={C.compLabel}>
-          <input type="checkbox" checked={flow} onChange={e => setFlow(e.target.checked)} />
-          flow
-        </label>
-        <span style={{ color: '#666', fontSize: 11 }}>SI flow:</span>
-        <div style={C.siBtnWrap}>
-          {['present', 'pulled'].map(opt => (
-            <button key={opt} style={{ ...C.siBtn, ...(siFlow === opt ? C.siBtnA : {}) }}
-              onClick={() => toggleSiFlow(opt)}>{opt}</button>
-          ))}
-        </div>
-        <button style={C.compSave} onClick={save}>save</button>
-      </div>
-    </div>
-  )
-}
-
-// ── EventRow ───────────────────────────────────────────────────────────────
-
+// ─── EventRow ───
 function EventRow({ e, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false)
-  const [draft,   setDraft]   = useState(e)
-  useEffect(() => { setDraft(e) }, [e])
-
-  const total = (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
+  const [draft, setDraft] = useState(e)
+  useEffect(() => setDraft(e), [e])
 
   if (e.system) {
+    const axes = AXIS_DEFS.map(d => ({ ...d, val: e[d.k] }))
+    const anyLit = axes.some(a => a.val > 0)
     return (
-      <div style={C.evRow}>
-        <div style={C.evTop}>
-          <span style={C.evBucket}>{e.bucket}</span>
-          <span style={{ ...C.evText, color: e.cancelled ? '#333' : '#555', fontStyle: 'italic', textDecoration: e.cancelled ? 'line-through' : 'none' }}>
+      <div className="event system" title="system entry — controlled by flow state">
+        <div className="event-time">{e.bucket}</div>
+        <div className="event-body">
+          <div className={`event-text ${e.cancelled ? 'cancelled' : ''}`}>
             {e.text}
-          </span>
-          {!e.cancelled && <span style={{ ...C.evPts, color: '#666' }}>+{(e.S||0)}pts</span>}
+            <span className="event-tag system-tag">~ daily</span>
+          </div>
+          {anyLit && !e.cancelled && (
+            <div className="event-axes">
+              {axes.map(a => (
+                <div key={a.k} className={`axis axis-${a.k} ${a.val > 0 ? 'lit' : ''}`}>
+                  <AxisLabel axisKey={a.k} />
+                  <span className="pips">
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <span key={i} className={`pip ${i < a.val ? 'on' : ''}`} />
+                    ))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
   if (editing) {
+    const setAxis = (k, v) => setDraft(d => ({ ...d, [k]: d[k] === v ? 0 : v }))
+    const save = () => { onUpdate(draft); setEditing(false) }
+    const cancel = () => { setDraft(e); setEditing(false) }
     return (
-      <div style={{ ...C.evRow, background: '#141414', borderRadius: 4, padding: '8px 10px' }}>
-        <textarea
-          style={{ ...C.compInput, marginBottom: 8 }}
-          value={draft.text}
-          onChange={ev => setDraft(d => ({ ...d, text: ev.target.value }))}
-          rows={2}
-          autoFocus
-        />
-        <div style={C.compAxes}>
-          {AXIS_DEFS.map(({ k, name, label }) => (
-            <div key={k} style={C.evAxis} title={name}>
-              <span style={{ ...C.evAxisLbl, color: draft[k] > 0 ? '#7eb8f7' : '#555' }}>{label}</span>
-              <PipRow value={draft[k]} onSet={v => setDraft(d => ({ ...d, [k]: v }))} />
-            </div>
-          ))}
-        </div>
-        <div style={{ ...C.compMeta, marginTop: 8 }}>
-          <select style={C.compSel} value={draft.bucket} onChange={ev => setDraft(d => ({ ...d, bucket: ev.target.value }))}>
+      <div className="event editing">
+        <div className="event-time">
+          <select value={draft.bucket} onChange={ev => setDraft(d => ({ ...d, bucket: ev.target.value }))}>
             {BUCKETS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <label style={C.compLabel}>
-            <input type="checkbox" checked={!!draft.delayed} onChange={ev => setDraft(d => ({ ...d, delayed: ev.target.checked }))} />
-            delayed
-          </label>
-          <label style={C.compLabel}>
-            <input type="checkbox" checked={!!draft.flow} onChange={ev => setDraft(d => ({ ...d, flow: ev.target.checked }))} />
-            flow
-          </label>
-          <label style={C.compLabel}>
-            <input type="checkbox" checked={!!draft.cancelled} onChange={ev => setDraft(d => ({ ...d, cancelled: ev.target.checked }))} />
-            cancelled
-          </label>
-          <div style={C.siBtnWrap}>
-            {['present', 'pulled'].map(opt => (
-              <button key={opt}
-                style={{ ...C.siBtn, ...(draft.siFlow === opt ? C.siBtnA : {}) }}
-                onClick={() => {
-                  const next = draft.siFlow === opt ? null : opt
-                  setDraft(d => ({ ...d, siFlow: next, flow: next != null ? true : d.flow }))
-                }}>{opt}</button>
+        </div>
+        <div className="event-body">
+          <textarea
+            className="event-edit-input"
+            value={draft.text}
+            onChange={ev => setDraft(d => ({ ...d, text: ev.target.value }))}
+            rows={2}
+            autoFocus
+          />
+          <div className="event-axes">
+            {AXIS_DEFS.map(a => (
+              <div key={a.k} className={`axis axis-${a.k} ${draft[a.k] > 0 ? 'lit' : ''}`}>
+                <AxisLabel axisKey={a.k} />
+                <span className="pips">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <span key={i}
+                          className={`pip editable ${i < draft[a.k] ? 'on' : ''}`}
+                          onClick={() => setAxis(a.k, i + 1)} />
+                  ))}
+                </span>
+              </div>
             ))}
           </div>
-          <button style={{ ...C.evEditBtn, color: '#f87171' }} onClick={() => { if (window.confirm('delete?')) onDelete(e.id) }}>delete</button>
-          <button style={C.evEditBtn} onClick={() => { setDraft(e); setEditing(false) }}>cancel</button>
-          <button style={{ ...C.compSave }} onClick={() => { onUpdate(draft); setEditing(false) }}>save</button>
+          <div className="event-edit-meta">
+            <label><input type="checkbox" checked={draft.flow} onChange={ev => setDraft(d => ({ ...d, flow: ev.target.checked }))} />flow</label>
+            <label><input type="checkbox" checked={draft.delayed} onChange={ev => setDraft(d => ({ ...d, delayed: ev.target.checked }))} />delayed</label>
+            <label><input type="checkbox" checked={draft.cancelled} onChange={ev => setDraft(d => ({ ...d, cancelled: ev.target.checked }))} />cancelled</label>
+            <span className="event-si-wrap">
+              <span className="event-si-label">SI flow</span>
+              <span className="event-si-btns">
+                {['present', 'pulled'].map(opt => (
+                  <button key={opt}
+                    className={`event-si-btn ${draft.siFlow === opt ? 'active' : ''}`}
+                    onClick={() => setDraft(d => {
+                      const next = d.siFlow === opt ? null : opt
+                      return { ...d, siFlow: next, flow: next != null ? true : d.flow }
+                    })}>
+                    {opt}
+                  </button>
+                ))}
+              </span>
+            </span>
+            <button className="event-edit-btn delete" onClick={() => { if (window.confirm('delete this event?')) onDelete(e.id) }}>delete</button>
+            <button className="event-edit-btn cancel" onClick={cancel}>cancel</button>
+            <button className="event-edit-btn save" onClick={save}>save</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const axes = AXIS_DEFS.map(d => ({ ...d, val: e[d.k] }))
+  const anyLit = axes.some(a => a.val > 0)
+  return (
+    <div className="event" onClick={() => setEditing(true)} title="click to edit">
+      <div className="event-time">{e.bucket}</div>
+      <div className="event-body">
+        <div className={`event-text ${e.cancelled ? 'cancelled' : ''}`}>
+          {e.text}
+          {e.flow && <span className="event-tag flow">~ flow</span>}
+          {e.delayed && <span className="event-tag">~ delayed</span>}
+          {e.siFlow && <span className="event-tag si-flow">⟳ SI {e.siFlow}</span>}
+          <span className="event-edit-hint">edit</span>
+        </div>
+        {anyLit && (
+          <div className="event-axes" onClick={ev => ev.stopPropagation()}>
+            {axes.map(a => (
+              <div key={a.k} className={`axis axis-${a.k} ${a.val > 0 ? 'lit' : ''}`}>
+                <AxisLabel axisKey={a.k} />
+                <span className="pips">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <span key={i} className={`pip ${i < a.val ? 'on' : ''}`} />
+                  ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Composer ───
+function Composer({ onAdd }) {
+  const [text, setText] = useState('')
+  const [axes, setAxes] = useState({ E: 0, S: 0, P: 0, M: 0, X: 0 })
+  const [delayed, setDelayed] = useState(false)
+  const [flow, setFlow] = useState(false)
+  const [siFlow, setSiFlow] = useState(null)
+  const [bucket, setBucket] = useState(nowBucket())
+
+  const set = (k, v) => setAxes(a => ({ ...a, [k]: a[k] === v ? 0 : v }))
+  function reset() {
+    setText(''); setAxes({ E: 0, S: 0, P: 0, M: 0, X: 0 })
+    setDelayed(false); setFlow(false); setSiFlow(null); setBucket(nowBucket())
+  }
+  function save() {
+    if (!text.trim()) return
+    onAdd({ id: 'e' + Date.now(), bucket, text: text.trim(), ...axes, delayed, flow, siFlow, cancelled: false })
+    reset()
+  }
+  function onKey(ev) {
+    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); save() }
+  }
+
+  return (
+    <div className="composer">
+      <textarea
+        className="composer-input"
+        placeholder="something happened…"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={onKey}
+        rows={1}
+      />
+      <div className="composer-axes">
+        {AXIS_DEFS.map(({ k }) => (
+          <div key={k} className={`composer-axis axis-${k} ${axes[k] > 0 ? 'lit' : ''}`}>
+            <AxisLabel axisKey={k} className="name" />
+            <span className="pips">
+              {Array.from({ length: 6 }, (_, i) => (
+                <span key={i}
+                      className={`pip ${i < axes[k] ? 'on' : ''}`}
+                      onClick={() => set(k, i + 1)} />
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="composer-meta">
+        <label className="bucket-pick">
+          <span>when</span>
+          <select value={bucket} onChange={e => setBucket(e.target.value)}>
+            {BUCKETS.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </label>
+        <label><input type="checkbox" checked={delayed} onChange={e => setDelayed(e.target.checked)} />delayed reaction</label>
+        <label><input type="checkbox" checked={flow} onChange={e => setFlow(e.target.checked)} />flow state</label>
+        <span className="event-si-wrap">
+          <span className="event-si-label">SI flow</span>
+          <span className="event-si-btns">
+            {['present', 'pulled'].map(opt => (
+              <button key={opt}
+                className={`event-si-btn ${siFlow === opt ? 'active' : ''}`}
+                onClick={() => {
+                  const next = siFlow === opt ? null : opt
+                  setSiFlow(next)
+                  if (next != null) setFlow(true)
+                }}>
+                {opt}
+              </button>
+            ))}
+          </span>
+        </span>
+        <button className="save" onClick={save}>save</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── RegChannel ───
+function RegChannel({ chan, value, onSet }) {
+  const useDial = chan.cap > 8
+  if (useDial) {
+    const pct = value / chan.cap
+    const r = 22, c = 2 * Math.PI * r
+    return (
+      <div className="reg-channel reg-dial-wrap">
+        <div className="reg-dial">
+          <svg width="56" height="56" viewBox="0 0 56 56">
+            <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(120,170,220,0.18)" strokeWidth="3"/>
+            <circle cx="28" cy="28" r={r} fill="none"
+              stroke="var(--reg-blue)" strokeWidth="3"
+              strokeDasharray={c}
+              strokeDashoffset={c * (1 - pct)}
+              transform="rotate(-90 28 28)"
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset .5s ease' }}
+            />
+            <text x="28" y="32" textAnchor="middle"
+              fontFamily="Cagliostro, serif" fontSize="16"
+              fill="var(--ink)">{value}</text>
+          </svg>
+          <div className="reg-dial-buttons">
+            <button onClick={() => onSet(Math.max(0, value - 1))} aria-label="decrement">−</button>
+            <button onClick={() => onSet(Math.min(chan.cap, value + 1))} aria-label="increment">+</button>
+          </div>
+        </div>
+        <div className="reg-name">{chan.name}</div>
+        <div className="reg-cap">/{chan.cap}</div>
+      </div>
+    )
+  }
+  return (
+    <div className="reg-channel">
+      <div className="reg-pips">
+        {Array.from({ length: chan.cap }, (_, i) => (
+          <span key={i}
+                className={`reg-pip ${i < value ? 'on' : ''}`}
+                onClick={() => onSet(i + 1 === value ? i : i + 1)}
+                title={`${chan.name}: ${i + 1}/${chan.cap}`} />
+        ))}
+      </div>
+      <div className="reg-name">{chan.name}</div>
+      <div className="reg-cap">{value}/{chan.cap}</div>
+    </div>
+  )
+}
+
+// ─── Regulation ───
+function Regulation({ values, onChange, recovery, onRecovery, goodSigns, onGood }) {
+  return (
+    <section className="reg-section">
+      <div className="ledger-head">
+        <div className="ledger-title">regulation</div>
+        <label className="recovery-toggle">
+          <input type="checkbox" checked={recovery} onChange={e => onRecovery(e.target.checked)} />
+          <span>recovery sleep <i>(beyond regular sleep)</i></span>
+        </label>
+      </div>
+      <div className="reg-row">
+        {REG_CHANNELS.map(c => (
+          <RegChannel key={c.k} chan={c} value={values[c.k] || 0}
+            onSet={v => onChange(c.k, v)} />
+        ))}
+      </div>
+      <div className="good-signs-row">
+        {GOOD_SIGNS.map(s => (
+          <button key={s.k}
+                  className={`signal good-signal ${goodSigns[s.k] ? 'lit' : ''}`}
+                  onClick={() => onGood(s.k)}
+                  title={s.name}>
+            <span className="signal-glyph">{s.glyph}</span>
+            <span className="signal-name">{s.name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── WarningSigns ───
+function WarningSigns({ flags, onToggle }) {
+  return (
+    <section className="signals-section">
+      <div className="ledger-head">
+        <div className="ledger-title">warning signs</div>
+        <div className="ledger-count">{Object.values(flags).filter(Boolean).length} marked</div>
+      </div>
+      <div className="signals-row">
+        {WARNING_SIGNS.map(s => (
+          <button key={s.k}
+                  className={`signal ${flags[s.k] ? 'lit' : ''}`}
+                  onClick={() => onToggle(s.k)}
+                  title={s.name}>
+            <span className="signal-glyph">{s.glyph}</span>
+            <span className="signal-name">{s.name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── MeltdownSection ───
+function MeltdownSection({ active, onToggle }) {
+  return (
+    <section className="signals-section">
+      <div className="ledger-head">
+        <div className="ledger-title">meltdown / shutdown</div>
+      </div>
+      <div className="signals-row">
+        <button className={`signal ${active ? 'lit' : ''}`} onClick={onToggle}>
+          <span className="signal-glyph">▽</span>
+          <span className="signal-name">{active ? 'yes' : 'no'}</span>
+        </button>
+      </div>
+    </section>
+  )
+}
+
+// ─── Sky helpers ───────────────────────────────────────────────────────────────
+
+function polarXY(cx, cy, angleDeg, r) {
+  const rad = (angleDeg - 90) * Math.PI / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function sparklePath(cx, cy, outer, inner) {
+  const pts = []
+  for (let i = 0; i < 8; i++) {
+    const rad = (i * 45 - 90) * Math.PI / 180
+    const r = i % 2 === 0 ? outer : inner
+    pts.push(`${(cx + r * Math.cos(rad)).toFixed(2)},${(cy + r * Math.sin(rad)).toFixed(2)}`)
+  }
+  return `M ${pts[0]} ` + pts.slice(1).map(p => `L ${p}`).join(' ') + ' Z'
+}
+
+const SKY_COLORS = {
+  peak: {
+    id: 'sky-gold-v2',
+    ringStops: [
+      { o: '0%',   c: '#1c0e00' }, { o: '14%',  c: '#6a3e04' },
+      { o: '30%',  c: '#a8680e' }, { o: '48%',  c: '#d4901a' },
+      { o: '60%',  c: '#f4cc3a' }, { o: '67%',  c: '#fff8a0' },
+      { o: '76%',  c: '#e0b028' }, { o: '89%',  c: '#7a4a08' },
+      { o: '100%', c: '#1c0e00' },
+    ],
+    glowColor: '#fffce8', glowDuration: 28,
+    barMid: '#d4a020', number: '#d4a020', star: '#e8c040',
+  },
+  le: {
+    id: 'sky-silver-v2',
+    ringStops: [
+      { o: '0%',   c: '#18182a' }, { o: '14%',  c: '#50506a' },
+      { o: '30%',  c: '#9898b0' }, { o: '48%',  c: '#c8c8dc' },
+      { o: '60%',  c: '#e8e8f4' }, { o: '67%',  c: '#ffffff' },
+      { o: '76%',  c: '#cccce0' }, { o: '89%',  c: '#606078' },
+      { o: '100%', c: '#1c1c2c' },
+    ],
+    glowColor: '#ffffff', glowDuration: 38,
+    barMid: '#c8c8d8', number: '#e0e0f0', star: '#d8d8ec',
+  },
+  reg: {
+    id: 'sky-teal-v2',
+    ringStops: [
+      { o: '0%',   c: '#061e1a' }, { o: '14%',  c: '#1a5e52' },
+      { o: '30%',  c: '#228878' }, { o: '48%',  c: '#30aa92' },
+      { o: '60%',  c: '#50d0b0' }, { o: '67%',  c: '#a8fff0' },
+      { o: '76%',  c: '#3ab898' }, { o: '89%',  c: '#1a6055' },
+      { o: '100%', c: '#061e1a' },
+    ],
+    glowColor: '#c8fff4', glowDuration: 50,
+    barMid: '#2a9d8f', number: '#4ab8a0', star: '#40c8a8',
+  },
+}
+
+const PEAK_STARS = [
+  { a: 18,  r: 106, sz: 7,   t: 's' }, { a: 52,  r: 98,  sz: 5,   t: 's' },
+  { a: 138, r: 104, sz: 6.5, t: 's' }, { a: 195, r: 109, sz: 5.5, t: 's' },
+  { a: 262, r: 96,  sz: 7.5, t: 's' }, { a: 305, r: 104, sz: 4.5, t: 's' },
+  { a: 344, r: 108, sz: 6,   t: 's' },
+  { a: 5,   r: 95,  sz: 2,   t: 'd' }, { a: 35,  r: 113, sz: 1.5, t: 'd' },
+  { a: 72,  r: 103, sz: 2,   t: 'd' }, { a: 112, r: 99,  sz: 1.5, t: 'd' },
+  { a: 163, r: 115, sz: 2,   t: 'd' }, { a: 228, r: 106, sz: 1.5, t: 'd' },
+  { a: 282, r: 113, sz: 2,   t: 'd' }, { a: 332, r: 98,  sz: 1.5, t: 'd' },
+]
+const LE_STARS = [
+  { a: 12,  r: 137, sz: 8.5, t: 's' }, { a: 45,  r: 126, sz: 6,   t: 's' },
+  { a: 82,  r: 140, sz: 7.5, t: 's' }, { a: 118, r: 130, sz: 5.5, t: 's' },
+  { a: 158, r: 141, sz: 7,   t: 's' }, { a: 205, r: 132, sz: 5,   t: 's' },
+  { a: 248, r: 136, sz: 8,   t: 's' }, { a: 292, r: 129, sz: 6,   t: 's' },
+  { a: 328, r: 134, sz: 6.5, t: 's' },
+  { a: 3,   r: 124, sz: 2,   t: 'd' }, { a: 28,  r: 142, sz: 1.5, t: 'd' },
+  { a: 63,  r: 132, sz: 2,   t: 'd' }, { a: 100, r: 146, sz: 1.5, t: 'd' },
+  { a: 138, r: 126, sz: 2,   t: 'd' }, { a: 180, r: 136, sz: 1.5, t: 'd' },
+  { a: 222, r: 144, sz: 2,   t: 'd' }, { a: 268, r: 124, sz: 1.5, t: 'd' },
+  { a: 310, r: 139, sz: 2,   t: 'd' }, { a: 350, r: 131, sz: 1.5, t: 'd' },
+]
+const REG_STARS = [
+  { a: 32,  r: 105, sz: 6.5, t: 's' }, { a: 78,  r: 99,  sz: 5,   t: 's' },
+  { a: 122, r: 109, sz: 7.5, t: 's' }, { a: 172, r: 103, sz: 5.5, t: 's' },
+  { a: 218, r: 111, sz: 7,   t: 's' }, { a: 268, r: 95,  sz: 4.5, t: 's' },
+  { a: 315, r: 106, sz: 6,   t: 's' },
+  { a: 15,  r: 99,  sz: 2,   t: 'd' }, { a: 55,  r: 115, sz: 1.5, t: 'd' },
+  { a: 100, r: 104, sz: 2,   t: 'd' }, { a: 148, r: 96,  sz: 1.5, t: 'd' },
+  { a: 195, r: 114, sz: 2,   t: 'd' }, { a: 245, r: 105, sz: 1.5, t: 'd' },
+  { a: 292, r: 111, sz: 2,   t: 'd' }, { a: 340, r: 101, sz: 1.5, t: 'd' },
+]
+
+const PEAK_MOB_STARS = [
+  { x: 9,  y: 6,  sz: 5,   t: 's', op: 0.72 }, { x: 26, y: 11, sz: 3,   t: 's', op: 0.58 },
+  { x: 18, y: 15, sz: 1.8, t: 'd', op: 0.40 }, { x: 31, y: 29, sz: 4.5, t: 's', op: 0.65 },
+  { x: 12, y: 38, sz: 1.5, t: 'd', op: 0.32 }, { x: 7,  y: 47, sz: 6,   t: 's', op: 0.75 },
+  { x: 28, y: 53, sz: 2,   t: 'd', op: 0.50 }, { x: 20, y: 61, sz: 3.5, t: 's', op: 0.60 },
+  { x: 9,  y: 72, sz: 1.5, t: 'd', op: 0.38 }, { x: 25, y: 80, sz: 4,   t: 's', op: 0.68 },
+  { x: 15, y: 87, sz: 1.5, t: 'd', op: 0.42 },
+]
+const LE_MOB_STARS = [
+  { x: 22, y: 4,  sz: 4,   t: 's', op: 0.60 }, { x: 9,  y: 13, sz: 1.5, t: 'd', op: 0.38 },
+  { x: 29, y: 20, sz: 5.5, t: 's', op: 0.70 }, { x: 14, y: 25, sz: 3,   t: 's', op: 0.52 },
+  { x: 31, y: 35, sz: 1.8, t: 'd', op: 0.44 }, { x: 8,  y: 49, sz: 5,   t: 's', op: 0.78 },
+  { x: 24, y: 58, sz: 2,   t: 'd', op: 0.36 }, { x: 17, y: 65, sz: 4.5, t: 's', op: 0.63 },
+  { x: 7,  y: 74, sz: 1.5, t: 'd', op: 0.45 }, { x: 27, y: 80, sz: 3.5, t: 's', op: 0.55 },
+  { x: 13, y: 88, sz: 2,   t: 'd', op: 0.40 },
+]
+const REG_MOB_STARS = [
+  { x: 17, y: 3,  sz: 3.5, t: 's', op: 0.65 }, { x: 28, y: 12, sz: 5,   t: 's', op: 0.72 },
+  { x: 8,  y: 18, sz: 1.8, t: 'd', op: 0.40 }, { x: 23, y: 23, sz: 4,   t: 's', op: 0.55 },
+  { x: 11, y: 37, sz: 1.5, t: 'd', op: 0.35 }, { x: 30, y: 44, sz: 5.5, t: 's', op: 0.75 },
+  { x: 16, y: 54, sz: 2,   t: 'd', op: 0.48 }, { x: 7,  y: 62, sz: 3,   t: 's', op: 0.58 },
+  { x: 26, y: 69, sz: 1.5, t: 'd', op: 0.38 }, { x: 19, y: 77, sz: 4.5, t: 's', op: 0.68 },
+  { x: 29, y: 86, sz: 1.8, t: 'd', op: 0.42 },
+]
+
+// ─── SkyOrb ───
+function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animClass }) {
+  const [hov, setHov] = useState(false)
+  const [vis, setVis] = useState(false)
+
+  useEffect(() => {
+    let t
+    if (hov) { t = setTimeout(() => setVis(true), 600) }
+    else { setVis(false) }
+    return () => clearTimeout(t)
+  }, [hov])
+
+  const pad = 30
+  const svgSize = size + pad * 2
+  const cx = svgSize / 2, cy = svgSize / 2
+  const outerR = size * 0.455, innerR = size * 0.395
+
+  return (
+    <div className={`sky-orb-wrap${animClass ? ' ' + animClass : ''}`}
+         style={{ height: size, cursor: onClick ? 'pointer' : undefined }}
+         onClick={onClick}
+         onMouseEnter={() => setHov(true)}
+         onMouseLeave={() => setHov(false)}>
+      <div className="sky-orb" style={{ width: size, height: size }}>
+        <svg width={svgSize} height={svgSize}
+          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={`${colors.id}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+              {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
+            </linearGradient>
+            <filter id={`${colors.id}-glow`} x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <filter id={`${colors.id}-travel`} x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="wide" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4"  result="tight" />
+              <feMerge><feMergeNode in="wide" /><feMergeNode in="tight" /></feMerge>
+            </filter>
+          </defs>
+          <circle cx={cx} cy={cy} r={outerR} fill="none"
+            stroke={`url(#${colors.id}-grad)`} strokeWidth="2"
+            filter={`url(#${colors.id}-glow)`} />
+          <circle cx={cx} cy={cy} r={innerR} fill="none"
+            stroke={`url(#${colors.id}-grad)`} strokeWidth="1" opacity="0.5" />
+          <circle cx={cx} cy={cy} r={outerR} fill="none"
+            stroke={colors.glowColor} strokeWidth="6"
+            strokeDasharray={`3 ${(2 * Math.PI * outerR - 3).toFixed(1)}`}
+            strokeLinecap="round"
+            filter={`url(#${colors.id}-travel)`}
+            opacity="0.58" className="sky-ring-glow"
+            style={{ animationDuration: `${colors.glowDuration}s` }} />
+          {stars.map((s, i) => {
+            const { x, y } = polarXY(cx, cy, s.a, s.r)
+            const delay = `-${((i * 1.13 + s.a * 0.041) % 5.7).toFixed(2)}s`
+            const dur   = `${(1.6 + ((i * 0.67 + s.sz * 0.55) % 3.2)).toFixed(2)}s`
+            return s.t === 'd'
+              ? <circle key={i} className="sky-star" cx={x} cy={y} r={s.sz}
+                  fill={colors.star} style={{ animationDelay: delay, animationDuration: dur }} />
+              : <path key={i} className="sky-star" d={sparklePath(x, y, s.sz, s.sz * 0.18)}
+                  fill={colors.star} style={{ animationDelay: delay, animationDuration: dur }} />
+          })}
+        </svg>
+        <div className="sky-orb-inner">
+          <div className="sky-orb-num" style={{ fontSize: size > 230 ? '68px' : '50px', color: colors.number }}>
+            {numStr}
+          </div>
+          <div className="sky-orb-lbl">{label}</div>
+        </div>
+      </div>
+      <div className={`sky-orb-detail${vis ? ' sky-orb-detail--show' : ''}`}>{detailNode}</div>
+    </div>
+  )
+}
+
+// ─── SkyNavOrb ───
+function SkyNavOrb({ colors, numStr, active, onClick }) {
+  const size = 48, pad = 10
+  const svgSize = size + pad * 2
+  const cx = svgSize / 2, cy = svgSize / 2
+  const outerR = size * 0.455
+  return (
+    <button className={`sky-nav-orb${active ? ' sky-nav-orb--active' : ''}`} onClick={onClick}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={svgSize} height={svgSize}
+          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={`${colors.id}-nav-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+              {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
+            </linearGradient>
+            <filter id={`${colors.id}-nav-glow`} x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <circle cx={cx} cy={cy} r={outerR} fill="none"
+            stroke={`url(#${colors.id}-nav-grad)`} strokeWidth="1.5"
+            filter={`url(#${colors.id}-nav-glow)`} />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: '"Cagliostro", serif', fontSize: '15px', lineHeight: 1, color: colors.number }}>
+            {numStr}
+          </span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+// ─── SkyMobileRow ───
+function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick }) {
+  const BAR_H = 92, SVG_W = 34
+  return (
+    <div className="sky-mob-row" onClick={onClick} style={{ cursor: onClick ? 'pointer' : undefined }}>
+      <div className="sky-mob-bar-col">
+        <svg width={SVG_W} height={BAR_H} style={{ overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={`${colors.id}-vbar`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor={colors.barMid} stopOpacity="0" />
+              <stop offset="22%"  stopColor={colors.barMid} stopOpacity="1" />
+              <stop offset="78%"  stopColor={colors.barMid} stopOpacity="1" />
+              <stop offset="100%" stopColor={colors.barMid} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="5" height={BAR_H} fill={`url(#${colors.id}-vbar)`} rx="2" />
+          {mobileStars.map((s, i) =>
+            s.t === 'd'
+              ? <circle key={i} cx={s.x} cy={s.y} r={s.sz} fill={colors.star} opacity={s.op} />
+              : <path key={i} d={sparklePath(s.x, s.y, s.sz, s.sz * 0.18)} fill={colors.star} opacity={s.op} />
+          )}
+        </svg>
+      </div>
+      <div className="sky-mob-content">
+        <div className="sky-mob-num-wrap">
+          <div className="sky-orb-lbl sky-mob-lbl" style={{ color: colors.number, opacity: 0.75 }}>{label}</div>
+          <div className="sky-mob-num" style={{ color: colors.number }}>{numStr}</div>
+        </div>
+        <div className="sky-mob-detail">{detailNode}</div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Sky ───
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus }) {
+  const [expanding, setExpanding] = useState(null)
+
+  function handleOrbClick(key) {
+    if (!onOrb) return
+    setExpanding(key)
+    setTimeout(() => { setExpanding(null); onOrb(key) }, 380)
+  }
+
+  const { taxValue, taxStartDate } = settings
+  const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
+  const taxPoints  = taxApplies ? taxValue : 0
+
+  const axisSums = { E: 0, S: 0, P: 0, M: 0, X: 0 }
+  for (const e of userEvents) {
+    if (e.cancelled) continue
+    axisSums.E += e.E || 0; axisSums.S += e.S || 0; axisSums.P += e.P || 0
+    axisSums.M += e.M || 0; axisSums.X += e.X || 0
+  }
+  const evPts    = axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X
+  const peak     = openingBalance + evPts + taxPoints
+  const activeReg = nonSleepRegTotal(regulation)
+  const siFlowBonus = Math.round(
+    userEvents.reduce((sum, e) => {
+      if (!e.siFlow || e.cancelled) return sum
+      return sum + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
+    }, 0) * 0.2
+  )
+  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
+  const livedExperience = Math.max(0, peak - activeReg - siFlowBonus)
+  const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
+
+  const PEAK_BREAKDOWN = [
+    { k: 'E', name: 'emotional' }, { k: 'S', name: 'sensory' },
+    { k: 'P', name: 'predictability' }, { k: 'M', name: 'masking' }, { k: 'X', name: 'EF' },
+  ]
+
+  const peakDetail = (
+    <div className="sky-detail sky-detail--grid">
+      {PEAK_BREAKDOWN.map(({ k, name }) => (
+        <div key={k} className={`sky-det-cell${highestAxis[0] === k && highestAxis[1] > 0 ? ' sky-det-amber' : ''}`}>
+          <span>{name}</span><span>{Math.round(axisSums[k])}</span>
+        </div>
+      ))}
+    </div>
+  )
+  const leDetail = (
+    <div className="sky-detail sky-detail--le">
+      <span>{Math.round(peak)} peak</span>
+      <span className="sky-det-sep">·</span>
+      <span>{Math.round(activeReg)} reg</span>
+      {siFlowActive && <>
+        <span className="sky-det-sep">·</span>
+        <span style={{ color: '#5abf7a' }}>−{siFlowBonus} SI</span>
+      </>}
+    </div>
+  )
+  const regDetail = (
+    <div className="sky-detail sky-detail--grid">
+      {REG_CHANNELS.map(c => {
+        const cur = regulation[c.k] || 0
+        const under = (c.cap - cur) > 2
+        return (
+          <div key={c.k} className={`sky-det-cell${under ? ' sky-det-teal' : ''}`}>
+            <span>{c.name}</span><span>{Math.round(cur)}/{c.cap}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  const peakStr = String(Math.round(peak))
+  const leStr   = String(Math.round(livedExperience))
+  const regStr  = String(Math.round(activeReg))
+
+  if (drillThrough) {
+    return (
+      <div className="sky sky--drill">
+        <div className="sky-nav">
+          <SkyNavOrb colors={SKY_COLORS.peak} numStr={peakStr}
+            active={drillThrough === 'peak'}
+            onClick={() => drillThrough === 'peak' ? onClose?.() : onOrb?.('peak')} />
+          <SkyNavOrb colors={SKY_COLORS.le} numStr={leStr}
+            active={drillThrough === 'le'}
+            onClick={() => drillThrough === 'le' ? onClose?.() : onOrb?.('le')} />
+          <SkyNavOrb colors={SKY_COLORS.reg} numStr={regStr}
+            active={drillThrough === 'reg'}
+            onClick={() => drillThrough === 'reg' ? onClose?.() : onOrb?.('reg')} />
+          {saveStatus && <span className="sky-nav-status">{saveStatus}</span>}
         </div>
       </div>
     )
   }
 
   return (
-    <div style={C.evRow} onClick={() => setEditing(true)} title="click to edit" role="button">
-      <div style={C.evTop}>
-        <span style={C.evBucket}>{e.bucket}</span>
-        <span style={{ ...C.evText, ...(e.cancelled ? C.evCancelled : {}) }}>{e.text}</span>
-        {!e.cancelled && total > 0 && <span style={C.evPts}>+{total}pts</span>}
-        <button style={C.evEditBtn} onClick={ev => { ev.stopPropagation(); setEditing(true) }}>edit</button>
+    <div className="sky">
+      <div className="sky-desk">
+        <SkyOrb size={200} colors={SKY_COLORS.peak} numStr={peakStr}
+          label="today's peak" stars={PEAK_STARS} detailNode={peakDetail}
+          onClick={() => handleOrbClick('peak')}
+          animClass={expanding === 'peak' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
+        <SkyOrb size={260} colors={SKY_COLORS.le} numStr={leStr}
+          label="lived experience" stars={LE_STARS} detailNode={leDetail}
+          onClick={() => handleOrbClick('le')}
+          animClass={expanding === 'le' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
+        <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={regStr}
+          label="regulation" stars={REG_STARS} detailNode={regDetail}
+          onClick={() => handleOrbClick('reg')}
+          animClass={expanding === 'reg' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
       </div>
-      {(total > 0 || e.flow || e.siFlow) && (
-        <div style={C.evAxes}>
-          {AXIS_DEFS.map(({ k, label, name }) => e[k] > 0 && (
-            <div key={k} style={C.evAxis} title={name}>
-              <span style={{ ...C.evAxisLbl, color: '#7eb8f7' }}>{label}</span>
-              <PipRow value={e[k]} readOnly />
-            </div>
-          ))}
-          {e.flow   && <span style={C.evTag}>~ flow</span>}
-          {e.siFlow && <span style={{ ...C.evTag, ...C.evTagSI }}>⟳ SI {e.siFlow}</span>}
-          {e.delayed && <span style={{ ...C.evTag, ...C.evTagDel }}>delayed</span>}
-          {e.cancelled && <span style={{ ...C.evTag, ...C.evTagCan }}>cancelled</span>}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Balance bar ────────────────────────────────────────────────────────────
-
-function BalanceBar({ opening, userEvents, regulation, settings, dateStr, goodSigns }) {
-  const { taxValue, taxStartDate } = settings
-  const flowOverride = goodSigns?.flow ?? false
-  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !flowOverride
-
-  let evPts = 0
-  for (const e of userEvents) {
-    if (e.cancelled) continue
-    evPts += (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
-  }
-  const taxPts = taxApplies ? taxValue : 0
-  const peak   = opening + evPts + taxPts
-  const reg    = nonSleepRegTotal(regulation)
-  const siBon  = Math.round(
-    userEvents.reduce((s, e) => e.siFlow && !e.cancelled
-      ? s + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0) : s, 0) * 0.2
-  )
-  const lived  = Math.max(0, peak - reg - siBon)
-  const closing = Math.max(0, peak - reg)
-
-  const goldColor = '#d4a020'
-  const tealColor = '#4ab8a0'
-  const silverColor = '#c0c0d8'
-
-  return (
-    <div style={C.balRow}>
-      <div style={{ ...C.balCell }}>
-        <div style={{ ...C.balNum, color: '#888' }}>{opening}</div>
-        <div style={C.balLbl}>opening</div>
-      </div>
-      <div style={{ ...C.balCell }}>
-        <div style={{ ...C.balNum, color: goldColor }}>{peak}</div>
-        <div style={C.balLbl}>peak{taxApplies ? ` (+${taxPts} tax)` : ''}</div>
-      </div>
-      <div style={{ ...C.balCell }}>
-        <div style={{ ...C.balNum, color: tealColor }}>{reg}</div>
-        <div style={C.balLbl}>regulation</div>
-      </div>
-      {siBon > 0 && (
-        <div style={{ ...C.balCell }}>
-          <div style={{ ...C.balNum, color: '#5abf7a' }}>−{siBon}</div>
-          <div style={C.balLbl}>SI bonus</div>
-        </div>
-      )}
-      <div style={{ ...C.balCell }}>
-        <div style={{ ...C.balNum, color: silverColor }}>{lived}</div>
-        <div style={C.balLbl}>lived exp</div>
-      </div>
-      <div style={{ ...C.balCell, borderRight: 'none' }}>
-        <div style={{ ...C.balNum, color: '#e0e0e0' }}>{closing}</div>
-        <div style={C.balLbl}>closing →</div>
+      <div className="sky-mob">
+        <SkyMobileRow colors={SKY_COLORS.peak} numStr={peakStr}
+          label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS}
+          onClick={() => onOrb?.('peak')} />
+        <div className="sky-mob-div" />
+        <SkyMobileRow colors={SKY_COLORS.le} numStr={leStr}
+          label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS}
+          onClick={() => onOrb?.('le')} />
+        <div className="sky-mob-div" />
+        <SkyMobileRow colors={SKY_COLORS.reg} numStr={regStr}
+          label="regulation" detailNode={regDetail} mobileStars={REG_MOB_STARS}
+          onClick={() => onOrb?.('reg')} />
       </div>
     </div>
   )
 }
 
-// ── Day editor ─────────────────────────────────────────────────────────────
+// ─── TrackerDayEditor (V2) ───
+// Same as TrackerRoom's TrackerDayEditor but uses V2 data functions.
+// fillGapsBefore is omitted — V2 tables already have all historical data.
+function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough }) {
+  const dateStr = dateProp || todayDateStr()
+  const isToday = dateStr === todayDateStr()
+  const [loading,       setLoading]       = useState(true)
+  const [userEvents,    setUserEvents]    = useState([])
+  const [regulation,    setRegulation]    = useState({ sensory: 0, av: 0, env: 0, body: 0 })
+  const [recovery,      setRecovery]      = useState(false)
+  const [warning,       setWarning]       = useState({ skin: false, vision: false, thought: false, other: false })
+  const [goodSigns,     setGoodSigns]     = useState({ flow: false, crisis: false })
+  const [meltdown,      setMeltdown]      = useState(false)
+  const [openingBalance,setOpeningBalance]= useState(0)
+  const [yesterdayClosing,setYesterdayClosing] = useState(0)
+  const [saveStatus,    setSaveStatus]    = useState('')
 
-function DayEditor({ session, settings, dateStr, isToday, onBack, oldClosing }) {
-  const [loading,      setLoading]      = useState(true)
-  const [userEvents,   setUserEvents]   = useState([])
-  const [regulation,   setRegulation]   = useState({ sensory: 0, av: 0, env: 0, body: 0 })
-  const [recovery,     setRecovery]     = useState(false)
-  const [warning,      setWarning]      = useState({ skin: false, vision: false, thought: false, other: false })
-  const [goodSigns,    setGoodSigns]    = useState({ flow: false, crisis: false })
-  const [meltdown,     setMeltdown]     = useState(false)
-  const [openingBal,   setOpeningBal]   = useState(0)
-  const [yesterClosing,setYesterClosing]= useState(0)
-  const [saveStatus,   setSaveStatus]   = useState('')
-  const [oldPeak,      setOldPeak]      = useState(null)  // from energy_entries for comparison
+  useEffect(() => { onDrillThrough?.(null) }, [resetKey])
 
   useEffect(() => {
     async function init() {
-      setLoading(true)
       try {
-        const entry = await loadEntryV2(dateStr, session.user.id)
-        if (entry) {
-          const state = dbToInternal(entry)
+        const existing = await loadEntryV2(dateStr, session.user.id)
+        if (existing) {
+          const state = dbToInternal(existing)
+          if (isToday) {
+            const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
+            if (yest) {
+              const closing = yest.entry_data.closingBalance ?? 0
+              setOpeningBalance(Math.max(0, closing - 5))
+              setYesterdayClosing(closing)
+            }
+          } else {
+            setOpeningBalance(state.openingBalance)
+            setYesterdayClosing(state.openingBalance)
+          }
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
           setRecovery(state.recovery)
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
-          setOpeningBal(state.openingBalance)
-          setYesterClosing(entry.entry_data.closingBalance ?? 0)
         } else if (isToday) {
-          // Today: get opening from yesterday's new-table closing
-          const yest = await loadEntryV2(yesterdayStr(), session.user.id)
+          const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
           if (yest) {
             const closing = yest.entry_data.closingBalance ?? 0
-            setOpeningBal(Math.max(0, closing - 5))
-            setYesterClosing(closing)
+            setOpeningBalance(Math.max(0, closing - 5))
+            setYesterdayClosing(closing)
           }
         }
-
-        // Fetch old closing from energy_entries for comparison banner
-        const { data: oldRow } = await supabase
-          .from('energy_entries')
-          .select('entry_data')
-          .eq('user_id', session.user.id)
-          .eq('date', dateStr)
-          .maybeSingle()
-        if (oldRow) setOldPeak(oldRow.entry_data?.closingBalance ?? null)
+      } catch (err) {
+        console.error('failed to load entry (v2)', err)
       } finally {
         setLoading(false)
       }
@@ -461,19 +867,270 @@ function DayEditor({ session, settings, dateStr, isToday, onBack, oldClosing }) 
     init()
   }, [dateStr])
 
-  // Build allEvents including system autistic-tax entry (same as live tracker)
-  const anyFlow = userEvents.some(e => !e.cancelled && (e.flow || e.siFlow != null)) || goodSigns.flow
-  const taxApplies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
   const allEvents = [
     ...userEvents,
-    {
-      id: 'autistic-tax',
-      bucket: 'evening',
-      text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
-      E: 0, S: taxApplies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
-      delayed: false, flow: false, cancelled: !taxApplies,
-      system: true,
-    },
+    ...((() => {
+      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
+      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
+      return [{
+        id: 'autistic-tax',
+        bucket: 'evening',
+        text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
+        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
+        delayed: false, flow: false, cancelled: !applies,
+        system: true,
+      }]
+    })()),
+  ]
+
+  if (loading) return <div className="history-loading">opening the almanac…</div>
+
+  async function autoSave(patch = {}) {
+    const evts = patch.userEvents ?? userEvents
+    const reg  = patch.regulation ?? regulation
+    const rec  = patch.recovery   ?? recovery
+    const warn = patch.warning    ?? warning
+    const gs   = patch.goodSigns  ?? goodSigns
+    const melt = patch.meltdown   ?? meltdown
+    setSaveStatus('saving…')
+    try {
+      const { entryData, peakDebit } = internalToDb({
+        dateStr, openingBalance, userEvents: evts, regulation: reg,
+        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
+      })
+      await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
+      if (!isToday) await recalculateFromDateV2(session.user.id, dateStr)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2000)
+    } catch (err) {
+      console.error('auto-save failed (v2)', err)
+      setSaveStatus('auto-save failed')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }
+
+  const onAdd    = (ev) => { const n=[...userEvents,ev];              setUserEvents(n); autoSave({ userEvents: n }) }
+  const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
+  const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
+  const onRegChange = (k,v) => { const n={...regulation,[k]:v};         setRegulation(n); autoSave({ regulation: n }) }
+  const onWarning   = (k)   => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
+  const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
+  const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
+  const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+
+  return (
+    <>
+      {onBack && (
+        <>
+          <button className="back-link" onClick={onBack}>← back to history</button>
+          <div className="history-edit-date">{formatDateStr(dateStr)}</div>
+        </>
+      )}
+      <Sky
+        userEvents={userEvents}
+        regulation={regulation}
+        openingBalance={openingBalance}
+        settings={settings}
+        flowOverride={goodSigns.flow}
+        dateStr={dateStr}
+        drillThrough={drillThrough}
+        onOrb={onDrillThrough}
+        onClose={() => onDrillThrough?.(null)}
+        saveStatus={saveStatus}
+      />
+      {drillThrough && (
+        <div className="sky-drill" key={drillThrough}>
+          {(drillThrough === 'peak' || drillThrough === 'le') && (
+            <>
+              <section className="events-section">
+                <div className="ledger-head">
+                  <div className="ledger-title">events · today</div>
+                  <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
+                </div>
+                <div className="events">
+                  {allEvents.map(e => (
+                    <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                  ))}
+                </div>
+                <Composer onAdd={onAdd} />
+              </section>
+              <WarningSigns flags={warning} onToggle={onWarning} />
+              <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+            </>
+          )}
+          {(drillThrough === 'reg' || drillThrough === 'le') && (
+            <Regulation
+              values={regulation}
+              onChange={onRegChange}
+              recovery={recovery}
+              onRecovery={onRecovery}
+              goodSigns={goodSigns}
+              onGood={onGood}
+            />
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── HistoryDateEditor helpers ───
+function hedParseDate(s) { return new Date(s + 'T12:00:00') }
+function hedToDateStr(d) {
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-')
+}
+function hedAddDays(date, n) {
+  const d = new Date(date); d.setDate(d.getDate() + n); return d
+}
+function hedWeekMonday(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  d.setHours(12, 0, 0, 0)
+  return d
+}
+function hedPeakColor(peak, thr) {
+  if (peak >= thr.critical) return '#e84040'
+  if (peak >= thr.yellow)   return '#f0b825'
+  return '#2ed468'
+}
+function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr) {
+  const { taxValue, taxStartDate } = settings
+  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !goodSigns.flow
+  const taxPoints  = taxApplies ? taxValue : 0
+  const axisSums   = { E: 0, S: 0, P: 0, M: 0, X: 0 }
+  for (const e of userEvents) {
+    if (e.cancelled) continue
+    axisSums.E += e.E||0; axisSums.S += e.S||0; axisSums.P += e.P||0
+    axisSums.M += e.M||0; axisSums.X += e.X||0
+  }
+  const peak = openingBalance + axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X + taxPoints
+  const reg  = nonSleepRegTotal(regulation)
+  const siFlowBonus = Math.round(userEvents.reduce((sum, e) => {
+    if (!e.siFlow || e.cancelled) return sum
+    return sum + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
+  }, 0) * 0.2)
+  return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siFlowBonus)), reg: Math.round(reg) }
+}
+
+const HED_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+const HED_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+// ─── WeekStrip ───
+function WeekStrip({ weekStart, selectedDate, entryMap, thresholds, todayStr, onSelect, onPrev, onNext }) {
+  const days = Array.from({ length: 7 }, (_, i) => hedAddDays(weekStart, i))
+  const monthLabel = `${HED_MON[weekStart.getMonth()]} ${weekStart.getFullYear()}`
+
+  return (
+    <div className="hed-week-strip">
+      <div className="hed-week-head">
+        <button className="hed-week-arrow" onClick={onPrev} aria-label="previous week">‹</button>
+        <span className="hed-week-month">{monthLabel}</span>
+        <button className="hed-week-arrow" onClick={onNext} aria-label="next week">›</button>
+      </div>
+      <div className="hed-week-days">
+        {days.map((day, i) => {
+          const ds        = hedToDateStr(day)
+          const entry     = entryMap[ds]
+          const leVal     = entry?.entry_data?.livedExperience ?? entry?.entry_data?.closingBalance ?? 0
+          const isSelected = ds === selectedDate
+          const isToday   = ds === todayStr
+          const isFuture  = ds > todayStr
+          const color     = entry ? hedPeakColor(leVal, thresholds) : undefined
+          return (
+            <button key={ds}
+              className={[
+                'hed-day',
+                entry      ? 'hed-day--logged'  : '',
+                isSelected ? 'hed-day--selected' : '',
+                isToday    ? 'hed-day--today'    : '',
+                isFuture   ? 'hed-day--future'   : '',
+              ].filter(Boolean).join(' ')}
+              onClick={!isFuture ? () => onSelect(ds) : undefined}
+              disabled={isFuture}
+              style={color ? { '--hed-day-color': color } : undefined}>
+              <span className="hed-dow">{HED_DOW[i]}</span>
+              <span className="hed-day-num">{day.getDate()}</span>
+              {entry && <span className="hed-day-dot" />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── HistoryDateEditor (V2) ───
+function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack }) {
+  const [dateStr, setDateStr]       = useState(initialDateStr)
+  const [weekStart, setWeekStart]   = useState(() => hedWeekMonday(hedParseDate(initialDateStr)))
+  const [allEntries, setAllEntries] = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [userEvents, setUserEvents] = useState([])
+  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0 })
+  const [recovery, setRecovery]     = useState(false)
+  const [warning, setWarning]       = useState({ skin: false, vision: false, thought: false, other: false })
+  const [goodSigns, setGoodSigns]   = useState({ flow: false, crisis: false })
+  const [meltdown, setMeltdown]     = useState(false)
+  const [openingBalance, setOpeningBalance]   = useState(0)
+  const [yesterdayClosing, setYesterdayClosing] = useState(0)
+  const [saveStatus, setSaveStatus] = useState('')
+  const todayStr = todayDateStr()
+
+  useEffect(() => {
+    loadAllEntriesV2(session.user.id)
+      .then(rows => setAllEntries(rows))
+      .catch(() => setAllEntries([]))
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    setSaveStatus('')
+    async function init() {
+      try {
+        const existing = await loadEntryV2(dateStr, session.user.id)
+        if (existing) {
+          const state = dbToInternal(existing)
+          setOpeningBalance(state.openingBalance)
+          setYesterdayClosing(state.openingBalance)
+          setUserEvents(state.userEvents)
+          setRegulation(state.regulation)
+          setRecovery(state.recovery)
+          setWarning(state.warning)
+          setGoodSigns(state.goodSigns)
+          setMeltdown(state.meltdown)
+        } else {
+          setOpeningBalance(0); setYesterdayClosing(0)
+          setUserEvents([])
+          setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
+          setRecovery(false)
+          setWarning({ skin: false, vision: false, thought: false, other: false })
+          setGoodSigns({ flow: false, crisis: false })
+          setMeltdown(false)
+        }
+      } catch (err) { console.error('failed to load entry (v2)', err) }
+      finally { setLoading(false) }
+    }
+    init()
+  }, [dateStr])
+
+  const entryMap = useMemo(() => {
+    if (!allEntries) return {}
+    const m = {}
+    for (const e of allEntries) m[e.date] = e
+    return m
+  }, [allEntries])
+
+  const allEventsWithTax = [
+    ...userEvents,
+    ...(() => {
+      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
+      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
+      return [{ id: 'autistic-tax', bucket: 'evening',
+        text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
+        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
+        delayed: false, flow: false, cancelled: !applies, system: true }]
+    })(),
   ]
 
   async function autoSave(patch = {}) {
@@ -485,256 +1142,291 @@ function DayEditor({ session, settings, dateStr, isToday, onBack, oldClosing }) 
     const melt = patch.meltdown   ?? meltdown
     setSaveStatus('saving…')
     try {
-      const { entryData } = internalToDb({
-        dateStr, openingBalance: openingBal, userEvents: evts, regulation: reg,
-        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing: yesterClosing, meltdown: melt,
+      const { entryData, peakDebit } = internalToDb({
+        dateStr, openingBalance, userEvents: evts, regulation: reg,
+        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
       })
-      await saveEntryV2({ dateStr, entryData, userId: session.user.id })
-      if (!isToday) await recalculateFromDateV2(session.user.id, dateStr)
-      setSaveStatus('saved ✓')
+      await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
+      await recalculateFromDateV2(session.user.id, dateStr)
+      loadAllEntriesV2(session.user.id).then(rows => setAllEntries(rows)).catch(() => {})
+      setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (err) {
-      console.error('save failed', err)
-      setSaveStatus('save failed')
+      console.error('auto-save failed (v2)', err)
+      setSaveStatus('auto-save failed')
       setTimeout(() => setSaveStatus(''), 4000)
     }
   }
 
-  const onAdd    = ev => { const n=[...userEvents,ev];         setUserEvents(n); autoSave({ userEvents: n }) }
-  const onUpdate = ev => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
-  const onDelete = id => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
-  const onReg    = (k,v)=> { const n={...regulation,[k]:v};      setRegulation(n); autoSave({ regulation: n }) }
-  const onWarn   = k => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
-  const onGood   = k => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
-  const onRec    = v => { setRecovery(v); autoSave({ recovery: v }) }
-  const onMelt   = () => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+  const onAdd    = (ev) => { const n=[...userEvents,ev];              setUserEvents(n); autoSave({ userEvents: n }) }
+  const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
+  const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
+  const onRegChange = (k,v) => { const n={...regulation,[k]:v};         setRegulation(n); autoSave({ regulation: n }) }
+  const onWarning   = (k)   => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
+  const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
+  const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
+  const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
 
-  // Compute current closing for comparison
-  let evPts = 0
-  for (const e of userEvents) {
-    if (e.cancelled) continue
-    evPts += (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
+  function handleSelectDate(ds) {
+    setDateStr(ds)
+    const d = hedParseDate(ds)
+    if (d < weekStart || d > hedAddDays(weekStart, 6)) setWeekStart(hedWeekMonday(d))
   }
-  const taxPts = taxApplies ? settings.taxValue : 0
-  const currentPeak = openingBal + evPts + taxPts
-  const currentReg  = nonSleepRegTotal(regulation)
-  const currentClosing = Math.max(0, currentPeak - currentReg)
 
-  const closingMatch = oldPeak === null ? null : (currentClosing === oldPeak)
+  const skyNums  = calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr)
+  const [y, mo, da] = dateStr.split('-').map(Number)
+  const dateLabel    = `${HED_MON[mo-1]} ${da} · ${y}`
 
-  if (loading) return <div style={{ color: '#555', padding: 16 }}>loading…</div>
+  return (
+    <div className="hed">
+      <div className="hed-head">
+        <button className="hed-back" onClick={onBack}>←</button>
+        <span className="hed-date-label">{dateLabel}</span>
+        {saveStatus && <span className="hed-status">{saveStatus}</span>}
+      </div>
+
+      <WeekStrip
+        weekStart={weekStart}
+        selectedDate={dateStr}
+        entryMap={entryMap}
+        thresholds={settings.livedExperienceThresholds}
+        todayStr={todayStr}
+        onSelect={handleSelectDate}
+        onPrev={() => setWeekStart(d => hedAddDays(d, -7))}
+        onNext={() => setWeekStart(d => hedAddDays(d, 7))}
+      />
+
+      <div className="hed-sky-nums">
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.peak.number }}>
+            {loading ? '·' : skyNums.peak}
+          </span>
+          <span className="hed-sky-lbl">peak</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.le.number }}>
+            {loading ? '·' : skyNums.le}
+          </span>
+          <span className="hed-sky-lbl">lived exp</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.reg.number }}>
+            {loading ? '·' : skyNums.reg}
+          </span>
+          <span className="hed-sky-lbl">regulation</span>
+        </div>
+      </div>
+
+      {loading
+        ? <div className="history-loading">opening the almanac…</div>
+        : (
+          <>
+            <section className="events-section">
+              <div className="ledger-head">
+                <div className="ledger-title">events</div>
+                <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
+              </div>
+              <div className="events">
+                {allEventsWithTax.map(e => (
+                  <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                ))}
+              </div>
+              <Composer onAdd={onAdd} />
+            </section>
+            <Regulation
+              values={regulation}
+              onChange={onRegChange}
+              recovery={recovery}
+              onRecovery={onRecovery}
+              goodSigns={goodSigns}
+              onGood={onGood}
+            />
+            <WarningSigns flags={warning} onToggle={onWarning} />
+            <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+          </>
+        )
+      }
+    </div>
+  )
+}
+
+// ─── ThresholdSettings ───
+function ThresholdSettings({ settings, onThresholdsChange }) {
+  const [leYellow,   setLeYellow]   = useState(settings.livedExperienceThresholds?.yellow   ?? 15)
+  const [leCritical, setLeCritical] = useState(settings.livedExperienceThresholds?.critical ?? 30)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function handleSave() {
+    setSaving(true); setStatus('')
+    try {
+      const updated = { leYellow: Number(leYellow), leCritical: Number(leCritical) }
+      await saveThresholds(updated)
+      onThresholdsChange?.(updated)
+      setStatus('saved')
+      setTimeout(() => setStatus(''), 3000)
+    } catch { setStatus('failed to save') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="settings-section">
+      <div className="ledger-head">
+        <div className="ledger-title">lived experience thresholds</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>yellow threshold</label>
+          <div className="settings-field-desc">day reads as caution when lived experience reaches this number</div>
+        </div>
+        <input type="number" className="settings-number-input" value={leYellow} min={1} onChange={e => setLeYellow(e.target.value)} />
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>critical threshold</label>
+          <div className="settings-field-desc">day reads as critical when lived experience reaches this number</div>
+        </div>
+        <input type="number" className="settings-number-input" value={leCritical} min={1} onChange={e => setLeCritical(e.target.value)} />
+      </div>
+      <div className="save-bar">
+        <span className="save-bar-status">{status}</span>
+        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+          {saving ? 'saving…' : 'save thresholds'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+// ─── TrackerV2Room shell ───
+export default function TrackerV2Room({ onHome, session, settings: settingsProp, onThresholdsChange }) {
+  const [settings, setSettings] = useState(settingsProp ?? null)
+  const [tab,      setTab]      = useState('today')
+  const [editDate, setEditDate] = useState(null)
+  const [todayResetKey,  setTodayResetKey]  = useState(0)
+  const [drillThrough,   setDrillThrough]   = useState(null)
+  const [viewYear,  setViewYear]  = useState(() => new Date().getFullYear())
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
+
+  // Update local settings if parent passes new ones
+  useEffect(() => { if (settingsProp) setSettings(settingsProp) }, [settingsProp])
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+
+  function handleTabChange(t) {
+    if (t === 'today') { setTodayResetKey(k => k + 1); setDrillThrough(null) }
+    setTab(t)
+    if (t !== 'history') setEditDate(null)
+  }
+
+  useEffect(() => {
+    const vf = document.querySelector('.view-fade')
+    if (!vf) return
+    if (tab === 'today' && !drillThrough) {
+      vf.style.overflowY = 'hidden'
+      const hdr  = vf.querySelector('.room-header-wrap')
+      const hdrH = hdr ? hdr.getBoundingClientRect().height : 80
+      vf.style.setProperty('--today-h', `${window.innerHeight - hdrH - 20}px`)
+    } else {
+      vf.style.overflowY = ''
+      vf.style.removeProperty('--today-h')
+    }
+    return () => { vf.style.overflowY = ''; vf.style.removeProperty('--today-h') }
+  }, [tab, drillThrough])
+
+  const showHistoryNav = tab === 'history' && !editDate
+
+  if (!settings) return null
 
   return (
     <>
-      {onBack && (
-        <div style={{ marginBottom: 12 }}>
-          <button style={C.btn} onClick={onBack}>← back</button>
-          <span style={{ marginLeft: 12, color: '#888', fontSize: 13 }}>{fmtDate(dateStr)}</span>
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{tab === 'settings' ? 'settings' : 'Capacity Tracker'}</h2>
+          <RoomMark date={todayDisplayStr()} onSettings={() => setTab('settings')} />
         </div>
-      )}
-
-      <BalanceBar
-        opening={openingBal}
-        userEvents={userEvents}
-        regulation={regulation}
-        settings={settings}
-        dateStr={dateStr}
-        goodSigns={goodSigns}
-      />
-
-      {/* Events */}
-      <div style={C.secHead}>
-        <span style={C.secTitle}>events</span>
-        <span style={C.secCount}>{userEvents.filter(e=>!e.cancelled).length} active</span>
-        {saveStatus && (
-          <span style={saveStatus.includes('failed') ? C.statusErr : C.status}>{saveStatus}</span>
+        {tab !== 'settings' && (
+          <div className="room-tabs">
+            {['today', 'history'].map(t => (
+              <div key={t}
+                   className={`room-tab ${tab === t ? 'active' : ''}`}
+                   onClick={() => handleTabChange(t)}>
+                {t}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-      {allEvents.map(e => (
-        <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
-      ))}
-      <Composer onAdd={onAdd} />
-
-      {/* Regulation */}
-      <div style={C.secHead}>
-        <span style={C.secTitle}>regulation</span>
-        <label style={{ ...C.compLabel, marginLeft: 'auto' }}>
-          <input type="checkbox" checked={recovery} onChange={e => onRec(e.target.checked)} />
-          <span style={{ fontSize: 11, color: '#666' }}>recovery sleep</span>
-        </label>
-      </div>
-      <div style={C.regRow}>
-        {REG_CHANNELS.map(ch => (
-          <div key={ch.k} style={C.regChan}>
-            <div style={C.regName}>{ch.name}</div>
-            <div style={C.regPips}>
-              {Array.from({ length: ch.cap }, (_, i) => (
-                <span key={i}
-                  style={{ ...C.regPip, ...(i < (regulation[ch.k]||0) ? C.regPipOn : {}) }}
-                  onClick={() => onReg(ch.k, i+1 === regulation[ch.k] ? 0 : i+1)}
-                />
-              ))}
-            </div>
-            <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>{regulation[ch.k]||0}/{ch.cap}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Good signs */}
-      <div style={C.secHead}><span style={C.secTitle}>good signs</span></div>
-      <div style={C.signRow}>
-        {GOOD_SIGNS.map(s => (
-          <button key={s.k}
-            style={{ ...C.signBtn, ...(goodSigns[s.k] ? C.goodBtnA : {}) }}
-            onClick={() => onGood(s.k)}>
-            {s.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Warning signs */}
-      <div style={C.secHead}><span style={C.secTitle}>warning signs</span></div>
-      <div style={C.signRow}>
-        {WARNING_SIGNS.map(s => (
-          <button key={s.k}
-            style={{ ...C.signBtn, ...(warning[s.k] ? C.signBtnA : {}) }}
-            onClick={() => onWarn(s.k)}>
-            {s.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Meltdown */}
-      <div style={C.secHead}><span style={C.secTitle}>meltdown / shutdown</span></div>
-      <button style={{ ...C.signBtn, ...(meltdown ? C.signBtnA : {}) }} onClick={onMelt}>
-        {meltdown ? '▽ yes' : '▽ no'}
-      </button>
-
-      {/* Comparison with old energy_entries */}
-      {oldPeak !== null && (
-        <div style={{ ...C.compare, ...(closingMatch ? C.compOk : C.compMiss) }}>
-          {closingMatch
-            ? `✓ closing balance matches energy_entries (both: ${currentClosing})`
-            : `✗ closing mismatch — new: ${currentClosing}  |  old: ${oldPeak}`
-          }
-        </div>
-      )}
-    </>
-  )
-}
-
-// ── History list ────────────────────────────────────────────────────────────
-
-function HistoryList({ session, onSelect }) {
-  const [entries, setEntries] = useState(null)
-
-  useEffect(() => {
-    loadAllEntriesV2(session.user.id).then(setEntries).catch(() => setEntries([]))
-  }, [])
-
-  if (!entries) return <div style={{ color: '#555', padding: 16 }}>loading history…</div>
-
-  return (
-    <div>
-      <div style={{ ...C.secHead, marginTop: 8 }}>
-        <span style={C.secTitle}>all days — newest first</span>
-        <span style={C.secCount}>{entries.length} days in new tables</span>
-      </div>
-      {entries.map(e => {
-        const d = e.entry_data
-        return (
-          <div key={e.date} style={C.histDay} onClick={() => onSelect(e.date)}>
-            <span style={C.histDate}>{fmtDate(e.date)}</span>
-            <div style={C.histNums}>
-              <span style={{ ...C.histNum, color: '#888' }}>↑ {d.openingBalance}</span>
-              <span style={{ ...C.histNum, color: '#e0e0e0' }}>↓ {d.closingBalance}</span>
-              <span style={{ ...C.histNum, color: '#555' }}>{d.events?.length ?? 0} events</span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Root component ─────────────────────────────────────────────────────────
-
-export default function TrackerV2Room({ onHome, session: sessionProp, settings: settingsProp }) {
-  const [session,  setSession]  = useState(sessionProp ?? null)
-  const [settings, setSettings] = useState(settingsProp ?? null)
-  const [tab,      setTab]      = useState('today')   // 'today' | 'history'
-  const [editDate, setEditDate] = useState(null)
-
-  // Only self-load if not passed as props (e.g. accessed via ?room=tracker-v2 directly)
-  useEffect(() => {
-    if (sessionProp && settingsProp) return
-    async function init() {
-      const { data: { session: s } } = await supabase.auth.getSession()
-      setSession(s)
-      const cfg = await loadSettings()
-      setSettings(cfg)
-    }
-    init()
-  }, [])
-
-  if (!session || !settings) {
-    return <div style={{ ...C.page, padding: 24, color: '#555' }}>loading…</div>
-  }
-
-  const today = todayStr()
-
-  return (
-    <div style={C.page}>
-      {/* Header */}
-      <div style={C.header}>
-        <div style={C.title}>Capacity Tracker V2</div>
-        <span style={C.badge}>tracker-v2 branch · new tables</span>
-        <button style={C.btn} onClick={onHome}>← back to hub</button>
-      </div>
-
-      {/* Tabs */}
-      {!editDate && (
-        <div style={C.tabs}>
-          {['today', 'history'].map(t => (
-            <div key={t}
-              style={{ ...C.tab, ...(tab === t ? C.tabA : {}) }}
-              onClick={() => setTab(t)}>
-              {t}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={C.body}>
-        {tab === 'today' && !editDate && (
+        {showHistoryNav && (
           <>
-            <div style={{ color: '#555', fontSize: 11, marginBottom: 12 }}>{fmtDate(today)}</div>
-            <DayEditor
-              session={session}
-              settings={settings}
-              dateStr={today}
-              isToday={true}
-            />
+            <div className="cal-month-nav">
+              <button className="cal-month-arrow" onClick={prevMonth} aria-label="Previous month">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="13,4 7,10 13,16" />
+                </svg>
+              </button>
+              <div className="cal-month-label">{HIST_MONTHS[viewMonth]} {viewYear}</div>
+              <button className="cal-month-arrow" onClick={nextMonth} aria-label="Next month">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="7,4 13,10 7,16" />
+                </svg>
+              </button>
+            </div>
+            <div className="cal-dow-header">
+              {HIST_DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
+            </div>
           </>
         )}
-
-        {tab === 'history' && !editDate && (
-          <HistoryList
-            session={session}
-            onSelect={date => { setEditDate(date); setTab('history') }}
-          />
-        )}
-
-        {editDate && (
-          <DayEditor
-            session={session}
-            settings={settings}
-            dateStr={editDate}
-            isToday={editDate === today}
-            onBack={() => setEditDate(null)}
-          />
-        )}
       </div>
-    </div>
+
+      {/* Today stays mounted so unsaved state survives tab switches */}
+      <div style={{
+        display: tab === 'today' ? 'flex' : 'none',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minHeight: 'var(--today-h, calc(100svh - 100px))',
+      }}>
+        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} />
+      </div>
+
+      {tab === 'history' && !editDate && (
+        <TrackerHistory
+          settings={settings}
+          session={session}
+          onEditDate={date => setEditDate(date)}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+        />
+      )}
+      {tab === 'history' && editDate && (
+        <HistoryDateEditor
+          session={session}
+          settings={settings}
+          dateStr={editDate}
+          onBack={() => setEditDate(null)}
+        />
+      )}
+      {tab === 'settings' && (
+        <>
+          <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          <div className="settings-signout">
+            <button className="settings-signout-btn" onClick={() => supabase.auth.signOut()}>
+              sign out
+            </button>
+          </div>
+        </>
+      )}
+    </>
   )
 }
