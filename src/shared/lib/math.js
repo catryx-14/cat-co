@@ -1,5 +1,51 @@
 export const REG_FULL_AT = 20
 
+/**
+ * THE single source of truth for peak, regulation, and lived experience.
+ * Called by the tooltip, the calendar arc, and the week strip — every display
+ * that reads stored data goes through here, so there is only one formula to fix.
+ *
+ * entryData  — the shape built by buildEntryData / internalToDb.
+ *              Events use stored field names: emotional, sensory, predictability, masking, ef, siFlow.
+ * settings   — optional { taxValue, taxStartDate } from almanac_settings.
+ *              When provided, autistic tax is applied exactly as the editor does,
+ *              so the tooltip and the editor always agree.
+ *
+ * Returns: { peakDebit, activeRegulation, siFlowBonus, livedExperience }
+ */
+export function computeDisplayValues(entryData, settings = null) {
+  const reg = entryData.regulation ?? {}
+  const activeRegulation =
+    (reg.sensoryComfort || 0) + (reg.audioVisual || 0) +
+    (reg.environment    || 0) + (reg.bodyRest    || 0)
+
+  const events = entryData.events ?? []
+  let evPoints = 0, siFlowCost = 0
+  for (const e of events) {
+    if (!e.cancelled) {
+      const cost = (e.emotional || 0) + (e.sensory || 0) + (e.predictability || 0) +
+                   (e.masking   || 0) + (e.ef      || 0)
+      evPoints    += cost
+      if (e.siFlow) siFlowCost += cost
+    }
+  }
+  const siFlowBonus = Math.round(siFlowCost * 0.2)
+
+  // Autistic tax — same logic as the editor (calcSkyNums / internalToDb)
+  let taxPoints = 0
+  if (settings?.taxValue != null) {
+    const anyFlow = events.some(e => !e.cancelled && (e.flow || e.siFlow != null)) ||
+                   (entryData.flowActivity ?? false)
+    const taxApplies = (entryData.date ?? '') >= (settings.taxStartDate ?? '2000-01-01') && !anyFlow
+    taxPoints = taxApplies ? settings.taxValue : 0
+  }
+
+  const peakDebit       = Math.round((entryData.openingBalance ?? 0) + evPoints + taxPoints)
+  const livedExperience = Math.max(0, peakDebit - activeRegulation - siFlowBonus)
+
+  return { peakDebit, activeRegulation, siFlowBonus, livedExperience }
+}
+
 // Phase boundaries scale with thresholds — derived to match current values (yellow=15, critical=30)
 export function weatherOf(peak, yellow = 15, critical = 30) {
   if (peak <= Math.round(yellow / 3))        return { word: 'clear', intensity: 0 }
@@ -57,7 +103,12 @@ export function computeSIFlowBonus(userEvents) {
   return Math.round(cost * 0.2)
 }
 
-// Formula 5: Lived Experience / Closing Balance = Peak − Active Regulation − SI Flow Bonus
+// Formula 3: Closing Balance = Peak − Active Regulation (carries forward to next day)
+export function computeClosingBalance(peakDebit, activeRegulation) {
+  return Math.round(Math.max(0, peakDebit - activeRegulation))
+}
+
+// Formula 5: Lived Experience = Peak − Active Regulation − SI Flow Bonus (display only, not carried forward)
 export function computeLivedExperience(peakDebit, activeRegulation, siFlowBonus) {
   return Math.max(0, peakDebit - activeRegulation - siFlowBonus)
 }

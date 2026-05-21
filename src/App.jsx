@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
+import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
@@ -886,7 +887,8 @@ function Rail({ inRoom, current, onPick, onHome }) {
 function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey, efSuiteResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerRoom key={trackerResetKey} roomName={room?.name ?? 'Capacity Tracker'} onHome={onHome} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
+    // tracker-v2 branch: route the Capacity Tracker to the V2 test UI
+    return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
@@ -905,6 +907,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   }
   if (roomKey === 'ef-suite') {
     return <EFSuiteRoom key={efSuiteResetKey} />
+  }
+  if (roomKey === 'tracker-v2') {
+    return <TrackerV2Room onHome={onHome} />
   }
   if (roomKey === 'library') {
     return (
@@ -940,7 +945,10 @@ export default function App({ session, profile }) {
 }
 
 function HubApp({ session }) {
-  const [view, setView] = useState('hub')
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('room') || 'hub'
+  })
   const [settings, setSettings] = useState(null)
   const inRoom = view !== 'hub'
 

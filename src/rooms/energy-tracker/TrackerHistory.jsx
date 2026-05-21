@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { loadAllEntries } from '../../shared/lib/db.js'
+import { computeDisplayValues } from '../../shared/lib/math.js'
 /* NIGHT GARDEN THEME VALUE — SI FLOW / SHUTDOWN ICONS
    Icons were cat photos: Aris Flow.jpg (243KB) and Aris Shutdown.png (2.2MB).
    Used in DayCell as <img src={icon} className="cal-icon"> inside .cal-icon-wrap.
@@ -198,14 +199,12 @@ function CalIcon({ shape = 'pip', src, alt, color = 'rgba(255,255,255,0.6)' }) {
 const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const FULL_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-function DayTooltip({ entry, date, col }) {
+function DayTooltip({ entry, date, col, settings }) {
   const d = entry.entry_data
-  const peak    = d.peakDebit       ?? 0
-  const le      = d.livedExperience ?? d.closingBalance ?? 0
-  const reg     = d.regulation
-    ? (d.regulation.sensoryComfort ?? 0) + (d.regulation.audioVisual ?? 0) +
-      (d.regulation.environment    ?? 0) + (d.regulation.bodyRest    ?? 0)
-    : 0
+  // computeDisplayValues is the single source of truth — same function used everywhere.
+  // Passing settings applies the autistic tax exactly as the editor does.
+  const { peakDebit: peak, activeRegulation: reg, livedExperience: le } =
+    computeDisplayValues(d, settings)
   const events  = d.events   ?? []
   const hasMelt = d.meltdown  ?? false
   const hasSI   = d.siFlowActive ?? false
@@ -242,7 +241,7 @@ function DayTooltip({ entry, date, col }) {
 
 // ── Day cell ──────────────────────────────────────────────────────────────────
 
-function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfMonth, col }) {
+function DayCell({ date, entry, thresholds, settings, onClick, isToday, isFuture, isOutOfMonth, col }) {
   const [showTip, setShowTip] = useState(false)
   const tipTimer = useRef(null)
 
@@ -257,7 +256,8 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfM
   useEffect(() => () => clearTimeout(tipTimer.current), [])
 
   const d = entry?.entry_data
-  const leVal = d?.livedExperience ?? d?.closingBalance ?? 0
+  // Use the same formula as the editor so arc colour and tooltip always agree
+  const leVal = d ? computeDisplayValues(d, settings).livedExperience : 0
   const isPastEmpty = !isFuture && !entry
 
   let stars, starColor, glowClass = ''
@@ -314,14 +314,14 @@ function DayCell({ date, entry, thresholds, onClick, isToday, isFuture, isOutOfM
         )}
       </div>
 
-      {showTip && entry && <DayTooltip entry={entry} date={date} col={col} />}
+      {showTip && entry && <DayTooltip entry={entry} date={date} col={col} settings={settings} />}
     </div>
   )
 }
 
 // ── Week row ──────────────────────────────────────────────────────────────────
 
-function WeekRow({ week, entryMap, thresholds, todayStr, onEdit, viewMonth }) {
+function WeekRow({ week, entryMap, thresholds, settings, todayStr, onEdit, viewMonth }) {
   return (
     <div className="cal-week">
       <div className="cal-week-days">
@@ -334,6 +334,7 @@ function WeekRow({ week, entryMap, thresholds, todayStr, onEdit, viewMonth }) {
               date={day}
               entry={outOfMonth ? null : (entryMap[ds] || null)}
               thresholds={thresholds}
+              settings={settings}
               onClick={outOfMonth ? undefined : onEdit}
               isToday={ds === todayStr}
               isFuture={ds > todayStr}
@@ -365,12 +366,13 @@ function buildMonthWeeks(year, month) {
 
 // ── TrackerHistory ────────────────────────────────────────────────────────────
 
-export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth }) {
+export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth, loadEntries }) {
   const [entries, setEntries] = useState(null)
   const thresholds = settings.livedExperienceThresholds
+  const _load = loadEntries ?? loadAllEntries
 
   useEffect(() => {
-    loadAllEntries(session.user.id)
+    _load(session.user.id)
       .then(rows => setEntries(rows))
       .catch(err => { console.error(err); setEntries([]) })
   }, [])
@@ -405,6 +407,7 @@ export default function TrackerHistory({ settings, session, onEditDate, viewYear
               week={week}
               entryMap={entryMap}
               thresholds={thresholds}
+              settings={settings}
               todayStr={todayStr}
               onEdit={onEditDate}
               viewMonth={viewMonth}
