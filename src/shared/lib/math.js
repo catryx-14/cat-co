@@ -1,5 +1,39 @@
 export const REG_FULL_AT = 20
 
+/**
+ * THE single source of truth for peak, regulation, and lived experience
+ * when reading stored data (history, tooltip, week strip — anything that
+ * comes back from the database).
+ *
+ * Takes an entry_data object (the shape built by buildEntryData / internalToDb).
+ * Events use the stored field names: emotional, sensory, predictability, masking, ef, siFlow.
+ *
+ * Returns: { peakDebit, activeRegulation, siFlowBonus, livedExperience }
+ */
+export function computeDisplayValues(entryData) {
+  const reg = entryData.regulation ?? {}
+  const activeRegulation =
+    (reg.sensoryComfort || 0) + (reg.audioVisual || 0) +
+    (reg.environment    || 0) + (reg.bodyRest    || 0)
+
+  let siFlowCost = 0
+  for (const e of entryData.events ?? []) {
+    if (!e.cancelled && e.siFlow) {
+      siFlowCost += (e.emotional || 0) + (e.sensory || 0) + (e.predictability || 0) +
+                   (e.masking   || 0) + (e.ef      || 0)
+    }
+  }
+  const siFlowBonus = Math.round(siFlowCost * 0.2)
+
+  // closingBalance was stamped at save time with the full formula (including autistic tax).
+  // Using it as the anchor means peak = closing + reg is exact — no need to re-run the tax.
+  const closingBalance   = entryData.closingBalance ?? 0
+  const peakDebit        = closingBalance + activeRegulation
+  const livedExperience  = Math.max(0, closingBalance - siFlowBonus)
+
+  return { peakDebit, activeRegulation, siFlowBonus, livedExperience }
+}
+
 // Phase boundaries scale with thresholds — derived to match current values (yellow=15, critical=30)
 export function weatherOf(peak, yellow = 15, critical = 30) {
   if (peak <= Math.round(yellow / 3))        return { word: 'clear', intensity: 0 }

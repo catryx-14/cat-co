@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { loadAllEntries } from '../../shared/lib/db.js'
+import { computeDisplayValues } from '../../shared/lib/math.js'
 /* NIGHT GARDEN THEME VALUE — SI FLOW / SHUTDOWN ICONS
    Icons were cat photos: Aris Flow.jpg (243KB) and Aris Shutdown.png (2.2MB).
    Used in DayCell as <img src={icon} className="cal-icon"> inside .cal-icon-wrap.
@@ -200,12 +201,9 @@ const FULL_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 
 function DayTooltip({ entry, date, col }) {
   const d = entry.entry_data
-  const peak    = d.peakDebit       ?? 0
-  const le      = d.livedExperience ?? d.closingBalance ?? 0
-  const reg     = d.regulation
-    ? (d.regulation.sensoryComfort ?? 0) + (d.regulation.audioVisual ?? 0) +
-      (d.regulation.environment    ?? 0) + (d.regulation.bodyRest    ?? 0)
-    : 0
+  // computeDisplayValues is the single source of truth — same function used everywhere
+  const { peakDebit: peak, activeRegulation: reg, livedExperience: le } =
+    computeDisplayValues(d)
   const events  = d.events   ?? []
   const hasMelt = d.meltdown  ?? false
   const hasSI   = d.siFlowActive ?? false

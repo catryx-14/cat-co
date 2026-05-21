@@ -12,6 +12,7 @@
 
 import { supabase } from './supabase.js'
 import { dbToInternal, internalToDb } from './db.js'
+import { computeDisplayValues } from './math.js'
 
 // ── Conversion helpers ─────────────────────────────────────────────────────
 
@@ -21,23 +22,37 @@ import { dbToInternal, internalToDb } from './db.js'
  * all the existing internal-state logic without duplication.
  */
 function buildEntryData(daily, events) {
-  // Compute display values from stored data so tooltips and week strips show correct numbers
-  const activeRegulation =
-    (daily.reg_sensory      ?? 0) + (daily.reg_audio_visual ?? 0) +
-    (daily.reg_environment  ?? 0) + (daily.reg_body         ?? 0)
-
-  let siFlowCost = 0
-  for (const ev of events ?? []) {
-    if (!ev.cancelled && ev.si_flow) {
-      siFlowCost += (ev.ef ?? 0) + (ev.emotional ?? 0) + (ev.sensory ?? 0) +
-                   (ev.masking ?? 0) + (ev.predictability ?? 0)
-    }
-  }
-  const siFlowBonus   = Math.round(siFlowCost * 0.2)
   const closingBalance = daily.closing_balance ?? 0
-  // peak = closing + reg (exact when closing > 0; best estimate when closing = 0)
-  const peakDebit     = closingBalance + activeRegulation
-  const livedExperience = Math.max(0, closingBalance - siFlowBonus)
+
+  // Build the regulation and events shape first so computeDisplayValues can use them
+  const regulation = {
+    sensoryComfort: daily.reg_sensory        ?? 0,
+    audioVisual:    daily.reg_audio_visual   ?? 0,
+    environment:    daily.reg_environment    ?? 0,
+    bodyRest:       daily.reg_body           ?? 0,
+    recoverySleep:  daily.reg_recovery_sleep ?? false,
+  }
+
+  const mappedEvents = (events ?? []).map(ev => ({
+    summary: ev.summary ?? '',
+    emotional: ev.emotional ?? 0,
+    sensory: ev.sensory ?? 0,
+    predictability: ev.predictability ?? 0,
+    masking: ev.masking ?? 0,
+    ef: ev.ef ?? 0,
+    bucket: ev.bucket ?? 'morning',
+    flow: ev.flow ?? false,
+    siFlow: ev.si_flow ?? null,
+    siFlowCredit: ev.si_flow_credit ?? null,
+    delayed: ev.delayed ?? false,
+    realizedOn: ev.realized_on ?? '',
+    cancelled: ev.cancelled ?? false,
+    _v2id: ev.id,
+  }))
+
+  // Single shared function — same numbers everywhere (tooltip, week strip, history)
+  const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
+    computeDisplayValues({ closingBalance, regulation, events: mappedEvents })
 
   return {
     date: daily.date,
@@ -53,29 +68,8 @@ function buildEntryData(daily, events) {
     meltdown: daily.meltdown ?? false,
     yellowThreshold: daily.yellow_threshold ?? 15,
     criticalThreshold: daily.critical_threshold ?? 30,
-    events: (events ?? []).map(ev => ({
-      summary: ev.summary ?? '',
-      emotional: ev.emotional ?? 0,
-      sensory: ev.sensory ?? 0,
-      predictability: ev.predictability ?? 0,
-      masking: ev.masking ?? 0,
-      ef: ev.ef ?? 0,
-      bucket: ev.bucket ?? 'morning',
-      flow: ev.flow ?? false,
-      siFlow: ev.si_flow ?? null,
-      siFlowCredit: ev.si_flow_credit ?? null,
-      delayed: ev.delayed ?? false,
-      realizedOn: ev.realized_on ?? '',
-      cancelled: ev.cancelled ?? false,
-      _v2id: ev.id,   // preserve the DB row id so updates can target the right row
-    })),
-    regulation: {
-      sensoryComfort: daily.reg_sensory ?? 0,
-      audioVisual: daily.reg_audio_visual ?? 0,
-      environment: daily.reg_environment ?? 0,
-      bodyRest: daily.reg_body ?? 0,
-      recoverySleep: daily.reg_recovery_sleep ?? false,
-    },
+    events: mappedEvents,
+    regulation,
     warningSign: {
       skin: daily.warn_skin ?? false,
       vision: daily.warn_vision ?? false,
