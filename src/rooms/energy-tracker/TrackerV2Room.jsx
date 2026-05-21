@@ -1323,9 +1323,9 @@ const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct'
 const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 // ─── TrackerV2Room shell ───
-export default function TrackerV2Room({ onHome, session, settings: settingsProp, onThresholdsChange }) {
+export default function TrackerV2Room({ onHome, onRoom, session, settings: settingsProp, onThresholdsChange, initialTab }) {
   const [settings, setSettings] = useState(settingsProp ?? null)
-  const [tab,      setTab]      = useState('today')
+  const [tab,      setTab]      = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey,  setTodayResetKey]  = useState(0)
   const [drillThrough,   setDrillThrough]   = useState(null)
@@ -1440,6 +1440,22 @@ export default function TrackerV2Room({ onHome, session, settings: settingsProp,
       {tab === 'settings' && (
         <>
           <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          {onRoom && (
+            <div className="settings-section">
+              <div className="ledger-head">
+                <div className="ledger-title">project notes</div>
+              </div>
+              <div className="settings-field-row">
+                <div>
+                  <label>engine room</label>
+                  <div className="settings-field-desc">project docs, formula reference, and architecture notes</div>
+                </div>
+                <button className="save-bar-btn" onClick={() => onRoom('engine-room')}>
+                  open
+                </button>
+              </div>
+            </div>
+          )}
           <div className="settings-signout">
             <button className="settings-signout-btn" onClick={() => supabase.auth.signOut()}>
               sign out

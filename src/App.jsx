@@ -888,7 +888,7 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
     // tracker-v2 branch: route the Capacity Tracker to the V2 test UI
-    return <TrackerV2Room onHome={onHome} session={session} settings={settings} />
+    return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
