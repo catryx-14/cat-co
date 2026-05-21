@@ -1407,6 +1407,7 @@ export default function TrackerV2Room({ onHome, session, settings: settingsProp,
           onEditDate={date => setEditDate(date)}
           viewYear={viewYear}
           viewMonth={viewMonth}
+          loadEntries={loadAllEntriesV2}
         />
       )}
       {tab === 'history' && editDate && (

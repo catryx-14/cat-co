@@ -365,12 +365,13 @@ function buildMonthWeeks(year, month) {
 
 // ── TrackerHistory ────────────────────────────────────────────────────────────
 
-export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth }) {
+export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth, loadEntries }) {
   const [entries, setEntries] = useState(null)
   const thresholds = settings.livedExperienceThresholds
+  const _load = loadEntries ?? loadAllEntries
 
   useEffect(() => {
-    loadAllEntries(session.user.id)
+    _load(session.user.id)
       .then(rows => setEntries(rows))
       .catch(err => { console.error(err); setEntries([]) })
   }, [])

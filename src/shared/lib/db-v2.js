@@ -21,16 +21,33 @@ import { dbToInternal, internalToDb } from './db.js'
  * all the existing internal-state logic without duplication.
  */
 function buildEntryData(daily, events) {
+  // Compute display values from stored data so tooltips and week strips show correct numbers
+  const activeRegulation =
+    (daily.reg_sensory      ?? 0) + (daily.reg_audio_visual ?? 0) +
+    (daily.reg_environment  ?? 0) + (daily.reg_body         ?? 0)
+
+  let siFlowCost = 0
+  for (const ev of events ?? []) {
+    if (!ev.cancelled && ev.si_flow) {
+      siFlowCost += (ev.ef ?? 0) + (ev.emotional ?? 0) + (ev.sensory ?? 0) +
+                   (ev.masking ?? 0) + (ev.predictability ?? 0)
+    }
+  }
+  const siFlowBonus   = Math.round(siFlowCost * 0.2)
+  const closingBalance = daily.closing_balance ?? 0
+  // peak = closing + reg (exact when closing > 0; best estimate when closing = 0)
+  const peakDebit     = closingBalance + activeRegulation
+  const livedExperience = Math.max(0, closingBalance - siFlowBonus)
+
   return {
     date: daily.date,
     openingBalance: daily.opening_balance ?? 0,
-    closingBalance: daily.closing_balance ?? 0,
-    // Calculated fields are stored for reference but always recomputed at runtime
-    peakDebit: 0,
-    activeRegulation: 0,
+    closingBalance,
+    peakDebit,
+    activeRegulation,
     autisticTax: 0,
-    siFlowBonus: 0,
-    livedExperience: 0,
+    siFlowBonus,
+    livedExperience,
     flowActivity: daily.flow_activity ?? false,
     siFlowActive: daily.si_flow_active ?? false,
     meltdown: daily.meltdown ?? false,
