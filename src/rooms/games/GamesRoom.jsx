@@ -1,4 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+
+function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}
 
 // ── Cat asset imports ────────────────────────────────────────────────────────
 import blackCat1   from '../../assets/cats/black Cat 1.png'
@@ -956,7 +963,7 @@ function CatSortGame({ onBack }) {
 }
 
 // ── Main GamesRoom ────────────────────────────────────────────────────────────
-export default function GamesRoom({ roomName = 'Games' }) {
+export default function GamesRoom({ roomName = 'Games', onSettings }) {
   const [activeGame, setActiveGame] = useState(null)
 
   return (
@@ -970,6 +977,7 @@ export default function GamesRoom({ roomName = 'Games' }) {
         <div className="room-header-wrap">
           <div className="room-head">
             <h2 className="room-title">{roomName}</h2>
+            <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
           </div>
         </div>
 

@@ -45,7 +45,7 @@ function EFSuiteLanding({ onSelect }) {
   )
 }
 
-export default function EFSuiteRoom() {
+export default function EFSuiteRoom({ onSettings }) {
   const [activeRoom, setActiveRoom] = useState(null)
   const title = activeRoom === 'book-pile' ? 'the book pile' : 'executive suite'
 
@@ -54,9 +54,7 @@ export default function EFSuiteRoom() {
       <div className="room-header-wrap">
         <div className="room-head">
           <h2 className="room-title">{title}</h2>
-          {activeRoom === 'book-pile' && (
-            <RoomMark date={todayDisplayStr()} onSettings={() => {}} />
-          )}
+          <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
         </div>
       </div>
       {activeRoom === 'book-pile'

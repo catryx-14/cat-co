@@ -9,6 +9,7 @@ import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
 import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
+import RoomMark from './shared/components/RoomMark.jsx'
 // NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
 import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
@@ -718,6 +719,26 @@ function ThresholdMoreRoomsPortal({ isMobile, isShort, onPick }) {
   )
 }
 
+function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}
+
+function LibraryPlaceholder({ title = 'Library', onSettings }) {
+  return (
+    <>
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">{title}</h2>
+          <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
+        </div>
+      </div>
+      <div className="placeholder">Coming Soon!</div>
+    </>
+  )
+}
+
 // ── HubView — The Threshold landing page ─────────────────────────────────────
 function HubView({ onPick }) {
   const { mobile: isMobile } = useViewport()
@@ -900,42 +921,21 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <FirstAidRoom onHome={onHome} />
   }
   if (roomKey === 'games') {
-    return <GamesRoom roomName="Games" />
+    return <GamesRoom roomName="Games" onSettings={onSettings} />
   }
   if (roomKey === 'more-lights') {
-    return <MoreLightsRoom onRoom={onRoom} />
+    return <MoreLightsRoom onRoom={onRoom} onSettings={onSettings} />
   }
   if (roomKey === 'ef-suite') {
-    return <EFSuiteRoom key={efSuiteResetKey} />
+    return <EFSuiteRoom key={efSuiteResetKey} onSettings={onSettings} />
   }
   if (roomKey === 'tracker-v2') {
     return <TrackerV2Room onHome={onHome} />
   }
   if (roomKey === 'library') {
-    return (
-      <>
-        <div className="room-header-wrap">
-          <div className="room-head">
-            <h2 className="room-title">Library</h2>
-          </div>
-        </div>
-        <div className="placeholder">Coming Soon!</div>
-      </>
-    )
+    return <LibraryPlaceholder onSettings={onSettings} />
   }
-  return (
-    <>
-      <div className="room-header-wrap">
-        <div className="room-head">
-          <h2 className="room-title">{room ? room.name : '—'}</h2>
-        </div>
-      </div>
-      {/* NIGHT GARDEN THEME VALUE: placeholder text was "this room hasn't been built yet — return to the threshold and choose another lantern." */}
-      <div className="placeholder">
-        Coming Soon!
-      </div>
-    </>
-  )
+  return <LibraryPlaceholder title={room ? room.name : '—'} onSettings={onSettings} />
 }
 
 // ─── App ───

@@ -1,4 +1,11 @@
 import SuiteCard from '../../shared/components/SuiteCard.jsx'
+import RoomMark from '../../shared/components/RoomMark.jsx'
+
+function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}
 
 const MORE_ROOMS = [
   {
@@ -15,12 +22,13 @@ const MORE_ROOMS = [
   },
 ]
 
-export default function MoreLightsRoom({ onRoom }) {
+export default function MoreLightsRoom({ onRoom, onSettings }) {
   return (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="room-header-wrap">
         <div className="room-head">
           <h2 className="room-title">more lights</h2>
+          <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
         </div>
       </div>
       <div style={{ padding: '24px 32px 40px' }}>
