@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
+import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
@@ -906,6 +907,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   if (roomKey === 'ef-suite') {
     return <EFSuiteRoom key={efSuiteResetKey} />
   }
+  if (roomKey === 'tracker-v2') {
+    return <TrackerV2Room onHome={onHome} />
+  }
   if (roomKey === 'library') {
     return (
       <>
@@ -940,7 +944,10 @@ export default function App({ session, profile }) {
 }
 
 function HubApp({ session }) {
-  const [view, setView] = useState('hub')
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('room') || 'hub'
+  })
   const [settings, setSettings] = useState(null)
   const inRoom = view !== 'hub'
 
