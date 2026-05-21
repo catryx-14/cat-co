@@ -21,7 +21,7 @@ import {
   internalToDb,
 } from '../../shared/lib/db-v2.js'
 import { saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
-import { taxActive, nonSleepRegTotal } from '../../shared/lib/math.js'
+import { computeDisplayValues } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
@@ -690,28 +690,40 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
     setTimeout(() => { setExpanding(null); onOrb(key) }, 380)
   }
 
-  const { taxValue, taxStartDate } = settings
-  const taxApplies = taxActive(dateStr || todayDateStr(), taxStartDate, userEvents) && !flowOverride
-  const taxPoints  = taxApplies ? taxValue : 0
-
+  // Per-axis sums are kept inline — needed for the breakdown detail panels
   const axisSums = { E: 0, S: 0, P: 0, M: 0, X: 0 }
   for (const e of userEvents) {
     if (e.cancelled) continue
     axisSums.E += e.E || 0; axisSums.S += e.S || 0; axisSums.P += e.P || 0
     axisSums.M += e.M || 0; axisSums.X += e.X || 0
   }
-  const evPts    = axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X
-  const peak     = openingBalance + evPts + taxPoints
-  const activeReg = nonSleepRegTotal(regulation)
-  const siFlowBonus = Math.round(
-    userEvents.reduce((sum, e) => {
-      if (!e.siFlow || e.cancelled) return sum
-      return sum + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
-    }, 0) * 0.2
-  )
-  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
-  const livedExperience = Math.max(0, peak - activeReg - siFlowBonus)
   const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
+
+  // Orb numbers — delegate to computeDisplayValues so today, history, and tooltip
+  // all run through the same formula. Edit math.js and all three update.
+  const { peakDebit: peak, activeRegulation: activeReg, siFlowBonus, livedExperience } =
+    computeDisplayValues({
+      date:          dateStr || todayDateStr(),
+      openingBalance,
+      flowActivity:  flowOverride,
+      regulation: {
+        sensoryComfort: regulation.sensory || 0,
+        audioVisual:    regulation.av      || 0,
+        environment:    regulation.env     || 0,
+        bodyRest:       regulation.body    || 0,
+      },
+      events: userEvents.map(e => ({
+        emotional:      e.E        || 0,
+        sensory:        e.S        || 0,
+        predictability: e.P        || 0,
+        masking:        e.M        || 0,
+        ef:             e.X        || 0,
+        flow:           e.flow     || false,
+        siFlow:         e.siFlow   ?? null,
+        cancelled:      e.cancelled || false,
+      })),
+    }, settings)
+  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
 
   const PEAK_BREAKDOWN = [
     { k: 'E', name: 'emotional' }, { k: 'S', name: 'sensory' },
@@ -995,22 +1007,29 @@ function hedPeakColor(peak, thr) {
   return '#2ed468'
 }
 function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr) {
-  const { taxValue, taxStartDate } = settings
-  const taxApplies = taxActive(dateStr, taxStartDate, userEvents) && !goodSigns.flow
-  const taxPoints  = taxApplies ? taxValue : 0
-  const axisSums   = { E: 0, S: 0, P: 0, M: 0, X: 0 }
-  for (const e of userEvents) {
-    if (e.cancelled) continue
-    axisSums.E += e.E||0; axisSums.S += e.S||0; axisSums.P += e.P||0
-    axisSums.M += e.M||0; axisSums.X += e.X||0
-  }
-  const peak = openingBalance + axisSums.E + axisSums.S + axisSums.P + axisSums.M + axisSums.X + taxPoints
-  const reg  = nonSleepRegTotal(regulation)
-  const siFlowBonus = Math.round(userEvents.reduce((sum, e) => {
-    if (!e.siFlow || e.cancelled) return sum
-    return sum + (e.E||0)+(e.S||0)+(e.P||0)+(e.M||0)+(e.X||0)
-  }, 0) * 0.2)
-  return { peak: Math.round(peak), le: Math.round(Math.max(0, peak - reg - siFlowBonus)), reg: Math.round(reg) }
+  // Thin wrapper — delegates to computeDisplayValues so all three views share one formula
+  const { peakDebit, activeRegulation, livedExperience } = computeDisplayValues({
+    date:          dateStr,
+    openingBalance,
+    flowActivity:  goodSigns.flow,
+    regulation: {
+      sensoryComfort: regulation.sensory || 0,
+      audioVisual:    regulation.av      || 0,
+      environment:    regulation.env     || 0,
+      bodyRest:       regulation.body    || 0,
+    },
+    events: userEvents.map(e => ({
+      emotional:      e.E        || 0,
+      sensory:        e.S        || 0,
+      predictability: e.P        || 0,
+      masking:        e.M        || 0,
+      ef:             e.X        || 0,
+      flow:           e.flow     || false,
+      siFlow:         e.siFlow   ?? null,
+      cancelled:      e.cancelled || false,
+    })),
+  }, settings)
+  return { peak: peakDebit, reg: activeRegulation, le: livedExperience }
 }
 
 const HED_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
