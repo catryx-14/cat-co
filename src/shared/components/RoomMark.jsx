@@ -1,4 +1,12 @@
+import { useId } from 'react'
+
 export default function RoomMark({ date, onSettings }) {
+  // Unique prefix per instance so gradient/filter IDs don't clash if two RoomMarks
+  // are ever in the DOM simultaneously (e.g. during page transitions)
+  const uid = useId().replace(/:/g, '')
+  const gradId   = `${uid}-starRimGold`
+  const filterId = `${uid}-starGlow`
+
   return (
     <div className="room-mark-stack">
       <button
@@ -11,11 +19,11 @@ export default function RoomMark({ date, onSettings }) {
       >
         <svg viewBox="-14 -14 28 28" aria-hidden="true" style={{ display: 'block', width: '100%', height: '100%', overflow: 'visible' }}>
           <defs>
-            <radialGradient id="starRimGold" cx="30%" cy="25%" r="60%">
+            <radialGradient id={gradId} cx="30%" cy="25%" r="60%">
               <stop offset="0%"  stopColor="#fff8e0" stopOpacity="0.9" />
               <stop offset="60%" stopColor="#fff8e0" stopOpacity="0" />
             </radialGradient>
-            <filter id="starGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <filter id={filterId} x="-80%" y="-80%" width="260%" height="260%">
               <feGaussianBlur stdDeviation="2.2" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
@@ -23,7 +31,7 @@ export default function RoomMark({ date, onSettings }) {
               </feMerge>
             </filter>
           </defs>
-          <g filter="url(#starGlow)">
+          <g filter={`url(#${filterId})`}>
             {/* outer glow layer */}
             <path d="M10,0 L1.768,-1.768 L0,-10 L-1.768,-1.768 L-10,0 L-1.768,1.768 L0,10 L1.768,1.768 Z"
               fill="rgba(212,174,60,0.55)" />
@@ -35,7 +43,7 @@ export default function RoomMark({ date, onSettings }) {
               fill="rgba(255,248,200,0.98)" />
             {/* specular rim */}
             <path d="M8,0 L1.414,-1.414 L0,-8 L-1.414,-1.414 L-8,0 L-1.414,1.414 L0,8 L1.414,1.414 Z"
-              fill="url(#starRimGold)" />
+              fill={`url(#${gradId})`} />
             {/* hot core */}
             <circle cx="0" cy="0" r="1.2" fill="rgba(255,255,240,1)" />
           </g>

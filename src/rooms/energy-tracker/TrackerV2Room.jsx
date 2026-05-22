@@ -861,7 +861,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
           if (yest) {
             const closing = yest.entry_data.closingBalance ?? 0
-            setOpeningBalance(Math.max(0, closing - 5))
+            setOpeningBalance(computeOpeningBalance(closing))
             setYesterdayClosing(closing)
           }
         }
