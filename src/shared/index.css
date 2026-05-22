@@ -277,6 +277,9 @@ body {
   cursor: pointer;
   color: var(--ink-soft);
   text-decoration: none;
+  background: none;
+  border: none;
+  font: inherit;
   transition: background .35s ease, color .35s ease;
   position: relative;
   touch-action: manipulation;
