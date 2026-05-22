@@ -57,7 +57,7 @@ function buildEntryData(daily, events) {
 
   // Single shared function — same numbers everywhere (tooltip, week strip, history)
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
-    computeDisplayValues({ closingBalance, regulation, events: mappedEvents })
+    computeDisplayValues({ openingBalance: daily.opening_balance ?? 0, regulation, events: mappedEvents })
 
   return {
     date: daily.date,
