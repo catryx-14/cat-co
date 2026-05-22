@@ -252,9 +252,9 @@ function HubView({ onPick }) {
         }}>
           <span>Cat</span>
           <img src="/assets/logo.png" alt="and" draggable={false} style={{
-            height: '0.92em', width: 'auto',
+            height: '1.15em', width: 'auto',
             display: 'inline-block', verticalAlign: 'middle',
-            transform: 'translateY(-0.04em)',
+            transform: 'translateY(0.08em)',
             filter: 'drop-shadow(0 0 18px rgba(242,205,140,0.45))',
             userSelect: 'none',
           }} />
