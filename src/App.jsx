@@ -59,7 +59,7 @@ const ROOMS = [
 // ── Lantern config (Threshold hub) ───────────────────────────────────────────
 /* NIGHT GARDEN THEME — LANTERNS */
 const LANTERN_ROOMS = [
-  { id: 'almanac', name: 'Capacity Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
+  { id: 'capacity-tracker', name: 'Capacity Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
   { id: 'sparks',  name: 'Sparks',          sub: 'hold them gently',          glow: '#e35a4a', glow2: '#ffb098', svg: '/assets/lantern-07.svg', roomKey: 'sparks'      },
   { id: 'neural',  name: 'First Aid',        sub: 'gentle attention',          glow: '#a8132a', glow2: '#ff7888', svg: '/assets/lantern-02.svg', roomKey: 'physio'      },
   { id: 'games',   name: 'Games',            sub: 'a soft place to drift',     glow: '#2a8a5a', glow2: '#88e2b4', svg: '/assets/lantern-04.svg', roomKey: 'games'       },
@@ -71,7 +71,7 @@ function lanternLayout(isMobile, isShort) {
   // Body top = topStyle + chain. Body bottom = body top + size*1.3px.
   if (isMobile) {
     return [
-      { id: 'almanac', xPct: 10, topStyle: '-8vh',  chain: '27vh', size: 60, sway: 1.2, delay: 0.0 },
+      { id: 'capacity-tracker', xPct: 10, topStyle: '-8vh',  chain: '27vh', size: 60, sway: 1.2, delay: 0.0 },
       { id: 'sparks',  xPct: 30, topStyle: '-2vh',  chain: '27vh', size: 64, sway: 0.8, delay: 1.4 },
       { id: 'neural',  xPct: 52, topStyle: '0',     chain: '39vh', size: 60, sway: 1.6, delay: 0.7 },
       { id: 'games',   xPct: 74, topStyle: '-2vh',  chain: '27vh', size: 62, sway: 1.0, delay: 2.1 },
@@ -80,7 +80,7 @@ function lanternLayout(isMobile, isShort) {
   }
   if (isShort) {
     return [
-      { id: 'almanac', xPct: 8,  topStyle: '-10vh', chain: '33vh',               size: 80, sway: 1.4, delay: 0.0 },
+      { id: 'capacity-tracker', xPct: 8,  topStyle: '-10vh', chain: '33vh',               size: 80, sway: 1.4, delay: 0.0 },
       { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 74, sway: 0.9, delay: 1.6 },
       { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(23vh + 180px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 78, sway: 1.7, delay: 0.6 },
       { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 76, sway: 1.0, delay: 2.4 },
@@ -89,7 +89,7 @@ function lanternLayout(isMobile, isShort) {
   }
   // arc: sides off-screen, sparks/games drop ~5vh lower, neural deepest for dramatic arc
   return [
-    { id: 'almanac', xPct: 8,  topStyle: '-15vh', chain: '42vh',                                                   size: 100, sway: 1.4, delay: 0.0 },
+    { id: 'capacity-tracker', xPct: 8,  topStyle: '-15vh', chain: '42vh',                                                   size: 100, sway: 1.4, delay: 0.0 },
     { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 92,  sway: 0.9, delay: 1.6 },
     { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(27vh + 220px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 96, sway: 1.7, delay: 0.6 },
     { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 94,  sway: 1.0, delay: 2.4 },
