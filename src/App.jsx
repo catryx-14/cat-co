@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import TrackerRoom from './rooms/energy-tracker/TrackerRoom.jsx'
 import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
@@ -908,7 +907,6 @@ function Rail({ inRoom, current, onPick, onHome }) {
 function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey, efSuiteResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    // tracker-v2 branch: route the Capacity Tracker to the V2 test UI
     return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
@@ -928,9 +926,6 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   }
   if (roomKey === 'ef-suite') {
     return <EFSuiteRoom key={efSuiteResetKey} onSettings={onSettings} />
-  }
-  if (roomKey === 'tracker-v2') {
-    return <TrackerV2Room onHome={onHome} />
   }
   if (roomKey === 'library') {
     return <LibraryPlaceholder onSettings={onSettings} />

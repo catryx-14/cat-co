@@ -20,7 +20,8 @@ import {
   dbToInternal,
   internalToDb,
 } from '../../shared/lib/db-v2.js'
-import { saveThresholds, todayDateStr, yesterdayDateStr } from '../../shared/lib/db.js'
+import { saveThresholds } from '../../shared/lib/db.js'
+import { todayDateStr, yesterdayDateStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, computeOpeningBalance, taxActive } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
