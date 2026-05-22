@@ -21,7 +21,7 @@ import {
   internalToDb,
 } from '../../shared/lib/db-v2.js'
 import { saveThresholds } from '../../shared/lib/db.js'
-import { todayDateStr, yesterdayDateStr } from '../../shared/lib/dates.js'
+import { todayDateStr, yesterdayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, computeOpeningBalance, taxActive } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
@@ -63,12 +63,6 @@ function nowBucket() {
   if (h < 18) return 'afternoon'
   if (h < 21) return 'evening'
   return 'night'
-}
-
-function todayDisplayStr() {
-  const d = new Date()
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
 }
 
 function formatDateStr(dateStr) {

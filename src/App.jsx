@@ -8,6 +8,7 @@ import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
 import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
+import { todayDisplayStr } from './shared/lib/dates.js'
 import RoomMark from './shared/components/RoomMark.jsx'
 // NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
 import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
@@ -718,12 +719,6 @@ function ThresholdMoreRoomsPortal({ isMobile, isShort, onPick }) {
   )
 }
 
-function todayDisplayStr() {
-  const d = new Date()
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
-}
-
 function LibraryPlaceholder({ title = 'Library', onSettings }) {
   return (
     <>
@@ -916,7 +911,7 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <EngineRoom roomName={room?.name ?? 'Engine Room'} onSettings={onSettings} />
   }
   if (roomKey === 'physio') {
-    return <FirstAidRoom onHome={onHome} />
+    return <FirstAidRoom onHome={onHome} onSettings={onSettings} />
   }
   if (roomKey === 'games') {
     return <GamesRoom roomName="Games" onSettings={onSettings} />

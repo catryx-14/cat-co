@@ -23,3 +23,13 @@ export function yesterdayDateStr() {
   d.setDate(d.getDate() - 1)
   return localDateStr(d)
 }
+
+/**
+ * Returns today's date in the human-readable display format used in room headers.
+ * Example: "2026 · may · 22"
+ */
+export function todayDisplayStr() {
+  const d = new Date()
+  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
+  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
+}

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import FirstAidToolsScreen from "./FirstAidToolsScreen.jsx";
 import { supabase } from "../../shared/lib/supabase.js";
+import RoomMark from "../../shared/components/RoomMark.jsx";
+import { todayDisplayStr } from "../../shared/lib/dates.js";
 
 // Colour sync note: #e8e0ff / #7a6aa0 appear in the keyframes, the holding state,
 // the fading state, and the header. If these colours ever change, update all four
@@ -23,7 +25,7 @@ const states = [
   { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown"        },
 ];
 
-export default function FirstAidRoom({ onHome, supporterMode = false, catUserId = null, onBack = null, directMechanism = null }) {
+export default function FirstAidRoom({ onHome, onSettings, supporterMode = false, catUserId = null, onBack = null, directMechanism = null }) {
   const [faView, setFaView] = useState(
     supporterMode ? (directMechanism ? "tools" : "picker") : "checking"
   );
@@ -114,30 +116,37 @@ export default function FirstAidRoom({ onHome, supporterMode = false, catUserId 
 
   if (faView === "tools") {
     return (
-      <FirstAidToolsScreen
-        mechanism={activeMechanism}
-        dataUserId={supporterMode ? catUserId : null}
-        onSupporterBack={supporterMode ? onBack : null}
-        onChangeState={() => {
-          setAutoPlayed(true);
-          setStage(STAGES.CARDS);
-          setSelected(null);
-          setFaView("picker");
-        }}
-        onReset={() => {
-          if (supporterMode) {
+      <>
+        {onSettings && (
+          <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 20 }}>
+            <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
+          </div>
+        )}
+        <FirstAidToolsScreen
+          mechanism={activeMechanism}
+          dataUserId={supporterMode ? catUserId : null}
+          onSupporterBack={supporterMode ? onBack : null}
+          onChangeState={() => {
+            setAutoPlayed(true);
             setStage(STAGES.CARDS);
             setSelected(null);
             setFaView("picker");
-          } else {
-            setStage(STAGES.FULL);
-            setSelected(null);
-            setVisibleCards([]);
-            setAutoPlayed(false);
-            setFaView("picker");
-          }
-        }}
-      />
+          }}
+          onReset={() => {
+            if (supporterMode) {
+              setStage(STAGES.CARDS);
+              setSelected(null);
+              setFaView("picker");
+            } else {
+              setStage(STAGES.FULL);
+              setSelected(null);
+              setVisibleCards([]);
+              setAutoPlayed(false);
+              setFaView("picker");
+            }
+          }}
+        />
+      </>
     );
   }
 
@@ -149,6 +158,11 @@ export default function FirstAidRoom({ onHome, supporterMode = false, catUserId 
       fontFamily: "'Outfit', sans-serif",
       overflow: "hidden",
     }}>
+      {onSettings && (
+        <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 20 }}>
+          <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
+        </div>
+      )}
       <div style={{
         padding: showHeader ? "40px 36px 32px" : "0 36px",
         overflow: "hidden",

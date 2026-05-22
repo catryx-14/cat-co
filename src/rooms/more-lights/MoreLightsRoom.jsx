@@ -1,11 +1,6 @@
 import SuiteCard from '../../shared/components/SuiteCard.jsx'
 import RoomMark from '../../shared/components/RoomMark.jsx'
-
-function todayDisplayStr() {
-  const d = new Date()
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
-}
+import { todayDisplayStr } from '../../shared/lib/dates.js'
 
 const MORE_ROOMS = [
   {

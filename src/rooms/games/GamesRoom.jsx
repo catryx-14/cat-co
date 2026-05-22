@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
-
-function todayDisplayStr() {
-  const d = new Date()
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][d.getMonth()]
-  return `${d.getFullYear()} · ${m} · ${d.getDate().toString().padStart(2,'0')}`
-}
+import { todayDisplayStr } from '../../shared/lib/dates.js'
 
 // ── Cat asset imports ────────────────────────────────────────────────────────
 import blackCat1   from '../../assets/cats/black Cat 1.png'
