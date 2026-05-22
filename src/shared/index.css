@@ -1244,6 +1244,20 @@ body {
 }
 .event.system { cursor: default; opacity: 0.92; }
 .event.system:hover { background: transparent; }
+.autistic-tax-line {
+  font-family: "Crimson Pro", serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faint);
+  padding: 7px 2px;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(232,201,140,0.07);
+}
+.autistic-tax-line.cancelled {
+  text-decoration: line-through;
+  text-decoration-color: rgba(232,201,140,0.35);
+  opacity: 0.45;
+}
 .event-axes {
   display: flex;
   gap: 12px;

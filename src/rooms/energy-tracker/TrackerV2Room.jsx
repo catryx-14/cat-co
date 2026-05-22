@@ -14,7 +14,7 @@ import {
   dbToInternal,
   internalToDb,
 } from '../../shared/lib/db-v2.js'
-import { saveThresholds } from '../../shared/lib/db.js'
+import { saveThresholds, saveTaxValue } from '../../shared/lib/db.js'
 import { todayDateStr, yesterdayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, computeOpeningBalance, taxActive } from '../../shared/lib/math.js'
 
@@ -827,6 +827,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [openingBalance,setOpeningBalance]= useState(0)
   const [yesterdayClosing,setYesterdayClosing] = useState(0)
   const [saveStatus,    setSaveStatus]    = useState('')
+  const [stampedTax,    setStampedTax]    = useState(settings.taxValue ?? 3)
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
@@ -835,6 +836,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
       try {
         const existing = await loadEntryV2(dateStr, session.user.id)
         if (existing) {
+          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? 3)
           const state = dbToInternal(existing)
           if (isToday) {
             const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
@@ -870,21 +872,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
     init()
   }, [dateStr, session.user.id])
 
-  const allEvents = [
-    ...userEvents,
-    ...((() => {
-      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
-      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
-      return [{
-        id: 'autistic-tax',
-        bucket: 'evening',
-        text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
-        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
-        delayed: false, flow: false, cancelled: !applies,
-        system: true,
-      }]
-    })()),
-  ]
+  const taxCancelled = !taxActive(dateStr, settings.taxStartDate, userEvents) || goodSigns.flow
 
   if (loading) return <div className="history-loading">opening the almanac…</div>
 
@@ -899,7 +887,9 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
     try {
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents: evts, regulation: reg,
-        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
+        recovery: rec, warning: warn, goodSigns: gs,
+        settings: { ...settings, taxValue: stampedTax },
+        yesterdayClosing, meltdown: melt,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       if (!isToday) await recalculateFromDateV2(session.user.id, dateStr)
@@ -933,7 +923,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         userEvents={userEvents}
         regulation={regulation}
         openingBalance={openingBalance}
-        settings={settings}
+        settings={{ ...settings, taxValue: stampedTax }}
         flowOverride={goodSigns.flow}
         dateStr={dateStr}
         drillThrough={drillThrough}
@@ -950,8 +940,9 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
                   <div className="ledger-title">events · today</div>
                   <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
                 </div>
+                <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
                 <div className="events">
-                  {allEvents.map(e => (
+                  {userEvents.map(e => (
                     <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
                   ))}
                 </div>
@@ -1085,6 +1076,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [openingBalance, setOpeningBalance]   = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
+  const [stampedTax, setStampedTax] = useState(settings.taxValue ?? 3)
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1100,6 +1092,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
       try {
         const existing = await loadEntryV2(dateStr, session.user.id)
         if (existing) {
+          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? 3)
           const state = dbToInternal(existing)
           setOpeningBalance(state.openingBalance)
           setYesterdayClosing(state.openingBalance)
@@ -1131,17 +1124,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     return m
   }, [allEntries])
 
-  const allEventsWithTax = [
-    ...userEvents,
-    ...(() => {
-      const anyFlow = userEvents.some(e => e.flow) || goodSigns.flow
-      const applies = taxActive(dateStr, settings.taxStartDate, userEvents) && !goodSigns.flow
-      return [{ id: 'autistic-tax', bucket: 'evening',
-        text: anyFlow ? 'autistic tax — cancelled by flow state' : 'autistic tax',
-        E: 0, S: applies ? settings.taxValue : 0, P: 0, M: 0, X: 0,
-        delayed: false, flow: false, cancelled: !applies, system: true }]
-    })(),
-  ]
+  const taxCancelled = !taxActive(dateStr, settings.taxStartDate, userEvents) || goodSigns.flow
 
   async function autoSave(patch = {}) {
     const evts = patch.userEvents ?? userEvents
@@ -1154,7 +1137,9 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     try {
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents: evts, regulation: reg,
-        recovery: rec, warning: warn, goodSigns: gs, settings, yesterdayClosing, meltdown: melt,
+        recovery: rec, warning: warn, goodSigns: gs,
+        settings: { ...settings, taxValue: stampedTax },
+        yesterdayClosing, meltdown: melt,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       await recalculateFromDateV2(session.user.id, dateStr)
@@ -1183,7 +1168,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     if (d < weekStart || d > hedAddDays(weekStart, 6)) setWeekStart(hedWeekMonday(d))
   }
 
-  const skyNums  = calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr)
+  const skyNums  = calcSkyNums(userEvents, regulation, openingBalance, { ...settings, taxValue: stampedTax }, goodSigns, dateStr)
   const [y, mo, da] = dateStr.split('-').map(Number)
   const dateLabel    = `${HED_MON[mo-1]} ${da} · ${y}`
 
@@ -1238,8 +1223,9 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
                 <div className="ledger-title">events</div>
                 <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
               </div>
+              <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
               <div className="events">
-                {allEventsWithTax.map(e => (
+                {userEvents.map(e => (
                   <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
                 ))}
               </div>
@@ -1258,6 +1244,15 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
           </>
         )
       }
+    </div>
+  )
+}
+
+// ─── AutisticTaxLine ───
+function AutisticTaxLine({ rate, cancelled }) {
+  return (
+    <div className={`autistic-tax-line${cancelled ? ' cancelled' : ''}`}>
+      autistic tax: {rate}
     </div>
   )
 }
@@ -1310,6 +1305,45 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
   )
 }
 
+// ─── AutisticTaxSettings ───
+function AutisticTaxSettings({ settings, onTaxChange }) {
+  const [value, setValue] = useState(settings.taxValue ?? 3)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function handleSave() {
+    setSaving(true); setStatus('')
+    try {
+      await saveTaxValue(Number(value))
+      onTaxChange?.(Number(value))
+      setStatus('saved')
+      setTimeout(() => setStatus(''), 3000)
+    } catch { setStatus('failed to save') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="settings-section">
+      <div className="ledger-head">
+        <div className="ledger-title">autistic tax</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>daily cost</label>
+          <div className="settings-field-desc">applied each day — cancelled automatically on flow and SI flow days. changes apply from today forward; old days are not affected.</div>
+        </div>
+        <input type="number" className="settings-number-input" value={value} min={0} onChange={e => setValue(e.target.value)} />
+      </div>
+      <div className="save-bar">
+        <span className="save-bar-status">{status}</span>
+        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+          {saving ? 'saving…' : 'save'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
 const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -1325,6 +1359,10 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
 
   // Update local settings if parent passes new ones
   useEffect(() => { if (settingsProp) setSettings(settingsProp) }, [settingsProp])
+
+  const handleTaxChange = (newVal) => {
+    setSettings(prev => ({ ...prev, taxValue: newVal }))
+  }
 
   function prevMonth() {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
@@ -1432,6 +1470,7 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
       {tab === 'settings' && (
         <>
           <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          <AutisticTaxSettings settings={settings} onTaxChange={handleTaxChange} />
           {onRoom && (
             <div className="settings-section">
               <div className="ledger-head">

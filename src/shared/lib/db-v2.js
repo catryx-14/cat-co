@@ -55,8 +55,15 @@ function buildEntryData(daily, events) {
   }))
 
   // Single shared function — same numbers everywhere (tooltip, week strip, history)
+  // Pass the stamped per-day tax so cascade recalculation applies it correctly
+  const taxSettings = daily.autistic_tax != null
+    ? { taxValue: daily.autistic_tax, taxStartDate: '2000-01-01' }
+    : null
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
-    computeDisplayValues({ openingBalance: daily.opening_balance ?? 0, regulation, events: mappedEvents })
+    computeDisplayValues(
+      { date: daily.date, openingBalance: daily.opening_balance ?? 0, regulation, events: mappedEvents, flowActivity: daily.flow_activity ?? false },
+      taxSettings
+    )
 
   return {
     date: daily.date,
@@ -65,6 +72,7 @@ function buildEntryData(daily, events) {
     peakDebit,
     activeRegulation,
     autisticTax: 0,
+    autisticTaxRate: daily.autistic_tax ?? 3,
     siFlowBonus,
     livedExperience,
     flowActivity: daily.flow_activity ?? false,
@@ -107,6 +115,7 @@ function entryDataToDailyRow(dateStr, entryData, userId) {
     meltdown:     d.meltdown ?? false,
     si_flow_active: d.siFlowActive ?? false,
     flow_activity:  d.flowActivity ?? false,
+    autistic_tax:   d.autisticTaxRate ?? 3,
     yellow_threshold:   d.yellowThreshold ?? 15,
     critical_threshold: d.criticalThreshold ?? 30,
   }

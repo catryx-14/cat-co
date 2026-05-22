@@ -35,6 +35,13 @@ export async function saveThresholds(thresholds) {
   if (error) throw error
 }
 
+export async function saveTaxValue(value) {
+  const { error } = await supabase
+    .from('almanac_settings')
+    .upsert({ key: 'autistic_tax', value: { value } }, { onConflict: 'key' })
+  if (error) throw error
+}
+
 // DB row → internal UI state shape
 export function dbToInternal(row) {
   const d = row.entry_data
@@ -134,6 +141,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     activeRegulation,
     siFlowBonus,
     autisticTax: taxPoints,
+    autisticTaxRate: settings.taxValue ?? 3,
     flowActivity: goodSigns.flow,
     yellowThreshold: thresholds.yellow,
     criticalThreshold: thresholds.critical,
