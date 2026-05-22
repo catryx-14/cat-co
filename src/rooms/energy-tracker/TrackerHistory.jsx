@@ -367,13 +367,6 @@ export default function TrackerHistory({ settings, session, onEditDate, viewYear
       .catch(err => { console.error(err); setEntries([]) })
   }, [])
 
-  // Dim bokeh while history is visible — data is the visual here
-  useEffect(() => {
-    const bokeh = document.getElementById('bokeh-layer')
-    const prev = bokeh?.style.opacity ?? ''
-    if (bokeh) bokeh.style.opacity = '0.10'
-    return () => { if (bokeh) bokeh.style.opacity = prev }
-  }, [])
 
   const { entryMap, weeks, todayStr } = useMemo(() => {
     const todayStr = toDateStr(new Date())

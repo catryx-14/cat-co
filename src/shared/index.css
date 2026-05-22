@@ -908,6 +908,10 @@ body {
   padding: 5px 22px 7px;
   color: var(--ink-faint);
   cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
   border-bottom: 1px solid transparent;
   margin-bottom: -1px;
   transition: color .35s ease, border-color .35s ease;
@@ -1280,6 +1284,9 @@ body {
   padding: 1px 4px;
   border-radius: 3px;
   transition: background .25s ease;
+  background: none;
+  border: none;
+  font: inherit;
 }
 .axis-label:hover { background: rgba(232,201,140,0.08); }
 .axis-tip {
@@ -1442,6 +1449,7 @@ body {
   background: rgba(232,201,140,0.06);
   border: 1px solid rgba(232,201,140,0.22);
   cursor: pointer;
+  padding: 0;
   transition: background .35s ease, transform .25s ease, box-shadow .35s ease;
 }
 .reg-pip:hover { transform: scale(1.18); }

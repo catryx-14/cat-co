@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../shared/lib/supabase.js";
 import RoomMark from "../../shared/components/RoomMark.jsx";
 import { todayDisplayStr } from "../../shared/lib/dates.js";
@@ -21,6 +21,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
   const [openTiers, setOpenTiers]             = useState(new Set([1]));
   const [activeCard, setActiveCard]           = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const userIdRef = useRef(null);
 
   useEffect(() => { loadData(); }, [mechanism]);
 
@@ -30,6 +31,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+      userIdRef.current = user.id;
 
       // For supporter mode, state data comes from Cat's user ID; session always uses the authenticated user.
       const stateUserId = dataUserId || user.id;
@@ -102,8 +104,8 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
   }
 
   async function toggleTick(assignmentId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
     const next = new Set(tickedIds);
     if (next.has(assignmentId)) next.delete(assignmentId);
     else next.add(assignmentId);
@@ -111,7 +113,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
     await supabase
       .from("first_aid_sessions")
       .update({ ticked_tool_ids: [...next], last_active_at: new Date().toISOString() })
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
   }
 
   function toggleTier(tier) {
@@ -123,15 +125,15 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
   }
 
   async function confirmReset() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
     setTickedIds(new Set());
     setOpenTiers(new Set([1]));
     setShowResetConfirm(false);
     const { error: resetErr } = await supabase
       .from("first_aid_sessions")
       .update({ ticked_tool_ids: [], user_state_id: null, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
     if (resetErr) console.error("[FirstAid] reset update error:", resetErr);
     onReset();
   }

@@ -364,13 +364,13 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
-    return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} session={session} />
+    return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} />
   }
   if (roomKey === 'engine-room') {
     return <EngineRoom roomName={room?.name ?? 'Engine Room'} onSettings={onSettings} />
   }
   if (roomKey === 'physio') {
-    return <FirstAidRoom onHome={onHome} onSettings={onSettings} />
+    return <FirstAidRoom onSettings={onSettings} />
   }
   if (roomKey === 'games') {
     return <GamesRoom roomName="Games" onSettings={onSettings} />

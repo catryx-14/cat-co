@@ -458,11 +458,15 @@ function Basket({ group, isTarget, placedCount, onSelect }) {
   const active = isTarget && hovered
 
   return (
-    <div
+    <button
+      type="button"
       onClick={isTarget ? onSelect : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -523,7 +527,7 @@ function Basket({ group, isTarget, placedCount, onSelect }) {
       }}>
         {group.label}
       </span>
-    </div>
+    </button>
   )
 }
 
@@ -580,9 +584,12 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
         </button>
 
         {/* Cat image */}
-        <div
+        <button
+          type="button"
           onClick={() => !isPlaced && onSelect(cat.id)}
           style={{
+            background: 'none',
+            padding: 0,
             position: 'relative',
             width: 'clamp(180px, 28vw, 240px)',
             height: 'clamp(180px, 28vw, 240px)',
@@ -633,7 +640,7 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
               <span style={{ fontSize: 32, opacity: 0.8 }}>✓</span>
             </div>
           )}
-        </div>
+        </button>
 
         {/* Next arrow */}
         <button
@@ -746,23 +753,35 @@ function RoundComplete({ score, roundNumber, onNext, onMenu }) {
   )
 }
 
+function parseColor(col) {
+  if (col.startsWith('#')) {
+    return { r: parseInt(col.slice(1,3),16), g: parseInt(col.slice(3,5),16), b: parseInt(col.slice(5,7),16) }
+  }
+  const m = col.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (m) return { r: +m[1], g: +m[2], b: +m[3] }
+  return { r: 200, g: 200, b: 200 }
+}
+function withA(col, alpha) {
+  const { r, g, b } = parseColor(col)
+  return `rgba(${r},${g},${b},${alpha})`
+}
 function btnStyle(col) {
   return {
     padding: '12px 32px', borderRadius: 999,
-    border: `1.5px solid ${col}40`,
-    background: `${col}12`,
+    border: `1.5px solid ${withA(col, 0.25)}`,
+    background: withA(col, 0.07),
     color: col, fontFamily: "'Outfit', sans-serif",
     fontSize: 14, letterSpacing: '0.08em',
     cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
   }
 }
 function btnHover(e, col) {
-  e.currentTarget.style.background = `${col}22`
-  e.currentTarget.style.borderColor = `${col}99`
+  e.currentTarget.style.background = withA(col, 0.13)
+  e.currentTarget.style.borderColor = withA(col, 0.60)
 }
 function btnLeave(e, col) {
-  e.currentTarget.style.background = `${col}12`
-  e.currentTarget.style.borderColor = `${col}40`
+  e.currentTarget.style.background = withA(col, 0.07)
+  e.currentTarget.style.borderColor = withA(col, 0.25)
 }
 
 // ── Cat Sorting Game ─────────────────────────────────────────────────────────
@@ -861,7 +880,6 @@ function CatSortGame({ onBack }) {
   function startNextRound() {
     setRound(buildRound())
     setRoundNumber(n => n + 1)
-    setScore(s => s) // keep cumulative score
   }
 
   const placedByGroup = {}

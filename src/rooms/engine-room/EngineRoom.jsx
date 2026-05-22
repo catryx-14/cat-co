@@ -3,10 +3,14 @@ import RoomMark from '../../shared/components/RoomMark.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 
 const CATEGORY_COLORS = {
-  design:    'rgba(168,144,212,0.7)',
-  technical: 'rgba(110,192,191,0.7)',
-  content:   'rgba(232,201,140,0.7)',
-  reference: 'rgba(126,184,217,0.7)',
+  architecture: 'rgba(110,192,191,0.7)',
+  schema:       'rgba(126,184,217,0.7)',
+  reference:    'rgba(168,144,212,0.7)',
+  design:       'rgba(232,201,140,0.7)',
+  config:       'rgba(180,200,150,0.7)',
+  todo:         'rgba(232,160,110,0.7)',
+  session:      'rgba(190,190,210,0.6)',
+  ideas:        'rgba(150,220,180,0.7)',
 }
 
 export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {

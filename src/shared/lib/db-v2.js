@@ -16,7 +16,6 @@ import {
   computeDisplayValues,
   computeOpeningBalance,
   computeClosingBalance,
-  computeLivedExperience,
 } from './math.js'
 
 // ── Conversion helpers ─────────────────────────────────────────────────────
@@ -145,10 +144,12 @@ function entryDataToEventRows(dateStr, entryData, userId) {
  * so all the existing internal-state logic can be reused unchanged.
  */
 export async function loadEntryV2(dateStr, userId) {
-  const [{ data: daily }, { data: events }] = await Promise.all([
+  const [{ data: daily, error: dailyErr }, { data: events, error: eventsErr }] = await Promise.all([
     supabase.from('energy_daily').select('*').eq('user_id', userId).eq('date', dateStr).maybeSingle(),
     supabase.from('energy_events').select('*').eq('user_id', userId).eq('date', dateStr).order('sort_order'),
   ])
+  if (dailyErr) throw dailyErr
+  if (eventsErr) throw eventsErr
   if (!daily) return null
   return {
     date: dateStr,
@@ -172,12 +173,13 @@ export async function loadAllEntriesV2(userId) {
 
   // Load all events in one query, then group by date
   const dates = allDaily.map(d => d.date)
-  const { data: allEvents } = await supabase
+  const { data: allEvents, error: eventsErr } = await supabase
     .from('energy_events')
     .select('*')
     .eq('user_id', userId)
     .in('date', dates)
     .order('sort_order')
+  if (eventsErr) throw eventsErr
 
   const eventsByDate = {}
   for (const ev of (allEvents ?? [])) {
@@ -251,14 +253,19 @@ export async function recalculateFromDateV2(userId, fromDateStr) {
   let prevClosing = anchor.entry_data.closingBalance ?? 0
 
   for (const entry of subsequent) {
-    const d = entry.entry_data
-    const openingBalance = computeOpeningBalance(prevClosing)
-    const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } =
-      _recomputeFromEntryData(d, openingBalance)
+    try {
+      const d = entry.entry_data
+      const openingBalance = computeOpeningBalance(prevClosing)
+      const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } =
+        _recomputeFromEntryData(d, openingBalance)
 
-    const updatedEntryData = { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
-    await saveEntryV2({ dateStr: entry.date, entryData: updatedEntryData, userId })
-    prevClosing = closingBalance
+      const updatedEntryData = { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
+      await saveEntryV2({ dateStr: entry.date, entryData: updatedEntryData, userId })
+      prevClosing = closingBalance
+    } catch (err) {
+      console.error(`[recalculate] failed on ${entry.date}:`, err)
+      throw err
+    }
   }
 
   return subsequent.length

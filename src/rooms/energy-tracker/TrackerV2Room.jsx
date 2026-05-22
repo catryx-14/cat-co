@@ -70,8 +70,9 @@ function AxisLabel({ axisKey, className }) {
   const [open, setOpen] = useState(false)
   const def = AXIS_DEFS.find(a => a.k === axisKey)
   return (
-    <span className={`axis-label ${className || ''}`}
-          onClick={e => { e.stopPropagation(); setOpen(o => !o) }}>
+    <button type="button"
+            className={`axis-label ${className || ''}`}
+            onClick={e => { e.stopPropagation(); setOpen(o => !o) }}>
       {axisKey}
       {open && (
         <span className="axis-tip" onClick={e => e.stopPropagation()}>
@@ -80,7 +81,7 @@ function AxisLabel({ axisKey, className }) {
           <i className="dismiss" onClick={() => setOpen(false)}>tap to dismiss</i>
         </span>
       )}
-    </span>
+    </button>
   )
 }
 
@@ -328,10 +329,11 @@ function RegChannel({ chan, value, onSet }) {
     <div className="reg-channel">
       <div className="reg-pips">
         {Array.from({ length: chan.cap }, (_, i) => (
-          <span key={i}
-                className={`reg-pip ${i < value ? 'on' : ''}`}
-                onClick={() => onSet(i + 1 === value ? i : i + 1)}
-                title={`${chan.name}: ${i + 1}/${chan.cap}`} />
+          <button key={i}
+                  type="button"
+                  className={`reg-pip ${i < value ? 'on' : ''}`}
+                  onClick={() => onSet(i + 1 === value ? i : i + 1)}
+                  title={`${chan.name}: ${i + 1}/${chan.cap}`} />
         ))}
       </div>
       <div className="reg-name">{chan.name}</div>
@@ -1368,11 +1370,12 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
         {tab !== 'settings' && (
           <div className="room-tabs">
             {['today', 'history'].map(t => (
-              <div key={t}
-                   className={`room-tab ${tab === t ? 'active' : ''}`}
-                   onClick={() => handleTabChange(t)}>
+              <button key={t}
+                      type="button"
+                      className={`room-tab ${tab === t ? 'active' : ''}`}
+                      onClick={() => handleTabChange(t)}>
                 {t}
-              </div>
+              </button>
             ))}
           </div>
         )}
