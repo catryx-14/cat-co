@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../shared/lib/supabase.js";
+import RoomMark from "../../shared/components/RoomMark.jsx";
+import { todayDisplayStr } from "../../shared/lib/dates.js";
 
 const TIER_LABELS = {
   1: "tier 1 — near zero capacity",
@@ -8,7 +10,7 @@ const TIER_LABELS = {
   4: "tier 4 — enough online to reach outward",
 };
 
-export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset, dataUserId = null, onSupporterBack = null }) {
+export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset, onSettings, dataUserId = null, onSupporterBack = null }) {
   const [userState, setUserState]       = useState(null);
   const [permissions, setPermissions]   = useState([]);
   const [tierGroups, setTierGroups]     = useState({});
@@ -158,6 +160,14 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", fontFamily: "'Outfit', sans-serif" }}>
+
+      {/* ── Standard room header ── */}
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">first aid</h2>
+          {onSettings && <RoomMark date={todayDisplayStr()} onSettings={onSettings} />}
+        </div>
+      </div>
 
       {/* ── Supporter back link ── */}
       {onSupporterBack && (

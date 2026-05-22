@@ -116,37 +116,31 @@ export default function FirstAidRoom({ onHome, onSettings, supporterMode = false
 
   if (faView === "tools") {
     return (
-      <>
-        {onSettings && (
-          <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 20 }}>
-            <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
-          </div>
-        )}
-        <FirstAidToolsScreen
-          mechanism={activeMechanism}
-          dataUserId={supporterMode ? catUserId : null}
-          onSupporterBack={supporterMode ? onBack : null}
-          onChangeState={() => {
-            setAutoPlayed(true);
+      <FirstAidToolsScreen
+        mechanism={activeMechanism}
+        onSettings={onSettings}
+        dataUserId={supporterMode ? catUserId : null}
+        onSupporterBack={supporterMode ? onBack : null}
+        onChangeState={() => {
+          setAutoPlayed(true);
+          setStage(STAGES.CARDS);
+          setSelected(null);
+          setFaView("picker");
+        }}
+        onReset={() => {
+          if (supporterMode) {
             setStage(STAGES.CARDS);
             setSelected(null);
             setFaView("picker");
-          }}
-          onReset={() => {
-            if (supporterMode) {
-              setStage(STAGES.CARDS);
-              setSelected(null);
-              setFaView("picker");
-            } else {
-              setStage(STAGES.FULL);
-              setSelected(null);
-              setVisibleCards([]);
-              setAutoPlayed(false);
-              setFaView("picker");
-            }
-          }}
-        />
-      </>
+          } else {
+            setStage(STAGES.FULL);
+            setSelected(null);
+            setVisibleCards([]);
+            setAutoPlayed(false);
+            setFaView("picker");
+          }
+        }}
+      />
     );
   }
 
@@ -204,7 +198,9 @@ export default function FirstAidRoom({ onHome, onSettings, supporterMode = false
           flexDirection: "column",
           alignItems: "center",
           justifyContent: (isFull || isHolding || isFading) ? "center" : "flex-start",
-          padding: showCards ? "32px 24px" : "0",
+          // paddingBottom during the breathing animation offsets the invisible-but-present
+          // header text above, so the breathing word lands at the true visual centre
+          padding: showCards ? "32px 24px" : (isFull || isHolding || isFading) ? "0 0 8vh" : "0",
           position: "relative",
         }}
         onClick={isFull ? skip : undefined}
