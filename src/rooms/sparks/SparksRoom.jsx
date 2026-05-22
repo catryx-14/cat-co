@@ -335,22 +335,27 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
 
 // ─── ambient field dots ────────────────────────────────────────────────
 function FieldDots() {
-  const items = useMemo(() => Array.from({ length: 64 }, (_, i) => {
-    const r = Math.random()
-    const kind = r < 0.62 ? 'dot' : r < 0.92 ? 'sparkle' : 'glow'
-    const size = kind === 'dot' ? 1.2 + Math.random() * 1.6 : kind === 'sparkle' ? 5 + Math.random() * 6 : 8 + Math.random() * 8
-    const t = Math.random()
-    const tint = t < 0.40 ? 'rgba(255,235,205,0.95)' : t < 0.65 ? 'rgba(255,215,200,0.92)' : t < 0.82 ? 'rgba(220,200,255,0.88)' : t < 0.94 ? 'rgba(180,220,255,0.86)' : 'rgba(255,200,220,0.9)'
-    return {
-      id: i, kind, size, tint,
-      x: Math.random() * 100, y: Math.random() * 100,
-      a: kind === 'glow' ? 0.18 + Math.random() * 0.18 : 0.4 + Math.random() * 0.45,
-      twinkleDelay: -Math.random() * 8, twinkleDur: 3.5 + Math.random() * 6,
-      driftDelay: -Math.random() * 30, driftDur: 22 + Math.random() * 28,
-      driftDir: Math.random() < 0.5 ? 'a' : 'b',
-      rotDur: 8 + Math.random() * 10, rotDir: Math.random() < 0.5 ? 'a' : 'b',
-    }
-  }), [])
+  const items = useMemo(() => {
+    // Seeded PRNG — same positions every render, no jumping on remount
+    let s = 8675
+    const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
+    return Array.from({ length: 64 }, (_, i) => {
+      const r = rn()
+      const kind = r < 0.62 ? 'dot' : r < 0.92 ? 'sparkle' : 'glow'
+      const size = kind === 'dot' ? 1.2 + rn() * 1.6 : kind === 'sparkle' ? 5 + rn() * 6 : 8 + rn() * 8
+      const t = rn()
+      const tint = t < 0.40 ? 'rgba(255,235,205,0.95)' : t < 0.65 ? 'rgba(255,215,200,0.92)' : t < 0.82 ? 'rgba(220,200,255,0.88)' : t < 0.94 ? 'rgba(180,220,255,0.86)' : 'rgba(255,200,220,0.9)'
+      return {
+        id: i, kind, size, tint,
+        x: rn() * 100, y: rn() * 100,
+        a: kind === 'glow' ? 0.18 + rn() * 0.18 : 0.4 + rn() * 0.45,
+        twinkleDelay: -rn() * 8, twinkleDur: 3.5 + rn() * 6,
+        driftDelay: -rn() * 30, driftDur: 22 + rn() * 28,
+        driftDir: rn() < 0.5 ? 'a' : 'b',
+        rotDur: 8 + rn() * 10, rotDir: rn() < 0.5 ? 'a' : 'b',
+      }
+    })
+  }, [])
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>

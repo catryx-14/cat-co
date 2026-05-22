@@ -110,54 +110,6 @@ function useViewport() {
   return vp
 }
 
-// ── Threshold hero text — swappable component ────────────────────────────────
-// MVP default text. Night garden theme will override via text prop.
-function ThresholdHeroText({ isMobile }) {
-  return (
-    <div style={{
-      position: 'fixed',
-      left: isMobile ? 28 : 48,
-      bottom: isMobile ? 32 : 52,
-      zIndex: 8,
-      pointerEvents: 'none',
-      maxWidth: isMobile ? 260 : 360,
-    }}>
-      <div>
-        <div style={{
-          fontFamily: 'var(--font-hero)',
-          fontStyle: 'normal',
-          fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
-          color: '#f2f0e6',
-          lineHeight: 1.15,
-          letterSpacing: '-0.01em',
-        }}>
-          A place to think
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-hero)',
-          fontStyle: 'italic',
-          fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
-          color: '#c4b5d4',
-          lineHeight: 1.15,
-          letterSpacing: '-0.01em',
-          marginBottom: isMobile ? 14 : 20,
-        }}>
-          out loud.
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-hero)',
-          fontStyle: 'normal',
-          fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
-          color: 'var(--color-text-dim)',
-          lineHeight: 1.65,
-        }}>
-          A personal hub for exploring what it means to be autistic — the mechanisms, the patterns, the daily navigation. Built to catch the thoughts before they disappear.
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Threshold nav grid — 2×2 + More Rooms (replaces lantern arc for MVP) ──────
 // Row 1: Capacity Tracker | First Aid
 // Row 2: Sparks           | Executive Suite
