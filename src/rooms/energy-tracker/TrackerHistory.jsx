@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { loadAllEntries } from '../../shared/lib/db.js'
+// db.js (old table) import removed — history always uses loadAllEntriesV2 via prop
 import { computeDisplayValues } from '../../shared/lib/math.js'
 /* NIGHT GARDEN THEME VALUE — SI FLOW / SHUTDOWN ICONS
    Icons were cat photos: Aris Flow.jpg (243KB) and Aris Shutdown.png (2.2MB).
@@ -369,7 +369,7 @@ function buildMonthWeeks(year, month) {
 export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth, loadEntries }) {
   const [entries, setEntries] = useState(null)
   const thresholds = settings.livedExperienceThresholds
-  const _load = loadEntries ?? loadAllEntries
+  const _load = loadEntries
 
   useEffect(() => {
     _load(session.user.id)
