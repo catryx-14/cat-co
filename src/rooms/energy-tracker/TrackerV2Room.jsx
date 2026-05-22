@@ -936,11 +936,11 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           {(drillThrough === 'peak' || drillThrough === 'le') && (
             <>
               <section className="events-section">
+                <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
                 <div className="ledger-head">
                   <div className="ledger-title">events · today</div>
                   <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
                 </div>
-                <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
                 <div className="events">
                   {userEvents.map(e => (
                     <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
@@ -1219,11 +1219,11 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         : (
           <>
             <section className="events-section">
+              <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
               <div className="ledger-head">
                 <div className="ledger-title">events</div>
                 <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
               </div>
-              <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
               <div className="events">
                 {userEvents.map(e => (
                   <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
