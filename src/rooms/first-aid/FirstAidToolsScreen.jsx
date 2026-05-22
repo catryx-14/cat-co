@@ -67,10 +67,6 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
         .order("display_order");
       if (toolsErr) throw toolsErr;
 
-      console.log("[FirstAid] raw tools response:", JSON.stringify(tools?.slice(0, 2)));
-      console.log("[FirstAid] permissions response:", JSON.stringify(perms));
-      console.log("[FirstAid] userState:", JSON.stringify(us));
-
       const groups = {};
       for (const t of tools ?? []) {
         if (!groups[t.tier]) groups[t.tier] = [];
@@ -89,12 +85,13 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
       if (session && session.user_state_id === us.id) {
         setTickedIds(new Set(session.ticked_tool_ids ?? []));
       } else {
-        await supabase
+        const { error: upsertErr } = await supabase
           .from("first_aid_sessions")
           .upsert(
             { user_id: user.id, user_state_id: us.id, ticked_tool_ids: [] },
             { onConflict: "user_id" }
           );
+        if (upsertErr) console.error("[FirstAid] session upsert error:", upsertErr);
         setTickedIds(new Set());
       }
     } catch (e) {
@@ -136,12 +133,6 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
       .update({ ticked_tool_ids: [], user_state_id: null, updated_at: new Date().toISOString() })
       .eq("user_id", user.id);
     if (resetErr) console.error("[FirstAid] reset update error:", resetErr);
-    const { data: check } = await supabase
-      .from("first_aid_sessions")
-      .select("user_state_id, ticked_tool_ids")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    console.log("[FirstAid] session after reset:", JSON.stringify(check));
     onReset();
   }
 

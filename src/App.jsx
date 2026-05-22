@@ -10,8 +10,6 @@ import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 import { todayDisplayStr } from './shared/lib/dates.js'
 import RoomMark from './shared/components/RoomMark.jsx'
-// NIGHT GARDEN THEME VALUE: used by ThresholdMoreLightsPortal (More Lights portal frame)
-import circleFrameImg from './assets/icons/circle_frame_celestial_path.png'
 
 // ── Room registry (nav + routing) ───────────────────────────────────────────
 const ROOMS = [
@@ -21,81 +19,6 @@ const ROOMS = [
   { key: 'ef-suite',    name: 'Executive Suite',   sub: 'tools for doing things',   tone: 'blue'   },
   { key: 'more-lights', name: 'More Lights',       sub: 'more rooms this way',      tone: 'purple' },
 ]
-
-/* NIGHT GARDEN LANTERN POSITIONS — DO NOT DISCARD
-   Exact arc coordinates, hard-won. Preserved here for Phase 2 restoration.
-
-   DESKTOP arc (default — viewport >= 768px, height >= 790px):
-     almanac:  xPct 8,  topStyle '-15vh', chain '42vh',                   size 100, sway 1.4, delay 0.0
-     sparks:   xPct 28, topStyle '0',     chain 'calc(27vh + 130px)',      size 92,  sway 0.9, delay 1.6
-     neural:   xPct 50, topStyle '0',     chain 'calc(27vh + 220px)',      size 96,  sway 1.7, delay 0.6
-                        chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)'
-     games:    xPct 74, topStyle '0',     chain 'calc(27vh + 130px)',      size 94,  sway 1.0, delay 2.4
-     threads:  xPct 92, topStyle '-13vh', chain '40vh',                   size 90,  sway 1.3, delay 3.1
-
-   SHORT viewport (height < 790px):
-     almanac:  xPct 8,  topStyle '-10vh', chain '33vh',                   size 80, sway 1.4, delay 0.0
-     sparks:   xPct 28, topStyle '0',     chain 'calc(23vh + 104px)',      size 74, sway 0.9, delay 1.6
-     neural:   xPct 50, topStyle '0',     chain 'calc(23vh + 180px)',      size 78, sway 1.7, delay 0.6
-                        chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)'
-     games:    xPct 74, topStyle '0',     chain 'calc(23vh + 104px)',      size 76, sway 1.0, delay 2.4
-     threads:  xPct 92, topStyle '-10vh', chain '31vh',                   size 72, sway 1.3, delay 3.1
-
-   MOBILE (viewport < 768px):
-     almanac:  xPct 10, topStyle '-8vh',  chain '27vh',                   size 60, sway 1.2, delay 0.0
-     sparks:   xPct 30, topStyle '-2vh',  chain '27vh',                   size 64, sway 0.8, delay 1.4
-     neural:   xPct 52, topStyle '0',     chain '39vh',                   size 60, sway 1.6, delay 0.7
-     games:    xPct 74, topStyle '-2vh',  chain '27vh',                   size 62, sway 1.0, delay 2.1
-     threads:  xPct 88, topStyle '-8vh',  chain '25vh',                   size 56, sway 1.4, delay 2.8
-
-   Lantern SVGs: /assets/lantern-01.svg (almanac), /assets/lantern-07.svg (sparks),
-     /assets/lantern-02.svg (neural), /assets/lantern-04.svg (games), /assets/lantern-03.svg (threads)
-   Glow colors: almanac #3a78d8/#86b6ff, sparks #e35a4a/#ffb098, neural #a8132a/#ff7888,
-     games #2a8a5a/#88e2b4, threads #7a4ad8/#c8a8ff
-   Chain: 1.2px wide, linear-gradient gold rgba(244,212,158,0.95)→rgba(232,184,124,0.7)
-   Sway animation: thresholdLanternSway, 11–13s ease-in-out
-*/
-
-// ── Lantern config (Threshold hub) ───────────────────────────────────────────
-/* NIGHT GARDEN THEME — LANTERNS */
-const LANTERN_ROOMS = [
-  { id: 'capacity-tracker', name: 'Capacity Tracker', sub: 'today · history', glow: '#3a78d8', glow2: '#86b6ff', svg: '/assets/lantern-01.svg', roomKey: 'tracker'     }, /* HORIZON TAB — DEFERRED */
-  { id: 'sparks',  name: 'Sparks',          sub: 'hold them gently',          glow: '#e35a4a', glow2: '#ffb098', svg: '/assets/lantern-07.svg', roomKey: 'sparks'      },
-  { id: 'neural',  name: 'First Aid',        sub: 'gentle attention',          glow: '#a8132a', glow2: '#ff7888', svg: '/assets/lantern-02.svg', roomKey: 'physio'      },
-  { id: 'games',   name: 'Games',            sub: 'a soft place to drift',     glow: '#2a8a5a', glow2: '#88e2b4', svg: '/assets/lantern-04.svg', roomKey: 'games'       },
-  { id: 'threads', name: 'Library',          sub: 'stories · collected things', glow: '#7a4ad8', glow2: '#c8a8ff', svg: '/assets/lantern-03.svg', roomKey: 'library'     },
-]
-
-function lanternLayout(isMobile, isShort) {
-  // topStyle: CSS `top` for the wrap. chain: CSS length for chain height (string).
-  // Body top = topStyle + chain. Body bottom = body top + size*1.3px.
-  if (isMobile) {
-    return [
-      { id: 'capacity-tracker', xPct: 10, topStyle: '-8vh',  chain: '27vh', size: 60, sway: 1.2, delay: 0.0 },
-      { id: 'sparks',  xPct: 30, topStyle: '-2vh',  chain: '27vh', size: 64, sway: 0.8, delay: 1.4 },
-      { id: 'neural',  xPct: 52, topStyle: '0',     chain: '39vh', size: 60, sway: 1.6, delay: 0.7 },
-      { id: 'games',   xPct: 74, topStyle: '-2vh',  chain: '27vh', size: 62, sway: 1.0, delay: 2.1 },
-      { id: 'threads', xPct: 88, topStyle: '-8vh',  chain: '25vh', size: 56, sway: 1.4, delay: 2.8 },
-    ]
-  }
-  if (isShort) {
-    return [
-      { id: 'capacity-tracker', xPct: 8,  topStyle: '-10vh', chain: '33vh',               size: 80, sway: 1.4, delay: 0.0 },
-      { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 74, sway: 0.9, delay: 1.6 },
-      { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(23vh + 180px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 78, sway: 1.7, delay: 0.6 },
-      { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(23vh + 104px)', size: 76, sway: 1.0, delay: 2.4 },
-      { id: 'threads', xPct: 92, topStyle: '-10vh', chain: '31vh',               size: 72, sway: 1.3, delay: 3.1 },
-    ]
-  }
-  // arc: sides off-screen, sparks/games drop ~5vh lower, neural deepest for dramatic arc
-  return [
-    { id: 'capacity-tracker', xPct: 8,  topStyle: '-15vh', chain: '42vh',                                                   size: 100, sway: 1.4, delay: 0.0 },
-    { id: 'sparks',  xPct: 28, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 92,  sway: 0.9, delay: 1.6 },
-    { id: 'neural',  xPct: 50, topStyle: '0',     chain: 'calc(27vh + 220px)', chainClipTop: 'clamp(204px, calc(92px + 14vw), 280px)', size: 96, sway: 1.7, delay: 0.6 },
-    { id: 'games',   xPct: 74, topStyle: '0',     chain: 'calc(27vh + 130px)',                                     size: 94,  sway: 1.0, delay: 2.4 },
-    { id: 'threads', xPct: 92, topStyle: '-13vh', chain: '40vh',                                                   size: 90,  sway: 1.3, delay: 3.1 },
-  ]
-}
 
 function useViewport() {
   const [vp, setVp] = useState(() => {
@@ -157,58 +80,6 @@ function ThresholdNavLinks({ onPick, isMobile }) {
 
 // ── Threshold atmosphere ─────────────────────────────────────────────────────
 
-/* NIGHT GARDEN THEME — MOON
-   ThresholdMoon: position fixed, top clamp(130px, calc(7.5vw+46px), 152px), left 50%,
-   size clamp(196px, 26vw, 370px), opacity 0.52
-   SVG: halo radialGradient rgba(225,238,252,0.6)→transparent, body cx42% cy40%
-   #f8f4e8→#8ea0b0, texture cx60% cy55% rgba(150,170,190,0)→rgba(110,130,160,0.32)
-   Craters: 4 circles rgba(130,150,175,0.2–0.3) at (46,46)r1.7, (55,53)r2.1, (51,44)r1.0, (44,55)r1.3
-*/
-function ThresholdMoon() {
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 'clamp(130px, calc(7.5vw + 46px), 152px)',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: 'clamp(196px, 26vw, 370px)',
-      height: 'clamp(196px, 26vw, 370px)',
-      pointerEvents: 'none',
-      zIndex: 0,
-      opacity: 0.52,
-    }}>
-      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ overflow: 'visible' }}>
-        <defs>
-          <radialGradient id="t-moon-halo" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="rgba(225,238,252,0.6)" />
-            <stop offset="22%"  stopColor="rgba(195,220,242,0.32)" />
-            <stop offset="45%"  stopColor="rgba(170,200,230,0.14)" />
-            <stop offset="75%"  stopColor="rgba(160,190,220,0.05)" />
-            <stop offset="100%" stopColor="rgba(160,190,220,0)" />
-          </radialGradient>
-          <radialGradient id="t-moon-body" cx="42%" cy="40%" r="60%">
-            <stop offset="0%"   stopColor="#f8f4e8" />
-            <stop offset="40%"  stopColor="#e4e6e8" />
-            <stop offset="70%"  stopColor="#c8cfd8" />
-            <stop offset="100%" stopColor="#8ea0b0" />
-          </radialGradient>
-          <radialGradient id="t-moon-texture" cx="60%" cy="55%" r="40%">
-            <stop offset="0%"   stopColor="rgba(150,170,190,0)" />
-            <stop offset="100%" stopColor="rgba(110,130,160,0.32)" />
-          </radialGradient>
-        </defs>
-        <circle cx="50" cy="50" r="50" fill="url(#t-moon-halo)" />
-        <circle cx="50" cy="50" r="24" fill="url(#t-moon-body)" />
-        <circle cx="50" cy="50" r="24" fill="url(#t-moon-texture)" opacity="0.55" />
-        <circle cx="46" cy="46" r="1.7" fill="rgba(130,150,175,0.25)" />
-        <circle cx="55" cy="53" r="2.1" fill="rgba(130,150,175,0.3)" />
-        <circle cx="51" cy="44" r="1.0" fill="rgba(130,150,175,0.22)" />
-        <circle cx="44" cy="55" r="1.3" fill="rgba(130,150,175,0.2)" />
-      </svg>
-    </div>
-  )
-}
-
 function ThresholdStarField() {
   const stars = useMemo(() => {
     let s = 1337
@@ -259,182 +130,6 @@ function ThresholdStarField() {
   )
 }
 
-/* NIGHT GARDEN THEME — FOREST FRAME
-   ThresholdForestFrame: position fixed SVG, viewBox 0 0 1600 1000, zIndex 1
-   - 70 grass tufts: seed 314, y 880–990, height 12–38px, stroke rgba(60,80,90,0.7)
-   - 46 flower blooms: seed 1729, y 860–990, r 3–8px, 5-petal ellipse,
-     palette ['#e8d8f0','#f4e0e6','#dfe8f4','#f0e6c8','#e0d4ec'], center #fff7d0
-   - Left/right haze: radialGradient rgba(20,28,48,0.85)→transparent
-   - Ground fog linearGradient rgba(8,14,36,0.75)→transparent
-   - Floor fade: rect x0 y640 width1600 height360
-   - Flower patches: 3 ellipses with t-flowerPatch radialGradient rgba(38,28,55,0.6)
-*/
-function ThresholdForestFrame() {
-  const grassTufts = useMemo(() => {
-    let s = 314
-    const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-    return Array.from({ length: 70 }).map(() => ({
-      x: rn() * 1600, y: 880 + rn() * 110,
-      h: 12 + rn() * 26, sway: (rn() - 0.5) * 4, o: 0.35 + rn() * 0.45,
-    }))
-  }, [])
-  const flowerBlooms = useMemo(() => {
-    let s = 1729
-    const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-    const palette = ['#e8d8f0', '#f4e0e6', '#dfe8f4', '#f0e6c8', '#e0d4ec']
-    return Array.from({ length: 46 }).map(() => ({
-      x: rn() * 1600, y: 860 + rn() * 130,
-      r: 3 + rn() * 5,
-      color: palette[Math.floor(rn() * palette.length)],
-      o: 0.55 + rn() * 0.4,
-    }))
-  }, [])
-  return (
-    <svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"
-      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
-      <defs>
-        <radialGradient id="t-leftHaze"  cx="0%"   cy="60%" r="55%">
-          <stop offset="0%"   stopColor="rgba(20,28,48,0.85)" />
-          <stop offset="55%"  stopColor="rgba(18,24,42,0.55)" />
-          <stop offset="100%" stopColor="rgba(8,12,28,0)" />
-        </radialGradient>
-        <radialGradient id="t-rightHaze" cx="100%" cy="60%" r="55%">
-          <stop offset="0%"   stopColor="rgba(20,28,48,0.85)" />
-          <stop offset="55%"  stopColor="rgba(18,24,42,0.55)" />
-          <stop offset="100%" stopColor="rgba(8,12,28,0)" />
-        </radialGradient>
-        <linearGradient id="t-groundFog" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%"   stopColor="rgba(8,14,36,0.75)" />
-          <stop offset="45%"  stopColor="rgba(12,20,48,0.35)" />
-          <stop offset="100%" stopColor="rgba(12,20,48,0)" />
-        </linearGradient>
-        <linearGradient id="t-floorFade" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%"   stopColor="rgba(10,15,32,0)" />
-          <stop offset="60%"  stopColor="rgba(8,12,28,0.6)" />
-          <stop offset="100%" stopColor="rgba(6,10,22,0.95)" />
-        </linearGradient>
-        <radialGradient id="t-flowerPatch" cx="50%" cy="60%" r="50%">
-          <stop offset="0%"   stopColor="rgba(38,28,55,0.6)" />
-          <stop offset="100%" stopColor="rgba(20,18,40,0)" />
-        </radialGradient>
-        <filter id="t-softblur"><feGaussianBlur stdDeviation="6" /></filter>
-        <filter id="t-lightblur"><feGaussianBlur stdDeviation="2" /></filter>
-      </defs>
-      <rect x="0"    y="0" width="520"  height="1000" fill="url(#t-leftHaze)" />
-      <rect x="1080" y="0" width="520"  height="1000" fill="url(#t-rightHaze)" />
-      <ellipse cx="800" cy="960" rx="1100" ry="280" fill="url(#t-floorFade)" />
-      <g filter="url(#t-softblur)" opacity="0.85">
-        <ellipse cx="180"  cy="940" rx="320" ry="120" fill="url(#t-flowerPatch)" />
-        <ellipse cx="1420" cy="940" rx="320" ry="120" fill="url(#t-flowerPatch)" />
-        <ellipse cx="800"  cy="980" rx="500" ry="80"  fill="url(#t-flowerPatch)" />
-      </g>
-      <g opacity="0.9">
-        {grassTufts.map((g, i) => (
-          <path key={i}
-            d={`M ${g.x} ${g.y} Q ${g.x + g.sway} ${g.y - g.h * 0.6} ${g.x + g.sway * 1.5} ${g.y - g.h}`}
-            stroke="rgba(60,80,90,0.7)" strokeWidth="0.7" fill="none" opacity={g.o} />
-        ))}
-      </g>
-      <g filter="url(#t-lightblur)">
-        {flowerBlooms.map((f, i) => (
-          <g key={i} opacity={f.o} transform={`translate(${f.x}, ${f.y})`}>
-            {[0, 72, 144, 216, 288].map((a) => (
-              <ellipse key={a} cx="0" cy={-f.r * 0.8} rx={f.r * 0.4} ry={f.r * 0.7}
-                transform={`rotate(${a})`} fill={f.color} />
-            ))}
-            <circle cx="0" cy="0" r={f.r * 0.3} fill="#fff7d0" opacity="0.9" />
-          </g>
-        ))}
-      </g>
-      <rect x="0" y="640" width="1600" height="360" fill="url(#t-groundFog)" opacity="1" />
-    </svg>
-  )
-}
-
-/* NIGHT GARDEN THEME — AMBIENT BOKEH (see also atmosphere.js NIGHT GARDEN comment)
-   ThresholdAmbientBokeh: 22 orbs, position fixed zIndex 2, overflow hidden
-   Colors: #5FAFA7 teal, #E8B87C amber, #E39AAA rose, #B29AD8 lavender,
-     #7CB78E sage, #F0D080 gold, #a6d6ff sky
-   Size: 30–120px diameter. Opacity: 0.15–0.37. Blur: size * 0.05px
-   Animation: thresholdOrbFloat, duration 10–24s, dx/dy ±15px
-*/
-function ThresholdAmbientBokeh() {
-  const orbs = useMemo(() => {
-    let s = 555
-    const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-    const colors = ['#5FAFA7', '#E8B87C', '#E39AAA', '#B29AD8', '#7CB78E', '#F0D080', '#a6d6ff']
-    return Array.from({ length: 22 }).map(() => ({
-      x: rn() * 100, y: rn() * 100,
-      size: 30 + rn() * 90,
-      color: colors[Math.floor(rn() * colors.length)],
-      opacity: 0.15 + rn() * 0.22,
-      dur: 10 + rn() * 14,
-      dx: (rn() - 0.5) * 30,
-      dy: (rn() - 0.5) * 30,
-      delay: rn() * 8,
-    }))
-  }, [])
-  return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2, overflow: 'hidden' }}>
-      {orbs.map((o, i) => (
-        <div key={i} className="threshold-orb" style={{
-          position: 'absolute',
-          left: `${o.x}%`, top: `${o.y}%`,
-          width: o.size, height: o.size,
-          background: `radial-gradient(circle at 38% 38%, ${o.color}ee, ${o.color}66 35%, ${o.color}22 65%, transparent 78%)`,
-          borderRadius: '50%',
-          opacity: o.opacity,
-          filter: `blur(${o.size * 0.05}px)`,
-          '--dur': `${o.dur}s`,
-          '--delay': `-${o.delay}s`,
-          '--dx': `${o.dx}px`,
-          '--dy': `${o.dy}px`,
-        }} />
-      ))}
-    </div>
-  )
-}
-
-/* NIGHT GARDEN THEME — FIREFLIES (shooting stars on Threshold)
-   ThresholdFireflies: 28 fireflies, position fixed zIndex 2
-   Size: 2–4.5px. Colors: #fff4c0 (15% chance) or #fdd874
-   boxShadow: 3× and 6× size glow in same hue
-   Animation: thresholdFirefly, duration 7–16s, dx ±50px, dy -(15–65)px upward
-*/
-function ThresholdFireflies() {
-  const flies = useMemo(() => {
-    let s = 2024
-    const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-    return Array.from({ length: 28 }).map(() => ({
-      x: rn() * 100, y: 30 + rn() * 65,
-      size: 2 + rn() * 2.5,
-      dur: 7 + rn() * 9,
-      delay: rn() * 10,
-      fx: (rn() - 0.5) * 100,
-      fy: -(15 + rn() * 50),
-      hue: rn() < 0.15 ? '#fff4c0' : '#fdd874',
-    }))
-  }, [])
-  return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
-      {flies.map((f, i) => (
-        <div key={i} className="threshold-firefly" style={{
-          position: 'absolute',
-          left: `${f.x}%`, top: `${f.y}%`,
-          width: f.size, height: f.size,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${f.hue}, ${f.hue}88 40%, transparent 70%)`,
-          boxShadow: `0 0 ${f.size * 3}px ${f.hue}, 0 0 ${f.size * 6}px ${f.hue}66`,
-          '--dur': `${f.dur}s`,
-          '--delay': `-${f.delay}s`,
-          '--fx': `${f.fx}px`,
-          '--fy': `${f.fy}px`,
-        }} />
-      ))}
-    </div>
-  )
-}
-
 function ThresholdDateBar() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -480,194 +175,6 @@ function ThresholdDateBar() {
         boxShadow: '0 0 8px rgba(244,212,158,0.4)',
       }} />
     </div>
-  )
-}
-
-function ThresholdHangingLantern({ room, xPct, topStyle, chain, size, sway, delay, chainClipTop, onPick }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      type="button"
-      className="threshold-lantern-wrap"
-      aria-label={`Enter ${room.name} — ${room.sub}`}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onClick={() => onPick(room.roomKey)}
-      style={{
-        position: 'fixed',
-        left: `${xPct}%`,
-        top: topStyle || 0,
-        transform: 'translateX(-50%)',
-        width: size,
-        zIndex: 5,
-        pointerEvents: 'auto',
-        cursor: 'pointer',
-        animation: `thresholdLanternSway ${10 + sway}s ease-in-out infinite`,
-        animationDelay: `${delay}s`,
-        transformOrigin: 'top center',
-        outline: 'none',
-        willChange: 'transform',
-        background: 'transparent',
-        border: 'none',
-        padding: 0,
-        margin: 0,
-        WebkitAppearance: 'none',
-        appearance: 'none',
-      }}>
-      {/* fine gold chain */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: 0,
-        transform: 'translateX(-50%)',
-        width: 1.2,
-        height: chain,
-        background: 'linear-gradient(180deg, rgba(244,212,158,0.95) 0%, rgba(244,212,158,0.85) 40%, rgba(232,184,124,0.7) 100%)',
-        boxShadow: '0 0 4px rgba(244,212,158,0.5)',
-        clipPath: chainClipTop ? `inset(${chainClipTop} 0 0 0)` : undefined,
-      }} />
-      {/* anchor ring at gold rule — hidden when chain is clipped */}
-      {!chainClipTop && (
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: -3,
-        transform: 'translateX(-50%)',
-        width: 6, height: 6,
-        borderRadius: '50%',
-        border: '1px solid rgba(244,212,158,0.95)',
-        boxShadow: '0 0 6px rgba(244,212,158,0.7)',
-      }} />
-      )}
-      {/* chain-to-lantern link */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: `calc(${chain} - 8px)`,
-        transform: 'translateX(-50%)',
-        width: 5, height: 10,
-        background: 'linear-gradient(180deg, rgba(232,184,124,0.7), rgba(244,212,158,1))',
-        borderRadius: 2,
-        boxShadow: '0 0 6px rgba(244,212,158,0.7)',
-      }} />
-
-      {/* lantern body */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: chain,
-        transform: `translate(-50%, 0) scale(${hover ? 1.06 : 1})`,
-        width: size,
-        height: size * 1.3,
-        transition: 'transform 380ms cubic-bezier(.2,.9,.2,1)',
-      }}>
-        {/* coloured radial glow */}
-        <div style={{
-          position: 'absolute',
-          inset: '-30%',
-          borderRadius: '50%',
-          background: `radial-gradient(circle at 50% 52%, ${room.glow2} 0%, ${room.glow}cc 18%, ${room.glow}55 40%, ${room.glow}00 75%)`,
-          filter: `blur(${hover ? 10 : 14}px)`,
-          opacity: hover ? 1 : 0.85,
-          transition: 'opacity 300ms, filter 300ms',
-          mixBlendMode: 'screen',
-          animation: 'thresholdLanternBreathe 4s ease-in-out infinite',
-          animationDelay: `${delay}s`,
-        }} />
-        {/* candle core */}
-        <div style={{
-          position: 'absolute',
-          left: '50%', top: '54%',
-          width: '40%', height: '40%',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, #fff8d4 0%, ${room.glow2} 40%, ${room.glow}aa 70%, transparent 90%)`,
-          mixBlendMode: 'screen',
-          filter: 'blur(2px)',
-          animation: 'thresholdLanternFlicker 3.2s ease-in-out infinite',
-          animationDelay: `${delay * 0.7}s`,
-        }} />
-        {/* lantern SVG metalwork */}
-        <img src={room.svg} alt=""
-          draggable={false}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            filter: 'brightness(0.18) drop-shadow(0 6px 14px rgba(0,0,0,0.55))',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }} />
-      </div>
-
-      {/* label — always visible, brightens on hover */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: `calc(${chain} + ${(size * 1.3 + 10).toFixed(1)}px)`,
-        transform: 'translate(-50%, 0)',
-        pointerEvents: 'none',
-        textAlign: 'center',
-        whiteSpace: 'nowrap',
-        transition: 'opacity 280ms',
-      }}>
-        <div style={{
-          fontFamily: 'Italiana, serif',
-          fontSize: 20,
-          color: hover ? '#fff4d0' : '#e8dfc0',
-          letterSpacing: 1.5,
-          textShadow: hover
-            ? `0 0 18px ${room.glow}, 0 0 32px ${room.glow}88, 0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)`
-            : '0 1px 6px rgba(0,0,0,0.9), 0 0 14px rgba(0,0,0,0.7)',
-          transition: 'color 280ms, text-shadow 280ms',
-        }}>{room.name}</div>
-        <div style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontSize: 13,
-          color: hover ? '#d6c8b5' : '#c4b89a',
-          marginTop: 2,
-          letterSpacing: 0.3,
-          textShadow: '0 1px 5px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.6)',
-          transition: 'color 280ms',
-        }}>{room.sub}</div>
-      </div>
-    </button>
-  )
-}
-
-/* NIGHT GARDEN THEME VALUE: More Lights portal label was "More Lights" with Italiana font,
-   and subtitle "more rooms this way" in Cormorant Garamond italic.
-   Icon: circle_frame_celestial_path.png with gold glow on hover. */
-function ThresholdMoreRoomsPortal({ isMobile, isShort, onPick }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      type="button"
-      aria-label="More Rooms — see all rooms"
-      onClick={() => onPick('more-lights')}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        position: 'fixed',
-        right: isMobile ? 18 : 32,
-        bottom: isMobile ? 28 : isShort ? 36 : 44,
-        zIndex: 8,
-        cursor: 'pointer',
-        background: 'transparent',
-        border: '1px solid var(--color-border)',
-        borderRadius: 4,
-        color: hover ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-        fontFamily: 'var(--font-primary)',
-        fontSize: isMobile ? 14 : 16,
-        letterSpacing: '0.06em',
-        padding: '8px 20px',
-        transition: 'color 200ms, border-color 200ms',
-        outline: 'none',
-      }}>
-      More Rooms
-    </button>
   )
 }
 
@@ -837,13 +344,13 @@ function Rail({ inRoom, current, onPick, onHome }) {
       </button>
       <nav className="rail-nav" aria-hidden={!inRoom}>
         {ROOMS.map(r => (
-          <a key={r.key}
+          <button key={r.key}
+             type="button"
              className={`rail-nav-item ${r.tone} ${current === r.key ? 'active' : ''}`}
-             href="#"
-             onClick={e => { e.preventDefault(); onPick(r.key) }}>
+             onClick={() => onPick(r.key)}>
             <span className="dot" />
             <span className="label-text">{r.name}</span>
-          </a>
+          </button>
         ))}
       </nav>
     </div>
@@ -851,7 +358,7 @@ function Rail({ inRoom, current, onPick, onHome }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, trackerResetKey, efSuiteResetKey }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, efSuiteResetKey }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
     return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
@@ -948,13 +455,11 @@ function HubApp({ session }) {
   }, [view])
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)
-  const [trackerResetKey, setTrackerResetKey] = useState(0)
   const [efSuiteResetKey, setEfSuiteResetKey] = useState(0)
 
   const goRoom = (key) => {
     if (key === 'tracker') {
       setTrackerInitTab(null)
-      setTrackerResetKey(k => k + 1)
     }
     if (key === 'ef-suite') {
       setEfSuiteResetKey(k => k + 1)
@@ -976,7 +481,7 @@ function HubApp({ session }) {
           <div className={fadeClass} key={view}>
             {view === 'hub'
               ? <HubView onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} trackerResetKey={trackerResetKey} efSuiteResetKey={efSuiteResetKey} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} efSuiteResetKey={efSuiteResetKey} />}
           </div>
         </main>
       </div>

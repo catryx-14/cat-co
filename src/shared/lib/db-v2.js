@@ -226,9 +226,10 @@ export async function saveEntryV2({ dateStr, entryData, peakDebit: _ignored, use
 // ── Cascade recalculation ─────────────────────────────────────────────────
 
 function _recomputeFromEntryData(entryData, openingBalance) {
-  // Delegate to computeDisplayValues — one formula for cascade recalculation too
+  // Spread the cascade-computed opening balance in so computeDisplayValues uses
+  // the correct value (not the stale one stored in entryData from a previous save)
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
-    computeDisplayValues(entryData)
+    computeDisplayValues({ ...entryData, openingBalance: Math.round(openingBalance) })
   const closingBalance = computeClosingBalance(peakDebit, activeRegulation)
   return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
 }

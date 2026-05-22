@@ -558,9 +558,15 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
   }, [loading, view])
 
   const fetchSparks = async () => {
-    const { data } = await supabase.from('sparks').select('*').order('created_at', { ascending: false })
-    setSparks(data || [])
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.from('sparks').select('*').order('created_at', { ascending: false })
+      if (error) throw error
+      setSparks(data || [])
+    } catch (err) {
+      console.error('[Sparks] failed to load sparks:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signIn = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } })
@@ -578,10 +584,14 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
 
   const onSave = async () => {
     if (!draft.trim()) return
-    if (editing) {
-      await supabase.from('sparks').update({ content: draft.trim(), tags: [draftTag] }).eq('id', editing)
-    } else {
-      await supabase.from('sparks').insert({ content: draft.trim(), tags: [draftTag], user_id: user?.id })
+    try {
+      const { error } = editing
+        ? await supabase.from('sparks').update({ content: draft.trim(), tags: [draftTag] }).eq('id', editing)
+        : await supabase.from('sparks').insert({ content: draft.trim(), tags: [draftTag], user_id: user?.id })
+      if (error) throw error
+    } catch (err) {
+      console.error('[Sparks] save failed:', err)
+      return
     }
     setEditing(null); setDraft(''); setDraftTag('general')
     fetchSparks()
@@ -589,7 +599,13 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
 
   const onDelete = async () => {
     if (!editing) return
-    await supabase.from('sparks').delete().eq('id', editing)
+    try {
+      const { error } = await supabase.from('sparks').delete().eq('id', editing)
+      if (error) throw error
+    } catch (err) {
+      console.error('[Sparks] delete failed:', err)
+      return
+    }
     setEditing(null); setDraft(''); setDraftTag('general')
     fetchSparks()
   }

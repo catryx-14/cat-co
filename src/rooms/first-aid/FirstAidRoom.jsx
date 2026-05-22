@@ -25,7 +25,7 @@ const states = [
   { id: "e", label: "I've shut down",                           mechanism: "dorsal_shutdown"        },
 ];
 
-export default function FirstAidRoom({ onHome, onSettings, supporterMode = false, catUserId = null, onBack = null, directMechanism = null }) {
+export default function FirstAidRoom({ onSettings, supporterMode = false, catUserId = null, onBack = null, directMechanism = null }) {
   const [faView, setFaView] = useState(
     supporterMode ? (directMechanism ? "tools" : "picker") : "checking"
   );
@@ -41,19 +41,24 @@ export default function FirstAidRoom({ onHome, onSettings, supporterMode = false
   useEffect(() => {
     if (supporterMode) return;
     async function checkSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setFaView("picker"); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setFaView("picker"); return; }
 
-      const { data: session } = await supabase
-        .from("first_aid_sessions")
-        .select("user_state_id, user_states(mechanism_id)")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        const { data: session } = await supabase
+          .from("first_aid_sessions")
+          .select("user_state_id, user_states(mechanism_id)")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      if (session?.user_state_id && session?.user_states?.mechanism_id) {
-        setActiveMechanism(session.user_states.mechanism_id);
-        setFaView("tools");
-      } else {
+        if (session?.user_state_id && session?.user_states?.mechanism_id) {
+          setActiveMechanism(session.user_states.mechanism_id);
+          setFaView("tools");
+        } else {
+          setFaView("picker");
+        }
+      } catch (err) {
+        console.error("[FirstAid] session check failed:", err);
         setFaView("picker");
       }
     }

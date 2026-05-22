@@ -1,11 +1,5 @@
 /**
- * TrackerV2Room — Cat's exact tracker UI, backed by energy_events + energy_daily
- *
- * Identical look and feel to TrackerRoom.  The only difference is the data layer:
- * reads/writes energy_events + energy_daily instead of the energy_entries JSON blob.
- *
- * On the tracker-v2 branch, App.jsx routes the Capacity Tracker nav here.
- * Master branch is unaffected.
+ * TrackerV2Room — Cat's capacity tracker, backed by energy_events + energy_daily.
  */
 
 import { useState, useEffect, useMemo } from 'react'
@@ -832,7 +826,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [yesterdayClosing,setYesterdayClosing] = useState(0)
   const [saveStatus,    setSaveStatus]    = useState('')
 
-  useEffect(() => { onDrillThrough?.(null) }, [resetKey])
+  useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
   useEffect(() => {
     async function init() {
@@ -872,7 +866,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
       }
     }
     init()
-  }, [dateStr])
+  }, [dateStr, session.user.id])
 
   const allEvents = [
     ...userEvents,

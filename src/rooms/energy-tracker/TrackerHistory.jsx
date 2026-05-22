@@ -1,15 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 // db.js (old table) import removed — history always uses loadAllEntriesV2 via prop
 import { computeDisplayValues } from '../../shared/lib/math.js'
-/* NIGHT GARDEN THEME VALUE — SI FLOW / SHUTDOWN ICONS
-   Icons were cat photos: Aris Flow.jpg (243KB) and Aris Shutdown.png (2.2MB).
-   Used in DayCell as <img src={icon} className="cal-icon"> inside .cal-icon-wrap.
-   CSS classes: .cal-icon-wrap--siflow and .cal-icon-wrap--meltdown
-   Image files preserved at: src/assets/icons/Aris Flow.jpg and Aris Shutdown.png
-   Restore: re-import below and pass to CalIcon as src prop
-*/
-import meltdownIcon from '../../assets/icons/Aris Shutdown.png'  // preserved — not deleted
-import siFlowIcon   from '../../assets/icons/Aris Flow.jpg'       // preserved — not deleted
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -369,10 +360,9 @@ function buildMonthWeeks(year, month) {
 export default function TrackerHistory({ settings, session, onEditDate, viewYear, viewMonth, loadEntries }) {
   const [entries, setEntries] = useState(null)
   const thresholds = settings.livedExperienceThresholds
-  const _load = loadEntries
 
   useEffect(() => {
-    _load(session.user.id)
+    loadEntries(session.user.id)
       .then(rows => setEntries(rows))
       .catch(err => { console.error(err); setEntries([]) })
   }, [])
