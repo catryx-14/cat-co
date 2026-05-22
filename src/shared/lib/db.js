@@ -12,6 +12,7 @@
  */
 
 import { supabase } from './supabase.js'
+import { computeDisplayValues, computeClosingBalance } from './math.js'
 
 export async function loadSettings() {
   const { data, error } = await supabase.from('almanac_settings').select('key, value')
@@ -79,56 +80,50 @@ export function dbToInternal(row) {
 // Internal UI state → DB entry_data blob + computed peak
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
                                 warning, goodSigns, settings, yesterdayClosing, meltdown }) {
-  const { taxValue, thresholds, taxStartDate } = settings
-  // Autistic tax cancelled by any flow or SI Flow event
-  const anyFlow = userEvents.some(e => !e.cancelled && (e.flow || e.siFlow != null)) || goodSigns.flow
-  const taxApplies = dateStr >= taxStartDate && !anyFlow
+  const { thresholds } = settings
 
-  let evPoints = 0
-  for (const e of userEvents) {
-    if (e.cancelled) continue
-    evPoints += (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
-  }
-  const taxPoints = taxApplies ? taxValue : 0
-
-  // Formula: Peak
-  const peakDebit = Math.round(openingBalance + evPoints + taxPoints)
-
-  // Formula: Active Regulation (sleep is always automatic, not counted here)
-  const activeRegulation = (regulation.sensory || 0) + (regulation.av || 0) +
-                           (regulation.env || 0) + (regulation.body || 0)
-
+  // Map events from UI shape (E/S/P/M/X) to stored shape (emotional/sensory/…)
   const events = userEvents.map(e => {
     const cost = (e.E || 0) + (e.S || 0) + (e.P || 0) + (e.M || 0) + (e.X || 0)
     const siFlowCredit = (e.siFlow && !e.cancelled) ? Math.round(cost * 0.2) : null
     return {
-      summary: e.text,
-      emotional: e.E || 0,
-      sensory: e.S || 0,
+      summary:        e.text,
+      emotional:      e.E || 0,
+      sensory:        e.S || 0,
       predictability: e.P || 0,
-      masking: e.M || 0,
-      ef: e.X || 0,
-      delayed: e.delayed || false,
-      flow: e.flow || false,
-      realizedOn: '',
-      bucket: e.bucket || 'morning',
-      siFlow: e.siFlow || null,
+      masking:        e.M || 0,
+      ef:             e.X || 0,
+      delayed:        e.delayed  || false,
+      flow:           e.flow     || false,
+      cancelled:      e.cancelled || false,
+      realizedOn:     '',
+      bucket:         e.bucket || 'morning',
+      siFlow:         e.siFlow || null,
       siFlowCredit,
     }
   })
 
-  // SI Flow Bonus = SI Flow event cost × 20%, rounded
-  const siFlowBonus = Math.round(
-    events.reduce((sum, e) => {
-      if (!e.siFlow) return sum
-      return sum + (e.emotional || 0) + (e.sensory || 0) + (e.predictability ?? 0) + (e.masking || 0) + (e.ef || 0)
-    }, 0) * 0.2
-  )
+  // Map regulation from UI shape (sensory/av/env/body) to stored shape
+  const storedRegulation = {
+    sensoryComfort: regulation.sensory || 0,
+    audioVisual:    regulation.av      || 0,
+    environment:    regulation.env     || 0,
+    bodyRest:       regulation.body    || 0,
+    recoverySleep:  recovery           || false,
+  }
 
-  // Closing Balance carries forward — SI Flow bonus does NOT reduce the chain
-  const closingBalance = Math.round(Math.max(0, peakDebit - activeRegulation))
-  // Lived Experience is display-only — SI Flow bonus visible here but not in the carry-forward
-  const livedExperience = Math.round(Math.max(0, peakDebit - activeRegulation - siFlowBonus))
+  // Single canonical formula — same as the tooltip and calendar
+  const { peakDebit, activeRegulation, siFlowBonus, livedExperience } = computeDisplayValues(
+    { date: dateStr, openingBalance, regulation: storedRegulation, events, flowActivity: goodSigns.flow },
+    settings
+  )
+  const closingBalance = computeClosingBalance(peakDebit, activeRegulation)
+
+  // Autistic tax stored for display purposes — mirrors what computeDisplayValues computes internally
+  const anyFlow = events.some(e => !e.cancelled && (e.flow || e.siFlow != null)) || (goodSigns.flow ?? false)
+  const taxApplies = dateStr >= (settings.taxStartDate ?? '2000-01-01') && !anyFlow
+  const taxPoints  = taxApplies ? (settings.taxValue ?? 0) : 0
+
   const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
 
   const entryData = {
@@ -147,13 +142,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     delayedReactionRealized: false,
     livedExperience,
     events,
-    regulation: {
-      sensoryComfort: regulation.sensory || 0,
-      audioVisual: regulation.av || 0,
-      environment: regulation.env || 0,
-      bodyRest: regulation.body || 0,
-      recoverySleep: recovery || false,
-    },
+    regulation: storedRegulation,
     warningSign: {
       skin: warning.skin || false,
       vision: warning.vision || false,
