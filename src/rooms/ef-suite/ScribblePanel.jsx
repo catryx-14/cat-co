@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../shared/lib/supabase.js'
 import Anthropic from '@anthropic-ai/sdk'
 
-console.log('[Scribble] API key defined:', !!import.meta.env.VITE_ANTHROPIC_API_KEY)
-
 const client = new Anthropic({
   apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
   dangerouslyAllowBrowser: true,
@@ -212,7 +210,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
     supabase
       .from('engine_room')
       .select('id, content')
-      .in('id', [72, 74])
+      .in('id', [72, 74])  // 72=Scribble system prompt, 74=AI model
       .then(({ data, error }) => {
         const promptRow = data?.find(r => r.id === 72)
         const modelRow  = data?.find(r => r.id === 74)

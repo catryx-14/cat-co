@@ -10,7 +10,7 @@ export async function enrichBook(bookId, { title, author, series_name = '' }) {
   const { data: rows } = await supabase
     .from('engine_room')
     .select('id, content')
-    .in('id', [67, 68, 71, 74])
+    .in('id', [67, 68, 71, 74])  // 67=tropes, 68=enrichment prompt, 71=vibe tags, 74=AI model
 
   const fullContent  = rows?.find(r => r.id === 68)?.content ?? ''
   const tropeContent = rows?.find(r => r.id === 67)?.content ?? ''

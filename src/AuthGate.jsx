@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './shared/lib/supabase.js'
 
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+const DEV_SESSION = { user: { id: 'dev-bypass' } }
+const DEV_PROFILE = { role: 'user', display_name: 'Dev' }
+
 export default function AuthGate({ children }) {
+  if (DEV_BYPASS) return children(DEV_SESSION, DEV_PROFILE)
+
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(undefined)
   const [email, setEmail] = useState('')
