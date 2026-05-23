@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './shared/lib/supabase.js'
 
 const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
-const DEV_SESSION = { user: { id: 'dev-bypass' } }
+const DEV_SESSION = { user: { id: '0a8a546c-8abc-4d16-92a0-98b592ee97c3' } }  // Cat's real user ID — dev mode shows real data
 const DEV_PROFILE = { role: 'user', display_name: 'Dev' }
 
 export default function AuthGate({ children }) {
