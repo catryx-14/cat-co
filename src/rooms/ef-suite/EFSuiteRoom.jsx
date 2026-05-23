@@ -3,11 +3,12 @@ import SuiteCard from '../../shared/components/SuiteCard.jsx'
 import BookPileRoom from './BookPileRoom.jsx'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
+import bookPileIcon from '../../assets/book-pile-icon.jpg'
 
 const SUITE_ROOMS = [
   {
     id: 'book-pile',
-    icon: '📚',
+    icon: bookPileIcon,
     title: 'the book pile',
     subtitle: "every book you've read, want to read, or gave up on",
   },
@@ -19,7 +20,7 @@ function EFSuiteLanding({ onSelect }) {
       <p style={{
         fontFamily: "'Crimson Pro', Georgia, serif",
         fontSize: 18,
-        color: 'rgba(255,255,255,0.45)',
+        color: 'rgba(230,210,165,0.75)',
         margin: '0 0 28px',
         fontStyle: 'italic',
       }}>

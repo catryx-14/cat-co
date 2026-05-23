@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../shared/lib/supabase.js'
 import Anthropic from '@anthropic-ai/sdk'
+import peekIcon from '../../assets/peek-icon.jpg'
 
 const client = new Anthropic({
   apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
@@ -113,28 +114,21 @@ async function generateAndSaveSummary(displayMessages, userId, model = 'claude-s
 
 function ScribbleAvatar({ size = 48 }) {
   return (
-    <div style={{
-      width: size,
-      height: size,
-      borderRadius: '50%',
-      background: 'linear-gradient(145deg, #0e2d4a 0%, #0a2438 50%, #0f3545 100%)',
-      border: `${size >= 40 ? 2 : 1.5}px solid rgba(110,192,191,0.5)`,
-      boxShadow: '0 0 16px rgba(110,192,191,0.2), inset 0 0 8px rgba(110,192,191,0.05)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      <span style={{
-        fontFamily: "'Cagliostro', serif",
-        fontSize: Math.round(size * 0.42),
-        color: '#6ec0bf',
-        letterSpacing: '0.02em',
-        textShadow: '0 0 10px rgba(110,192,191,0.5)',
-        userSelect: 'none',
-        lineHeight: 1,
-      }}>S</span>
-    </div>
+    <img
+      src={peekIcon}
+      alt="Scribble"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        objectPosition: '80% 80%',
+        flexShrink: 0,
+        display: 'block',
+        border: '2px solid rgba(212,175,55,0.9)',
+        boxShadow: '0 0 6px rgba(212,175,55,0.4)',
+      }}
+    />
   )
 }
 

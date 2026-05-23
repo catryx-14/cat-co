@@ -142,6 +142,7 @@ const STATUS_DISPLAY_OPTIONS = [
 const EMPTY_FILTERS = {
   genre: '', tropes: [], heatLevel: '', seriesStatus: '',
   cliffhangerType: '', vibeTags: [], storyStructure: '', lowConfidenceOnly: false,
+  myRating: [],
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -161,7 +162,8 @@ function hex2rgba(hex, a) {
 function countFilters(f) {
   return (f.genre ? 1 : 0) + f.tropes.length + (f.heatLevel ? 1 : 0) +
     (f.seriesStatus ? 1 : 0) + (f.cliffhangerType ? 1 : 0) +
-    f.vibeTags.length + (f.storyStructure ? 1 : 0) + (f.lowConfidenceOnly ? 1 : 0)
+    f.vibeTags.length + (f.storyStructure ? 1 : 0) + (f.lowConfidenceOnly ? 1 : 0) +
+    f.myRating.length
 }
 
 // ── Base components ───────────────────────────────────────────────────────────
@@ -215,7 +217,7 @@ function BookRow({ book, isSelected, onClick, isEnriching }) {
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0, paddingTop: 2 }}>
-          <RatingDots rating={attr.goodreads_rating} />
+          <RatingDots rating={attr.my_rating || attr.goodreads_rating} />
           {isEnriching && (
             <span style={{ fontSize: 11, color: 'rgba(110,192,191,0.5)', fontFamily: "'Outfit', sans-serif", fontStyle: 'italic', whiteSpace: 'nowrap' }}>
               scribbling...
@@ -568,6 +570,7 @@ function ActiveFilterChips({ filters, onRemove, onClear }) {
   if (filters.cliffhangerType) chips.push({ key: 'ending',    label: `ending: ${filters.cliffhangerType}`,   field: 'cliffhangerType', val: '' })
   if (filters.storyStructure)  chips.push({ key: 'structure', label: `structure: ${filters.storyStructure}`, field: 'storyStructure',  val: '' })
   if (filters.lowConfidenceOnly) chips.push({ key: 'unvalidated', label: 'unvalidated', field: 'lowConfidenceOnly', val: false })
+  filters.myRating.forEach(r => chips.push({ key: `rating-${r}`, label: `${r}★`, field: 'myRating', val: filters.myRating.filter(x => x !== r) }))
   filters.tropes.forEach(t   => chips.push({ key: `trope-${t}`, label: t, field: 'tropes',   val: filters.tropes.filter(x => x !== t) }))
   filters.vibeTags.forEach(t => chips.push({ key: `vibe-${t}`, label: `vibe: ${t}`, field: 'vibeTags', val: filters.vibeTags.filter(x => x !== t) }))
   if (chips.length === 0) return null
@@ -637,7 +640,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
           </select>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
         <div>
           <div style={sl}>Series</div>
           <select style={compactSelect} value={filters.seriesStatus} onChange={e => onUpdate('seriesStatus', e.target.value)}>
@@ -651,6 +654,23 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
             <option value="">all</option>
             {CLIFFHANGER_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#131e44' }}>{o.label}</option>)}
           </select>
+        </div>
+        <div>
+          <div style={sl}>My Rating</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', paddingTop: 2 }}>
+            {[6, 5, 4, 3, 2, 1].map(r => {
+              const active = filters.myRating.includes(r)
+              return (
+                <button key={r} onClick={() => onUpdate('myRating', active ? filters.myRating.filter(x => x !== r) : [...filters.myRating, r])} style={{
+                  padding: '3px 8px', borderRadius: 999,
+                  border: `1px solid ${active ? 'rgba(232,201,140,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                  background: active ? 'rgba(232,201,140,0.12)' : 'transparent',
+                  color: active ? '#e8c98c' : 'rgba(255,255,255,0.38)',
+                  fontFamily: "'Outfit', sans-serif", fontSize: 11, cursor: 'pointer', transition: 'all 0.12s',
+                }}>{r}★</button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -932,6 +952,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
   // Status / delete / date
   const [bookStatus,    setBookStatus]    = useState(book?.status ?? 3)
   const [dateRead,      setDateRead]      = useState(attr.date_read ?? '')
+  const [needsReview,   setNeedsReview]   = useState(book?.needs_review ?? false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   const pendingRef = useRef({ attrs: {}, top: {} })
@@ -967,6 +988,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
     setValidated(false)
     setBookStatus(book.status ?? 3)
     setDateRead(a.date_read ?? '')
+    setNeedsReview(book.needs_review ?? false)
     setDeleteConfirm(false)
     pendingRef.current = { attrs: {}, top: {} }
     clearTimeout(timerRef.current)
@@ -1227,7 +1249,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
         {/* Goodreads metadata — secondary */}
         <div style={{ marginTop: 4, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <ReadOnlyField label="Source"           value={SOURCE_LABELS[attr.source] ?? attr.source} />
-          <ReadOnlyField label="Goodreads rating" value={attr.goodreads_rating ? `${attr.goodreads_rating} / 5` : null} />
+          <ReadOnlyField label="Your Goodreads rating" value={attr.goodreads_rating ? `${attr.goodreads_rating} / 5` : null} />
           <ReadOnlyField label="Pages"            value={attr.pages} />
           <ReadOnlyField label="Year published"   value={attr.year_published} />
         </div>
@@ -1239,30 +1261,41 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
           Your notes
         </div>
 
-        <SelectField
-          label="My rating"
-          value={String(myRating ?? '')}
-          options={MY_RATING_OPTIONS}
-          onChange={v => {
-            setMyRating(v)
-            const parsed = v === 'dnf' ? 'dnf' : v ? Number(v) : null
-            const attrChanges = { my_rating: parsed }
-            const topChanges  = {}
-            if (parsed && parsed !== 'dnf' && (bookStatus === 1 || bookStatus === 3)) {
-              setBookStatus(2)
-              topChanges.status = 2
-            }
-            scheduleSave(attrChanges, topChanges)
-          }}
-        />
+        <div style={{ marginBottom: 16 }}>
+          <FieldLabel>My rating</FieldLabel>
+          <select
+            value={String(myRating ?? '')}
+            onChange={e => {
+              const v = e.target.value || null
+              setMyRating(v)
+              const parsed = v === 'dnf' ? 'dnf' : v ? Number(v) : null
+              const attrChanges = { my_rating: parsed, goodreads_rating: null }
+              const topChanges  = {}
+              if (parsed && parsed !== 'dnf' && (bookStatus === 1 || bookStatus === 3)) {
+                setBookStatus(2)
+                topChanges.status = 2
+              }
+              scheduleSave(attrChanges, topChanges)
+            }}
+            style={{ ...INPUT_STYLE, color: myRating ? '#f2f0e6' : 'rgba(255,255,255,0.3)' }}
+          >
+            <option value="">—</option>
+            {MY_RATING_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#131e44' }}>{o.label}</option>)}
+          </select>
+          {!myRating && attr.goodreads_rating && (
+            <div style={{ marginTop: 5, fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+              Your Goodreads rating: {attr.goodreads_rating} / 5 — set a rating above to replace it
+            </div>
+          )}
+        </div>
         {/* Date read */}
         <div style={{ marginBottom: 16 }}>
           <FieldLabel>Date read</FieldLabel>
           <input
+            type="date"
             value={dateRead}
             onChange={e => { setDateRead(e.target.value); scheduleSave({ date_read: e.target.value || null }) }}
-            placeholder="YYYY-MM-DD"
-            style={{ ...INPUT_STYLE, cursor: 'text', fontSize: 13 }}
+            style={{ ...INPUT_STYLE, cursor: 'pointer', fontSize: 13, colorScheme: 'dark' }}
           />
         </div>
 
@@ -1324,6 +1357,28 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
           <TextareaField label="Why I stopped" value={whyStopped} onChange={v => { setWhyStopped(v); scheduleSave({ why_stopped: v || null }) }} placeholder="what happened..." />
         )}
         <TextareaField label="My notes" value={notes} onChange={v => { setNotes(v); scheduleSave({}, { notes: v || null }) }} placeholder="anything you want to remember..." rows={4} />
+
+        {/* Needs sorting toggle */}
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={() => {
+            const next = !needsReview
+            setNeedsReview(next)
+            scheduleSave({}, { needs_review: next })
+          }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <div style={{
+              width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+              border: `1px solid ${needsReview ? 'rgba(232,201,140,0.6)' : 'rgba(255,255,255,0.2)'}`,
+              background: needsReview ? 'rgba(232,201,140,0.15)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 9, color: '#e8c98c',
+            }}>
+              {needsReview ? '✓' : ''}
+            </div>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: needsReview ? '#e8c98c' : 'rgba(255,255,255,0.38)' }}>
+              needs sorting
+            </span>
+          </button>
+        </div>
 
         {/* Delete */}
         <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1473,6 +1528,11 @@ export default function BookPileRoom({ onBack }) {
     }
 
     if (filters.lowConfidenceOnly && attr.low_confidence !== true && attr.low_confidence !== 'true') return false
+
+    if (filters.myRating.length > 0) {
+      const effectiveRating = attr.my_rating || attr.goodreads_rating
+      if (!effectiveRating || !filters.myRating.includes(effectiveRating)) return false
+    }
 
     return true
   })
