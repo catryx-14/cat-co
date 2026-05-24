@@ -3,7 +3,26 @@ import RoomMark from '../../shared/components/RoomMark.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
 import herdingCatsIcon from '../../assets/herding-cats-icon.png'
 import goldFrame from '../../assets/gold-circle-frame.svg'
-import basketWeave from '../../assets/basket-weave.svg?url'
+// Basket weave inlined as data URL — avoids Vite asset pipeline issues in production
+const basketWeaveUrl = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">' +
+  '<rect width="24" height="24" fill="#2a1606"/>' +
+  '<rect x="0" y="0" width="10" height="24" fill="#5c3a12"/>' +
+  '<rect x="14" y="0" width="10" height="24" fill="#5c3a12"/>' +
+  '<rect x="0" y="0" width="24" height="10" fill="#7a5020"/>' +
+  '<rect x="0" y="0" width="10" height="10" fill="#5c3a12"/>' +
+  '<rect x="0" y="14" width="24" height="10" fill="#7a5020"/>' +
+  '<rect x="14" y="14" width="10" height="10" fill="#5c3a12"/>' +
+  '<rect x="0" y="0" width="24" height="1" fill="rgba(255,210,120,0.18)"/>' +
+  '<rect x="0" y="14" width="24" height="1" fill="rgba(255,210,120,0.18)"/>' +
+  '<rect x="0" y="0" width="1" height="24" fill="rgba(255,210,120,0.10)"/>' +
+  '<rect x="14" y="0" width="1" height="24" fill="rgba(255,210,120,0.10)"/>' +
+  '<rect x="0" y="9" width="24" height="1" fill="rgba(0,0,0,0.35)"/>' +
+  '<rect x="0" y="23" width="24" height="1" fill="rgba(0,0,0,0.35)"/>' +
+  '<rect x="9" y="0" width="1" height="24" fill="rgba(0,0,0,0.25)"/>' +
+  '<rect x="23" y="0" width="1" height="24" fill="rgba(0,0,0,0.25)"/>' +
+  '</svg>'
+)
 
 // ── Basket icon images ───────────────────────────────────────────────────────
 import iconBlack   from '../../assets/game-icons/black.png'
@@ -1066,7 +1085,7 @@ export default function GamesRoom({ roomName = 'games', onSettings }) {
         position: 'relative',
       }}>
         {/* Basket weave background — only in game */}
-        {inGame && <div className="game-bg" style={{ backgroundImage: `url(${basketWeave})` }} />}
+        {inGame && <div className="game-bg" style={{ backgroundImage: `url(${basketWeaveUrl})` }} />}
 
         {/* Header */}
         <div className="room-header-wrap" style={{ position: 'relative', zIndex: 1 }}>
