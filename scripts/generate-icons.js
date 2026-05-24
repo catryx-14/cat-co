@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
-const LIGHT_GRAY = 0xf2f2f2ff;
+const LIGHT_GRAY = 0x122442ff; // mid navy blue
 const SIZES = [
   { size: 180, out: 'icon-180.png' },
   { size: 192, out: 'icon-192.png' },
