@@ -26,15 +26,11 @@ export default function SuiteCard({ icon, title, subtitle, onClick }) {
     >
       {isImage ? (
         <img src={icon} alt="" style={{
-          width: 135,
-          height: 180,
-          objectFit: 'cover',
-          objectPosition: 'center 20%',
-          borderRadius: '50%',
+          width: 170,
+          height: 'auto',
+          objectFit: 'contain',
           border: 'none',
-          boxShadow: hovered
-            ? '0 0 0 9px rgba(222,148,170,0.92), 0 0 0 16px rgba(110,68,28,0.95), 0 0 0 17px rgba(35,15,3,0.55), 0 0 0 19px rgba(232,201,140,0.88), 0 0 0 20px rgba(35,15,3,0.3), 0 10px 30px rgba(0,0,0,0.55)'
-            : '0 0 0 9px rgba(218,143,165,0.82), 0 0 0 16px rgba(100,62,24,0.9), 0 0 0 17px rgba(35,15,3,0.45), 0 0 0 19px rgba(232,201,140,0.7), 0 0 0 20px rgba(35,15,3,0.2), 0 5px 18px rgba(0,0,0,0.4)',
+          filter: hovered ? 'drop-shadow(0 6px 18px rgba(0,0,0,0.5))' : 'drop-shadow(0 3px 10px rgba(0,0,0,0.35))',
           transition: 'all 0.2s',
           transform: hovered ? 'scale(1.04)' : 'scale(1)',
           display: 'block',
