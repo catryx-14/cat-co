@@ -1018,7 +1018,6 @@ const burlapCss = `
   left: -56px;
   right: -56px;
   background-color: #4a3010;
-  background-image: var(--basket-weave-url);
   background-repeat: repeat;
   background-size: 12px 12px;
   box-shadow:
@@ -1067,7 +1066,7 @@ export default function GamesRoom({ roomName = 'games', onSettings }) {
         position: 'relative',
       }}>
         {/* Basket weave background — only in game */}
-        {inGame && <div className="game-bg" style={{ '--basket-weave-url': `url(${basketWeave})` }} />}
+        {inGame && <div className="game-bg" style={{ backgroundImage: `url(${basketWeave})` }} />}
 
         {/* Header */}
         <div className="room-header-wrap" style={{ position: 'relative', zIndex: 1 }}>
