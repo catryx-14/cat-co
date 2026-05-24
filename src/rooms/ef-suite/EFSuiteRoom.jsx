@@ -3,7 +3,7 @@ import SuiteCard from '../../shared/components/SuiteCard.jsx'
 import BookPileRoom from './BookPileRoom.jsx'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
-import bookPileIcon from '../../assets/book-pile-icon.jpg'
+import bookPileIcon from '../../assets/book-pile-icon.png'
 
 const SUITE_ROOMS = [
   {
