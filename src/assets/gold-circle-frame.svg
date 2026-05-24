@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="frameGrad" cx="50%" cy="35%" r="55%">
+      <stop offset="0%"   stop-color="#f5e199"/>
+      <stop offset="30%"  stop-color="#d4a83a"/>
+      <stop offset="60%"  stop-color="#a8751a"/>
+      <stop offset="80%"  stop-color="#c9942e"/>
+      <stop offset="100%" stop-color="#7a5010"/>
+    </radialGradient>
+    <radialGradient id="shineGrad" cx="40%" cy="30%" r="40%">
+      <stop offset="0%"   stop-color="#fff9e0" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#fff9e0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer dark ring -->
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#1a0f00" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Main gold frame ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="url(#frameGrad)" stroke-width="7"/>
+
+  <!-- Inner dark edge -->
+  <circle cx="100" cy="100" r="92.5" fill="none" stroke="#2a1800" stroke-width="1" opacity="0.5"/>
+
+  <!-- Shine overlay -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="url(#shineGrad)" stroke-width="7"/>
+</svg>

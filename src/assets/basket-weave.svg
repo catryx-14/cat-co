@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <!-- Base gap colour (dark shadow between threads) -->
+  <rect width="24" height="24" fill="#2a1606"/>
+
+  <!-- Warp threads (vertical) -->
+  <rect x="0"  y="0" width="10" height="24" fill="#5c3a12"/>
+  <rect x="14" y="0" width="10" height="24" fill="#5c3a12"/>
+
+  <!-- Weft threads (horizontal) — woven over/under the warps -->
+  <!-- Top weft: goes OVER right warp, UNDER left warp -->
+  <rect x="0"  y="0"  width="24" height="10" fill="#7a5020"/>
+  <!-- Left warp comes back OVER the top weft -->
+  <rect x="0"  y="0"  width="10" height="10" fill="#5c3a12"/>
+
+  <!-- Bottom weft: goes OVER left warp, UNDER right warp -->
+  <rect x="0"  y="14" width="24" height="10" fill="#7a5020"/>
+  <!-- Right warp comes back OVER the bottom weft -->
+  <rect x="14" y="14" width="10" height="10" fill="#5c3a12"/>
+
+  <!-- Highlight: top edge of each raised element (light catches the top) -->
+  <rect x="0"  y="0"  width="24" height="1"  fill="rgba(255,210,120,0.18)"/>
+  <rect x="0"  y="14" width="24" height="1"  fill="rgba(255,210,120,0.18)"/>
+  <rect x="0"  y="0"  width="1"  height="24" fill="rgba(255,210,120,0.10)"/>
+  <rect x="14" y="0"  width="1"  height="24" fill="rgba(255,210,120,0.10)"/>
+
+  <!-- Shadow: bottom edge of raised elements -->
+  <rect x="0"  y="9"  width="24" height="1"  fill="rgba(0,0,0,0.35)"/>
+  <rect x="0"  y="23" width="24" height="1"  fill="rgba(0,0,0,0.35)"/>
+  <rect x="9"  y="0"  width="1"  height="24" fill="rgba(0,0,0,0.25)"/>
+  <rect x="23" y="0"  width="1"  height="24" fill="rgba(0,0,0,0.25)"/>
+</svg>

@@ -1,6 +1,29 @@
 import { useState, useEffect, useRef } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
+import herdingCatsIcon from '../../assets/herding-cats-icon.png'
+import goldFrame from '../../assets/gold-circle-frame.svg'
+import basketWeave from '../../assets/basket-weave.svg?url'
+
+// ── Basket icon images ───────────────────────────────────────────────────────
+import iconBlack   from '../../assets/game-icons/black.png'
+import iconGray    from '../../assets/game-icons/gray.png'
+import iconOrange  from '../../assets/game-icons/orange.png'
+import iconCalico  from '../../assets/game-icons/calico.png'
+import iconSiamese from '../../assets/game-icons/siamese.png'
+import iconSpotted from '../../assets/game-icons/spotted.png'
+import iconKitten  from '../../assets/game-icons/kitten.png'
+import catAndCoLogo from '../../assets/cat-and-co-logo.png'
+
+const GROUP_ICONS = {
+  black:   iconBlack,
+  gray:    iconGray,
+  orange:  iconOrange,
+  calico:  iconCalico,
+  siamese: iconSiamese,
+  spotted: iconSpotted,
+  kitten:  iconKitten,
+}
 
 // ── Cat asset imports ────────────────────────────────────────────────────────
 import blackCat1   from '../../assets/cats/black Cat 1.png'
@@ -374,78 +397,77 @@ function BasketIcon({ groupId, color, bg }) {
 const GAME_TILES = [
   {
     id: 'cat-sort',
-    title: 'Cat Sorting Game',
-    description: 'sort the cats into their colour groups',
-    icon: '🐱',
+    title: 'herding cats',
+    subtitle: 'sort the cats into their colour groups',
+    icon: herdingCatsIcon,
   },
 ]
 
+function GameCard({ tile, onSelect }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={() => onSelect(tile.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: 220,
+        padding: '20px 16px 24px',
+        borderRadius: 16,
+        border: 'none',
+        background: 'transparent',
+        cursor: 'pointer',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 20,
+        transition: 'transform 0.15s',
+        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+      }}
+    >
+      <img
+        src={tile.icon}
+        alt=""
+        style={{
+          width: 170,
+          height: 170,
+          objectFit: 'contain',
+          transition: 'filter 0.2s, transform 0.2s',
+          filter: hovered
+            ? 'drop-shadow(0 0 18px rgba(232,201,140,0.6))'
+            : 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+          transform: hovered ? 'scale(1.05)' : 'scale(1)',
+        }}
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+        <span style={{
+          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontSize: 20,
+          color: '#e8c98c',
+          lineHeight: 1.2,
+        }}>
+          {tile.title}
+        </span>
+        <span style={{
+          fontFamily: "'Outfit', sans-serif",
+          fontSize: 13,
+          color: 'rgba(230,210,165,0.75)',
+          lineHeight: 1.5,
+        }}>
+          {tile.subtitle}
+        </span>
+      </div>
+    </button>
+  )
+}
+
 function GamesMenu({ onSelect }) {
   return (
-    <div style={{
-      padding: '24px 32px 40px',
-      animation: 'fadeSlideIn 0.4s ease',
-    }}>
-      <p style={{
-        fontFamily: "'Crimson Pro', Georgia, serif",
-        fontSize: 18,
-        color: 'rgba(255,255,255,0.45)',
-        margin: '0 0 28px',
-        fontStyle: 'italic',
-      }}>
-        choose a game
-      </p>
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 16,
-      }}>
+    <div style={{ padding: '24px 32px 40px', animation: 'fadeSlideIn 0.4s ease' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         {GAME_TILES.map(tile => (
-          <button
-            key={tile.id}
-            onClick={() => onSelect(tile.id)}
-            style={{
-              width: 220,
-              padding: '20px 24px',
-              borderRadius: 16,
-              border: '1.5px solid rgba(232,201,140,0.2)',
-              background: 'rgba(255,255,255,0.04)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'background 0.2s, border-color 0.2s, transform 0.15s',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(232,201,140,0.08)'
-              e.currentTarget.style.borderColor = 'rgba(232,201,140,0.45)'
-              e.currentTarget.style.transform = 'translateY(-2px)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.borderColor = 'rgba(232,201,140,0.2)'
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
-            <span style={{ fontSize: 28 }}>{tile.icon}</span>
-            <span style={{
-              fontFamily: "'Crimson Pro', Georgia, serif",
-              fontSize: 20,
-              color: '#e8c98c',
-              lineHeight: 1.2,
-            }}>
-              {tile.title}
-            </span>
-            <span style={{
-              fontFamily: "'Outfit', sans-serif",
-              fontSize: 13,
-              color: 'rgba(255,255,255,0.45)',
-              lineHeight: 1.5,
-            }}>
-              {tile.description}
-            </span>
-          </button>
+          <GameCard key={tile.id} tile={tile} onSelect={onSelect} />
         ))}
       </div>
     </div>
@@ -484,23 +506,23 @@ function Basket({ group, isTarget, placedCount, onSelect }) {
     >
       {/* Icon */}
       <div style={{
-        width: 64, height: 64,
+        width: 96, height: 96,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative',
       }}>
-        <BasketIcon groupId={group.id} color={group.borderColor} bg={group.cushionColor}/>
-        {/* Glow ring underneath on hover */}
-        {active && (
-          <div style={{
-            position: 'absolute',
-            bottom: -4, left: '50%', transform: 'translateX(-50%)',
-            width: 40, height: 8,
-            borderRadius: '50%',
-            background: group.cushionGlow,
-            filter: 'blur(6px)',
-            pointerEvents: 'none',
-          }}/>
-        )}
+        <img
+          src={GROUP_ICONS[group.id]}
+          alt={group.label}
+          style={{
+            width: 96, height: 96,
+            objectFit: 'contain',
+            transition: 'filter 0.15s, transform 0.15s',
+            filter: active
+              ? `drop-shadow(0 0 12px ${group.cushionGlow}) drop-shadow(0 8px 16px rgba(0,0,0,0.55))`
+              : 'drop-shadow(0 6px 14px rgba(0,0,0,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+            transform: active ? 'scale(1.1) translateY(-4px)' : 'scale(1)',
+          }}
+        />
       </div>
 
       {/* Pip progress dots */}
@@ -508,25 +530,13 @@ function Basket({ group, isTarget, placedCount, onSelect }) {
         {[0, 1, 2].map(i => (
           <div key={i} style={{
             width: 7, height: 7, borderRadius: '50%',
-            background: i < placedCount ? group.borderColor : 'rgba(255,255,255,0.12)',
+            background: i < placedCount ? group.borderColor : 'rgba(255,240,200,0.6)',
             boxShadow: i < placedCount ? `0 0 5px ${group.cushionGlow}` : 'none',
             transition: 'background 0.3s, box-shadow 0.3s',
           }}/>
         ))}
       </div>
 
-      {/* Label */}
-      <span style={{
-        fontSize: 10,
-        fontFamily: "'Outfit', sans-serif",
-        color: active ? group.borderColor : 'rgba(255,255,255,0.4)',
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        transition: 'color 0.15s',
-        fontWeight: active ? 600 : 400,
-      }}>
-        {group.label}
-      </span>
     </button>
   )
 }
@@ -543,16 +553,16 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: 16,
+      gap: 10,
       flex: 1,
       justifyContent: 'center',
-      padding: '8px 24px 24px',
+      padding: '4px 24px 12px',
     }}>
       {/* Counter */}
       <div style={{
         fontFamily: "'Outfit', sans-serif",
         fontSize: 12,
-        color: 'rgba(255,255,255,0.3)',
+        color: 'rgba(255,240,200,0.75)',
         letterSpacing: '0.08em',
       }}>
         cat {viewIndex + 1} of {total}
@@ -569,75 +579,95 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
           onClick={onPrev}
           style={{
             width: 40, height: 40, borderRadius: '50%',
-            border: '1.5px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.04)',
-            color: 'rgba(255,255,255,0.5)',
+            border: '1.5px solid rgba(255,240,200,0.25)',
+            background: 'rgba(255,240,200,0.08)',
+            color: 'rgba(255,240,200,0.7)',
             fontSize: 18, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.15s, color 0.15s',
             flexShrink: 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,240,200,0.18)'; e.currentTarget.style.color = 'rgba(255,240,200,1)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,240,200,0.08)'; e.currentTarget.style.color = 'rgba(255,240,200,0.7)' }}
         >
           ‹
         </button>
 
-        {/* Cat image */}
+        {/* Cat image — medallion framed */}
         <button
           type="button"
           onClick={() => !isPlaced && onSelect(cat.id)}
           style={{
             background: 'none',
+            border: 'none',
             padding: 0,
             position: 'relative',
-            width: 'clamp(180px, 28vw, 240px)',
-            height: 'clamp(180px, 28vw, 240px)',
-            borderRadius: 20,
-            overflow: 'hidden',
-            border: isSelected
-              ? '3px solid #e8c98c'
-              : isPlaced
-              ? '3px solid rgba(136,226,180,0.4)'
-              : '3px solid rgba(255,255,255,0.08)',
-            boxShadow: isSelected
-              ? '0 0 28px rgba(232,201,140,0.45), 0 8px 32px rgba(0,0,0,0.6)'
-              : isPlaced
-              ? '0 0 16px rgba(136,226,180,0.15), 0 8px 24px rgba(0,0,0,0.5)'
-              : '0 8px 32px rgba(0,0,0,0.6)',
+            width: 'clamp(160px, 24vw, 210px)',
+            height: 'clamp(160px, 24vw, 210px)',
             cursor: isPlaced ? 'default' : 'pointer',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
+            flexShrink: 0,
             animation: catAnim === 'shake' ? 'catShake 0.45s ease'
                      : catAnim === 'pop'   ? 'catPop 0.35s ease'
                      : catAnim === 'left'  ? 'catSlideLeft 0.22s ease'
                      : catAnim === 'right' ? 'catSlideRight 0.22s ease'
                      : 'none',
-            flexShrink: 0,
+            filter: isSelected
+              ? 'drop-shadow(0 0 18px rgba(232,201,140,0.8)) drop-shadow(0 10px 24px rgba(0,0,0,0.65))'
+              : isPlaced
+              ? 'drop-shadow(0 0 10px rgba(136,226,180,0.4)) drop-shadow(0 10px 24px rgba(0,0,0,0.65))'
+              : 'drop-shadow(0 10px 24px rgba(0,0,0,0.65)) drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
+            transition: 'filter 0.2s',
           }}
         >
+          {/* Navy background circle */}
+          <div style={{
+            position: 'absolute',
+            inset: '9%',
+            width: '82%',
+            height: '82%',
+            borderRadius: '50%',
+            background: '#0d1f3d',
+          }} />
+          {/* Cat photo clipped to circle */}
           <img
             src={cat.src}
             alt="cat"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{
+              position: 'absolute',
+              inset: '9%',
+              width: '82%',
+              height: '82%',
+              objectFit: 'cover',
+              borderRadius: '50%',
+              display: 'block',
+            }}
             draggable={false}
           />
-          {/* Gold selection overlay */}
-          {isSelected && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'rgba(232,201,140,0.1)',
+          {/* Gold frame overlay */}
+          <img
+            src={goldFrame}
+            alt=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
               pointerEvents: 'none',
-            }} />
-          )}
+            }}
+          />
           {/* Placed overlay */}
           {isPlaced && (
             <div style={{
-              position: 'absolute', inset: 0,
-              background: 'rgba(8,16,42,0.55)',
+              position: 'absolute',
+              inset: '9%',
+              width: '82%',
+              height: '82%',
+              borderRadius: '50%',
+              background: 'rgba(8,16,42,0.6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
             }}>
-              <span style={{ fontSize: 32, opacity: 0.8 }}>✓</span>
+              <span style={{ fontSize: 32, opacity: 0.9 }}>✓</span>
             </div>
           )}
         </button>
@@ -647,16 +677,16 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
           onClick={onNext}
           style={{
             width: 40, height: 40, borderRadius: '50%',
-            border: '1.5px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.04)',
-            color: 'rgba(255,255,255,0.5)',
+            border: '1.5px solid rgba(255,240,200,0.25)',
+            background: 'rgba(255,240,200,0.08)',
+            color: 'rgba(255,240,200,0.7)',
             fontSize: 18, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.15s, color 0.15s',
             flexShrink: 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,240,200,0.18)'; e.currentTarget.style.color = 'rgba(255,240,200,1)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,240,200,0.08)'; e.currentTarget.style.color = 'rgba(255,240,200,0.7)' }}
         >
           ›
         </button>
@@ -670,10 +700,10 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
             style={{
               width: 7, height: 7, borderRadius: '50%',
               background: placed[c.id]
-                ? 'rgba(136,226,180,0.6)'
+                ? '#2a8a78'
                 : i === viewIndex
                 ? '#e8c98c'
-                : 'rgba(255,255,255,0.15)',
+                : 'rgba(255,240,200,0.55)',
               transition: 'background 0.2s',
             }}
           />
@@ -684,7 +714,7 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
       <div style={{
         fontFamily: "'Outfit', sans-serif",
         fontSize: 12,
-        color: 'rgba(255,255,255,0.28)',
+        color: 'rgba(255,240,200,0.7)',
         letterSpacing: '0.06em',
         textAlign: 'center',
       }}>
@@ -896,19 +926,19 @@ function CatSortGame({ onBack }) {
       <div style={{
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '12px 28px 4px',
+        padding: '8px 28px 2px',
         flexShrink: 0,
       }}>
         <button
           onClick={onBack}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'rgba(255,255,255,0.3)', fontSize: 13,
+            color: 'rgba(255,240,200,0.65)', fontSize: 13,
             fontFamily: "'Outfit', sans-serif", letterSpacing: '0.05em',
             padding: 0, transition: 'color 0.15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,240,200,1)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,240,200,0.65)'}
         >
           ← games
         </button>
@@ -927,10 +957,10 @@ function CatSortGame({ onBack }) {
 
       {/* Baskets */}
       <div style={{
-        display: 'flex', justifyContent: 'center',
-        gap: 'clamp(6px, 2vw, 18px)',
-        padding: 'clamp(10px, 2vh, 20px) 20px 6px',
-        flexShrink: 0, flexWrap: 'wrap',
+        display: 'flex', justifyContent: 'space-evenly',
+        padding: 'clamp(4px, 1.5vh, 10px) 8px 2px',
+        flexShrink: 0, flexWrap: 'nowrap',
+        width: '100%',
       }}>
         {round.groups.map(group => (
           <Basket
@@ -975,29 +1005,139 @@ function CatSortGame({ onBack }) {
   )
 }
 
+// ── Burlap texture style ──────────────────────────────────────────────────────
+const burlapCss = `
+@keyframes gameRoomIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.game-bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -56px;
+  right: -56px;
+  background-color: #4a3010;
+  background-image: var(--basket-weave-url);
+  background-repeat: repeat;
+  background-size: 12px 12px;
+  box-shadow:
+    inset 0 0 0 7px #2a8a78,
+    inset 0 0 0 10px rgba(0,0,0,0.35),
+    inset 0 0 0 12px rgba(42,138,120,0.3);
+  animation: gameRoomIn 0.4s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.game-mode .room-header-wrap {
+  margin-bottom: 0 !important;
+}
+@media (max-width: 720px) {
+  .game-bg {
+    left: -22px;
+    right: -22px;
+    bottom: 0;
+  }
+}
+`
+
 // ── Main GamesRoom ────────────────────────────────────────────────────────────
-export default function GamesRoom({ roomName = 'Games', onSettings }) {
+export default function GamesRoom({ roomName = 'games', onSettings }) {
   const [activeGame, setActiveGame] = useState(null)
+  const inGame = activeGame === 'cat-sort'
+
+  // Lock scrolling on the parent container while in game
+  useEffect(() => {
+    const pane = document.querySelector('.view-fade')
+    if (!pane) return
+    if (inGame) {
+      pane.style.overflowY = 'hidden'
+    } else {
+      pane.style.overflowY = ''
+    }
+    return () => { pane.style.overflowY = '' }
+  }, [inGame])
 
   return (
     <>
-      <style>{css}</style>
-      <div style={{
+      <style>{css}{burlapCss}</style>
+      <div className={inGame ? 'game-mode' : ''} style={{
         minHeight: '100%', display: 'flex', flexDirection: 'column',
         fontFamily: "'Outfit', sans-serif",
+        position: 'relative',
       }}>
+        {/* Basket weave background — only in game */}
+        {inGame && <div className="game-bg" style={{ '--basket-weave-url': `url(${basketWeave})` }} />}
+
         {/* Header */}
-        <div className="room-header-wrap">
+        <div className="room-header-wrap" style={{ position: 'relative', zIndex: 1 }}>
           <div className="room-head">
-            <h2 className="room-title">{roomName}</h2>
+            <h2 className="room-title" style={{ transition: 'opacity 0.3s' }}>
+              {roomName}
+            </h2>
             <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
           </div>
         </div>
 
-        {activeGame === 'cat-sort'
-          ? <CatSortGame onBack={() => setActiveGame(null)} />
-          : <GamesMenu onSelect={setActiveGame} />
-        }
+        {/* Teal top ribbon — sits just below the header when in game */}
+        {inGame && (
+          <div style={{
+            height: 7,
+            background: '#2a8a78',
+            margin: '0 -56px',
+            position: 'relative',
+            zIndex: 1,
+            flexShrink: 0,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
+          }} />
+        )}
+
+        <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {inGame
+            ? <CatSortGame onBack={() => setActiveGame(null)} />
+            : <GamesMenu onSelect={setActiveGame} />
+          }
+
+          {/* Herding Cats logo stamp — bottom-left corner */}
+          {inGame && (
+            <img
+              src={herdingCatsIcon}
+              alt=""
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                left: -6,
+                width: 110,
+                height: 110,
+                objectFit: 'contain',
+                opacity: 0.72,
+                pointerEvents: 'none',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                zIndex: 2,
+              }}
+            />
+          )}
+
+          {/* Orange yarn decoration — bottom-right corner */}
+          {inGame && (
+            <img
+              src={catAndCoLogo}
+              alt=""
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                right: -6,
+                width: 110,
+                height: 110,
+                objectFit: 'contain',
+                opacity: 0.72,
+                pointerEvents: 'none',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                zIndex: 2,
+              }}
+            />
+          )}
+        </div>
       </div>
     </>
   )

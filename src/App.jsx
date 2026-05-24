@@ -17,7 +17,7 @@ const ROOMS = [
   { key: 'sparks',      name: 'Sparks',           sub: 'hold them gently',         tone: 'rose'   },
   { key: 'physio',      name: 'First Aid',         sub: 'gentle attention',         tone: 'teal'   },
   { key: 'ef-suite',    name: 'Executive Suite',   sub: 'tools for doing things',   tone: 'blue'   },
-  { key: 'more-lights', name: 'More Lights',       sub: 'more rooms this way',      tone: 'purple' },
+  { key: 'more-lights', name: 'More this way',      sub: 'more this way',            tone: 'purple' },
 ]
 
 function useViewport() {
@@ -72,7 +72,7 @@ function ThresholdNavLinks({ onPick, isMobile }) {
       </div>
       <button onClick={() => onPick('more-lights')} style={btnStyle}
         onMouseEnter={onEnter} onMouseLeave={onLeave}>
-        More Rooms
+        More this way
       </button>
     </nav>
   )
@@ -373,7 +373,7 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <FirstAidRoom onSettings={onSettings} />
   }
   if (roomKey === 'games') {
-    return <GamesRoom roomName="Games" onSettings={onSettings} />
+    return <GamesRoom roomName="games" onSettings={onSettings} />
   }
   if (roomKey === 'more-lights') {
     return <MoreLightsRoom onRoom={onRoom} onSettings={onSettings} />
