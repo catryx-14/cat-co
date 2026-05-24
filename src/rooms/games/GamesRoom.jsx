@@ -102,56 +102,56 @@ const ALL_GROUPS = [
     id: 'black',
     label: 'black',
     cushionColor: '#1a1a2e',
-    cushionGlow: 'rgba(120,120,180,0.45)',
-    borderColor: '#6060a0',
+    cushionGlow: 'rgba(155,95,232,0.55)',
+    borderColor: '#9b5fe8',   // amethyst
     images: [blackCat1, blackCat2, blackCat3, blackCat4, blackCat5],
   },
   {
     id: 'gray',
     label: 'gray',
-    cushionColor: '#3a3f5c',
-    cushionGlow: 'rgba(160,170,200,0.45)',
-    borderColor: '#8090b8',
+    cushionColor: '#1a2a4a',
+    cushionGlow: 'rgba(80,150,240,0.55)',
+    borderColor: '#5096f0',   // sapphire blue
     images: [grayCat1, grayCat2, grayCat3, grayCat4, grayCat5, grayCat6, grayCat7, grayCat8, grayCat9, grayCat10],
   },
   {
     id: 'orange',
     label: 'orange',
     cushionColor: '#4a2800',
-    cushionGlow: 'rgba(220,130,40,0.55)',
-    borderColor: '#e07820',
+    cushionGlow: 'rgba(240,110,20,0.60)',
+    borderColor: '#f06e14',   // vivid orange
     images: [orangeCat1, orangeCat2, orangeCat3, orangeCat4, orangeCat5, orangeCat6, orangeCat7, orangeCat8, orangeCat9, orangeCat10, orangeCat11, orangeCat12, orangeCat13, orangeCat14, orangeCat15],
   },
   {
     id: 'calico',
     label: 'calico',
-    cushionColor: '#3d1f10',
-    cushionGlow: 'rgba(200,140,80,0.50)',
-    borderColor: '#c87840',
+    cushionColor: '#3a1030',
+    cushionGlow: 'rgba(232,60,110,0.55)',
+    borderColor: '#e83c6e',   // ruby rose
     images: [calicoCat1, calicoCat2, calicoCat3, calicoCat4, calicoCat5, calicoCat6, calicoCat7],
   },
   {
     id: 'siamese',
     label: 'siamese',
-    cushionColor: '#2e2820',
-    cushionGlow: 'rgba(240,220,180,0.45)',
-    borderColor: '#d4b880',
+    cushionColor: '#0a2a28',
+    cushionGlow: 'rgba(20,196,172,0.55)',
+    borderColor: '#14c4ac',   // aquamarine
     images: [siameseCat1, siameseCat2, siameseCat3, siameseCat4, siameseCat5],
   },
   {
     id: 'spotted',
     label: 'spotted',
-    cushionColor: '#2a2010',
-    cushionGlow: 'rgba(200,170,100,0.50)',
-    borderColor: '#b89050',
+    cushionColor: '#0a2a18',
+    cushionGlow: 'rgba(40,196,100,0.55)',
+    borderColor: '#28c464',   // emerald green
     images: [spottedCat1, spottedCat2, spottedCat3, spottedCat4, spottedCat5, spottedCat6, spottedCat7],
   },
   {
     id: 'kitten',
     label: 'kitten',
-    cushionColor: '#2a1830',
-    cushionGlow: 'rgba(200,150,220,0.50)',
-    borderColor: '#c090d8',
+    cushionColor: '#2a1030',
+    cushionGlow: 'rgba(200,80,232,0.55)',
+    borderColor: '#c850e8',   // bright orchid
     images: [kitten1, kitten2, kitten3, kitten4, kitten5, kitten6, kitten7, kitten8, kitten9, kitten10, kitten11, kitten12, kitten13, kitten14, kitten15],
   },
 ]
