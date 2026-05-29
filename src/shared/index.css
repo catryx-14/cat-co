@@ -2672,3 +2672,32 @@ body {
     animation: none !important;
   }
 }
+
+/* ── Auto-filled missed-days banner (Capacity Tracker) ─────────────────── */
+.autofill-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 auto 16px;
+  max-width: 640px;
+  padding: 12px 14px;
+  border: 1px solid rgba(168, 144, 212, 0.45);
+  border-radius: 10px;
+  background: rgba(168, 144, 212, 0.10);
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.autofill-banner-text { flex: 1; }
+.autofill-banner-dates { color: var(--soft-purple); white-space: nowrap; }
+.autofill-banner-close {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.autofill-banner-close:hover { color: var(--ink); }

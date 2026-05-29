@@ -1,4 +1,12 @@
+import { addDaysStr } from './dates.js'
+
 export const REG_FULL_AT = 20
+
+// The autistic tax always comes from the user's settings (almanac_settings).
+// This constant is the ONE place the bare number lives — a last-resort default
+// used only if the setting is somehow entirely absent. Never sprinkle a literal
+// 3 elsewhere; reference this so there's a single, named source of truth.
+export const DEFAULT_AUTISTIC_TAX = 3
 
 /**
  * THE single source of truth for peak, regulation, and lived experience.
@@ -86,6 +94,51 @@ export function anyFlowEvent(userEvents) {
 // Formula 1: Opening Balance = previous day's closing − 5 (sleep is always automatic)
 export function computeOpeningBalance(prevClosing) {
   return Math.max(0, prevClosing - 5)
+}
+
+/**
+ * The correct opening balance for `dateStr`, derived purely from the chain —
+ * NEVER trusted from the day's own stored value. This is the heart of both
+ * carry-forward fixes: it walks back to the most recent real entry and steps
+ * forward across every missed (gap) day in between, applying the missed-day
+ * rule (sleep −5, autistic tax ON unless flow) for each gap.
+ *
+ *   allEntries: array of { date, entry_data } in any order
+ *   settings:   { taxValue, taxStartDate } — used for gap (never-logged) days
+ *
+ * If there is no entry before dateStr at all, the chain starts here → opening 0.
+ */
+export function resolveOpeningBalance(dateStr, allEntries, settings = {}) {
+  const taxValue = settings.taxValue ?? DEFAULT_AUTISTIC_TAX
+  const taxStartDate = settings.taxStartDate ?? '2000-01-01'
+
+  // Most recent real entry strictly before dateStr
+  let anchor = null
+  for (const e of allEntries) {
+    if (e.date < dateStr && (!anchor || e.date > anchor.date)) anchor = e
+  }
+  if (!anchor) return 0
+
+  // Every calendar day between the anchor and dateStr is a gap (the anchor is the
+  // closest prior entry), so each one is a missed day.
+  let prevClosing = anchor.entry_data.closingBalance ?? 0
+  let cursor = addDaysStr(anchor.date, 1)
+  while (cursor < dateStr) {
+    const opening = computeOpeningBalance(prevClosing)
+    const taxApplies = cursor >= taxStartDate          // missed day → no flow → tax on
+    prevClosing = computeMissedDayClosing(opening, taxApplies, taxValue)
+    cursor = addDaysStr(cursor, 1)
+  }
+  return computeOpeningBalance(prevClosing)
+}
+
+// A missed day (no entry logged) = zero events, zero regulation. Its only movements
+// are the automatic sleep deduction (already baked into `opening`) and the autistic
+// tax, which is assumed ON by default — a missed day has no flow to cancel it.
+// Decision 29 May 2026: missed days carry the tax until/unless an edit records flow.
+export function computeMissedDayClosing(opening, taxApplies, taxValue) {
+  const tax = taxApplies ? (taxValue || 0) : 0
+  return Math.max(0, Math.round(opening + tax))
 }
 
 // Formula 2: Peak = Opening + event points + autistic tax (if applicable)

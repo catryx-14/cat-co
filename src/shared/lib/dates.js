@@ -24,6 +24,14 @@ export function yesterdayDateStr() {
   return localDateStr(d)
 }
 
+/** Adds n days (can be negative) to a 'YYYY-MM-DD' string, returning a 'YYYY-MM-DD' string. */
+export function addDaysStr(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return localDateStr(dt)
+}
+
 /**
  * Returns today's date in the human-readable display format used in room headers.
  * Example: "2026 · may · 22"

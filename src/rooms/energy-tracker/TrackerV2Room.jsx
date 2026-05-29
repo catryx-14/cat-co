@@ -7,16 +7,16 @@ import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 import {
-  loadEntryV2,
   loadAllEntriesV2,
   saveEntryV2,
   recalculateFromDateV2,
+  backfillMissedDays,
   dbToInternal,
   internalToDb,
 } from '../../shared/lib/db-v2.js'
 import { saveThresholds, saveTaxValue } from '../../shared/lib/db.js'
-import { todayDateStr, yesterdayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
-import { computeDisplayValues, computeOpeningBalance, taxActive } from '../../shared/lib/math.js'
+import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
+import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
@@ -827,41 +827,43 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [openingBalance,setOpeningBalance]= useState(0)
   const [yesterdayClosing,setYesterdayClosing] = useState(0)
   const [saveStatus,    setSaveStatus]    = useState('')
-  const [stampedTax,    setStampedTax]    = useState(settings.taxValue ?? 3)
+  const [stampedTax,    setStampedTax]    = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [autoFilledDays,setAutoFilledDays]= useState([])
+  const [bannerDismissed,setBannerDismissed] = useState(false)
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
   useEffect(() => {
     async function init() {
       try {
-        const existing = await loadEntryV2(dateStr, session.user.id)
+        // On the today view, fill any trailing gap of missed days with quiet
+        // placeholder entries (sleep + tax) so the chain stays unbroken. They're
+        // flagged auto_filled so the banner below can flag them for review.
+        if (isToday) {
+          await backfillMissedDays(session.user.id, settings, dateStr)
+        }
+        const allEntries = await loadAllEntriesV2(session.user.id)
+        setAutoFilledDays(allEntries.filter(e => e.entry_data?.autoFilled).map(e => e.date).sort())
+        // Opening balance is ALWAYS derived from the chain — never trusted from the
+        // day's own stored value — so a late-entered day or a gap of missed days
+        // still carries forward correctly (sleep −5 and tax per missed day).
+        const opening = resolveOpeningBalance(
+          dateStr, allEntries,
+          { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate },
+        )
+        setOpeningBalance(opening)
+        setYesterdayClosing(opening)
+
+        const existing = allEntries.find(e => e.date === dateStr)
         if (existing) {
-          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? 3)
+          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
           const state = dbToInternal(existing)
-          if (isToday) {
-            const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
-            if (yest) {
-              const closing = yest.entry_data.closingBalance ?? 0
-              setOpeningBalance(computeOpeningBalance(closing))
-              setYesterdayClosing(closing)
-            }
-          } else {
-            setOpeningBalance(state.openingBalance)
-            setYesterdayClosing(state.openingBalance)
-          }
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
           setRecovery(state.recovery)
           setWarning(state.warning)
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
-        } else if (isToday) {
-          const yest = await loadEntryV2(yesterdayDateStr(), session.user.id)
-          if (yest) {
-            const closing = yest.entry_data.closingBalance ?? 0
-            setOpeningBalance(computeOpeningBalance(closing))
-            setYesterdayClosing(closing)
-          }
         }
       } catch (err) {
         console.error('failed to load entry (v2)', err)
@@ -892,7 +894,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         yesterdayClosing, meltdown: melt,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
-      if (!isToday) await recalculateFromDateV2(session.user.id, dateStr)
+      if (!isToday) await recalculateFromDateV2(session.user.id, dateStr, settings)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2000)
     } catch (err) {
@@ -918,6 +920,16 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           <button className="back-link" onClick={onBack}>← back to history</button>
           <div className="history-edit-date">{formatDateStr(dateStr)}</div>
         </>
+      )}
+      {!onBack && autoFilledDays.length > 0 && !bannerDismissed && (
+        <div className="autofill-banner">
+          <span className="autofill-banner-text">
+            {autoFilledDays.length === 1 ? 'A day was' : `${autoFilledDays.length} days were`} auto-filled because nothing
+            was logged — sleep and the autistic tax only. Edit anytime in History to add what really happened.
+            <span className="autofill-banner-dates"> ({autoFilledDays.map(formatDateStr).join(', ')})</span>
+          </span>
+          <button className="autofill-banner-close" onClick={() => setBannerDismissed(true)} aria-label="dismiss">×</button>
+        </div>
       )}
       <Sky
         userEvents={userEvents}
@@ -1076,7 +1088,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [openingBalance, setOpeningBalance]   = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
-  const [stampedTax, setStampedTax] = useState(settings.taxValue ?? 3)
+  const [stampedTax, setStampedTax] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1090,12 +1102,22 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     setSaveStatus('')
     async function init() {
       try {
-        const existing = await loadEntryV2(dateStr, session.user.id)
+        const rows = await loadAllEntriesV2(session.user.id)
+        setAllEntries(rows)
+        // Opening balance is ALWAYS derived from the chain (gap-aware), never
+        // trusted from the day's own stored value — so editing or opening any
+        // historical day, including a never-logged gap day, carries forward right.
+        const opening = resolveOpeningBalance(
+          dateStr, rows,
+          { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate },
+        )
+        setOpeningBalance(opening)
+        setYesterdayClosing(opening)
+
+        const existing = rows.find(e => e.date === dateStr)
         if (existing) {
-          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? 3)
+          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
           const state = dbToInternal(existing)
-          setOpeningBalance(state.openingBalance)
-          setYesterdayClosing(state.openingBalance)
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
           setRecovery(state.recovery)
@@ -1103,7 +1125,6 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
         } else {
-          setOpeningBalance(0); setYesterdayClosing(0)
           setUserEvents([])
           setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
           setRecovery(false)
@@ -1142,7 +1163,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         yesterdayClosing, meltdown: melt,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
-      await recalculateFromDateV2(session.user.id, dateStr)
+      await recalculateFromDateV2(session.user.id, dateStr, settings)
       loadAllEntriesV2(session.user.id).then(rows => setAllEntries(rows)).catch(() => {})
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(''), 2000)
@@ -1307,7 +1328,7 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
 
 // ─── AutisticTaxSettings ───
 function AutisticTaxSettings({ settings, onTaxChange }) {
-  const [value, setValue] = useState(settings.taxValue ?? 3)
+  const [value, setValue] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
 

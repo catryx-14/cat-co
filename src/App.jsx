@@ -8,6 +8,7 @@ import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
 import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
+import { DEFAULT_AUTISTIC_TAX } from './shared/lib/math.js'
 import { todayDisplayStr } from './shared/lib/dates.js'
 import RoomMark from './shared/components/RoomMark.jsx'
 
@@ -406,7 +407,7 @@ function HubApp({ session }) {
       .then(setSettings)
       .catch(err => {
         console.error('failed to load settings', err)
-        setSettings({ taxValue: 3, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
+        setSettings({ taxValue: DEFAULT_AUTISTIC_TAX, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
       })
   }, [])
 

@@ -12,10 +12,13 @@
 
 import { supabase } from './supabase.js'
 import { dbToInternal, internalToDb } from './db.js'
+import { addDaysStr } from './dates.js'
 import {
   computeDisplayValues,
-  computeOpeningBalance,
   computeClosingBalance,
+  computeMissedDayClosing,
+  resolveOpeningBalance,
+  DEFAULT_AUTISTIC_TAX,
 } from './math.js'
 
 // ── Conversion helpers ─────────────────────────────────────────────────────
@@ -72,11 +75,12 @@ function buildEntryData(daily, events) {
     peakDebit,
     activeRegulation,
     autisticTax: 0,
-    autisticTaxRate: daily.autistic_tax ?? 3,
+    autisticTaxRate: daily.autistic_tax,          // column is NOT NULL (defaults to the tax setting)
     siFlowBonus,
     livedExperience,
     flowActivity: daily.flow_activity ?? false,
     siFlowActive: daily.si_flow_active ?? false,
+    autoFilled: daily.auto_filled ?? false,
     meltdown: daily.meltdown ?? false,
     yellowThreshold: daily.yellow_threshold ?? 15,
     criticalThreshold: daily.critical_threshold ?? 30,
@@ -115,7 +119,8 @@ function entryDataToDailyRow(dateStr, entryData, userId) {
     meltdown:     d.meltdown ?? false,
     si_flow_active: d.siFlowActive ?? false,
     flow_activity:  d.flowActivity ?? false,
-    autistic_tax:   d.autisticTaxRate ?? 3,
+    auto_filled:    d.autoFilled ?? false,   // a real user edit always lands here as false → clears the flag
+    autistic_tax:   d.autisticTaxRate ?? DEFAULT_AUTISTIC_TAX,
     yellow_threshold:   d.yellowThreshold ?? 15,
     critical_threshold: d.criticalThreshold ?? 30,
   }
@@ -237,40 +242,45 @@ export async function saveEntryV2({ dateStr, entryData, peakDebit: _ignored, use
 // ── Cascade recalculation ─────────────────────────────────────────────────
 
 function _recomputeFromEntryData(entryData, openingBalance) {
-  // Spread the cascade-computed opening balance in so computeDisplayValues uses
-  // the correct value (not the stale one stored in entryData from a previous save)
+  // Hand the day's own stamped tax into computeDisplayValues — mirrors exactly
+  // what buildEntryData does for display, so the stored closing and the
+  // displayed peak can never disagree. (Previously settings were omitted here,
+  // which silently dropped the autistic tax on every cascaded day.)
+  const dayTax = {
+    taxValue: entryData.autisticTaxRate ?? DEFAULT_AUTISTIC_TAX,
+    taxStartDate: '2000-01-01',
+  }
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
-    computeDisplayValues({ ...entryData, openingBalance: Math.round(openingBalance) })
+    computeDisplayValues({ ...entryData, openingBalance: Math.round(openingBalance) }, dayTax)
   const closingBalance = computeClosingBalance(peakDebit, activeRegulation)
   return { openingBalance: Math.round(openingBalance), peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
 }
 
 /**
- * Cascade: recalculate all entries after fromDateStr using the V2 tables.
- * fromDateStr's closing balance becomes the anchor for subsequent days.
+ * Cascade: recalculate every stored entry AFTER fromDateStr.
+ * Each day's opening balance is re-derived from the chain (gap-aware) using the
+ * freshly-corrected closing of the days before it, so missed days between stored
+ * entries are accounted for and the autistic tax is reapplied correctly.
  */
-export async function recalculateFromDateV2(userId, fromDateStr) {
+export async function recalculateFromDateV2(userId, fromDateStr, settings = {}) {
   const entries = await loadAllEntriesV2(userId)
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
-
-  const anchor = sorted.find(e => e.date === fromDateStr)
-  if (!anchor) return 0
 
   const subsequent = sorted.filter(e => e.date > fromDateStr)
   if (subsequent.length === 0) return 0
 
-  let prevClosing = anchor.entry_data.closingBalance ?? 0
-
   for (const entry of subsequent) {
     try {
       const d = entry.entry_data
-      const openingBalance = computeOpeningBalance(prevClosing)
+      // resolveOpeningBalance reads `sorted`, which we mutate in place below, so
+      // each day sees the corrected closing of the day(s) before it.
+      const openingBalance = resolveOpeningBalance(entry.date, sorted, settings)
       const { peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience } =
         _recomputeFromEntryData(d, openingBalance)
 
       const updatedEntryData = { ...d, openingBalance, peakDebit, activeRegulation, siFlowBonus, closingBalance, livedExperience }
+      entry.entry_data = updatedEntryData            // update in-memory for the next day's resolve
       await saveEntryV2({ dateStr: entry.date, entryData: updatedEntryData, userId })
-      prevClosing = closingBalance
     } catch (err) {
       console.error(`[recalculate] failed on ${entry.date}:`, err)
       throw err
@@ -278,6 +288,68 @@ export async function recalculateFromDateV2(userId, fromDateStr) {
   }
 
   return subsequent.length
+}
+
+// ── Missed-day backfill ────────────────────────────────────────────────────
+
+/**
+ * Fills the trailing gap — every calendar day AFTER the user's most recent
+ * entry, up to (but not including) today — with quiet zero-event placeholder
+ * rows, each flagged auto_filled so the room can show a banner. Today stays
+ * unlogged until it's logged for real.
+ *
+ * Scope is deliberately the trailing gap only (the "I logged a few days late"
+ * case), not old internal gaps — those are handled virtually by
+ * resolveOpeningBalance and don't need rows written. Idempotent and
+ * non-destructive: it only creates days that have no row. Returns created dates.
+ *
+ * A placeholder is just a zero-event, no-flow day run through the standard rule,
+ * so it naturally carries the sleep deduction (via opening) and the autistic tax.
+ */
+export async function backfillMissedDays(userId, settings = {}, todayStr) {
+  const entries = await loadAllEntriesV2(userId)
+  if (entries.length === 0) return []
+
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
+  const lastEntryDate = sorted[sorted.length - 1].date
+  const lastNeeded = addDaysStr(todayStr, -1)        // fill up to yesterday
+  if (lastNeeded <= lastEntryDate) return []         // no trailing gap
+
+  const taxValue = settings.taxValue ?? DEFAULT_AUTISTIC_TAX
+  const taxStartDate = settings.taxStartDate ?? '2000-01-01'
+  const created = []
+
+  let cursor = addDaysStr(lastEntryDate, 1)
+  while (cursor <= lastNeeded) {
+    const opening = resolveOpeningBalance(cursor, sorted, settings)
+    const taxApplies = cursor >= taxStartDate
+    const closing = computeMissedDayClosing(opening, taxApplies, taxValue)
+    const entryData = {
+      date: cursor,
+      openingBalance: opening,
+      closingBalance: closing,
+      peakDebit: closing,
+      activeRegulation: 0,
+      siFlowBonus: 0,
+      livedExperience: closing,
+      regulation: { sensoryComfort: 0, audioVisual: 0, environment: 0, bodyRest: 0, recoverySleep: false },
+      events: [],
+      autisticTaxRate: taxValue,
+      autoFilled: true,
+      flowActivity: false,
+      siFlowActive: false,
+      meltdown: false,
+      warningSign: { skin: false, vision: false, thought: false, sunny: false, crisisResponse: false },
+      yellowThreshold: settings.thresholds?.yellow ?? 15,
+      criticalThreshold: settings.thresholds?.critical ?? 30,
+    }
+    await saveEntryV2({ dateStr: cursor, entryData, userId })
+    // append in date order (cursor only moves forward) so the next gap day chains off this one
+    sorted.push({ date: cursor, user_id: userId, entry_data: entryData })
+    created.push(cursor)
+    cursor = addDaysStr(cursor, 1)
+  }
+  return created
 }
 
 // Re-export the pure conversion utilities unchanged — no need to duplicate them

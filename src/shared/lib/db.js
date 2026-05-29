@@ -12,7 +12,7 @@
  */
 
 import { supabase } from './supabase.js'
-import { computeDisplayValues, computeClosingBalance } from './math.js'
+import { computeDisplayValues, computeClosingBalance, DEFAULT_AUTISTIC_TAX } from './math.js'
 
 export async function loadSettings() {
   const { data, error } = await supabase.from('almanac_settings').select('key, value')
@@ -21,7 +21,7 @@ export async function loadSettings() {
   for (const row of data) s[row.key] = row.value
   const stored = s.thresholds ?? {}
   return {
-    taxValue: s.autistic_tax?.value ?? 3,
+    taxValue: s.autistic_tax?.value ?? DEFAULT_AUTISTIC_TAX,
     thresholds: { yellow: stored.yellow ?? 15, critical: stored.critical ?? 30 },
     livedExperienceThresholds: { yellow: stored.leYellow ?? 15, critical: stored.leCritical ?? 30 },
     taxStartDate: s.tax_start_date?.date ?? '2000-01-01',
@@ -141,7 +141,7 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     activeRegulation,
     siFlowBonus,
     autisticTax: taxPoints,
-    autisticTaxRate: settings.taxValue ?? 3,
+    autisticTaxRate: settings.taxValue ?? DEFAULT_AUTISTIC_TAX,
     flowActivity: goodSigns.flow,
     yellowThreshold: thresholds.yellow,
     criticalThreshold: thresholds.critical,
