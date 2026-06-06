@@ -17,9 +17,16 @@ const MORE_ROOMS = [
     title: 'library',
     subtitle: 'stories · collected things',
   },
+  {
+    id: 'lost-found',
+    icon: null,
+    symbol: '⟡',
+    title: 'lost & found',
+    subtitle: "name what's here",
+  },
 ]
 
-function RoomCard({ icon, title, subtitle, onClick }) {
+function RoomCard({ icon, symbol, title, subtitle, onClick }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -42,20 +49,35 @@ function RoomCard({ icon, title, subtitle, onClick }) {
         transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
       }}
     >
-      <img
-        src={icon}
-        alt=""
-        style={{
-          width: 170,
-          height: 170,
-          objectFit: 'contain',
-          transition: 'filter 0.2s, transform 0.2s',
-          filter: hovered
-            ? 'drop-shadow(0 0 18px rgba(232,201,140,0.6))'
-            : 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+      {icon ? (
+        <img
+          src={icon}
+          alt=""
+          style={{
+            width: 170,
+            height: 170,
+            objectFit: 'contain',
+            transition: 'filter 0.2s, transform 0.2s',
+            filter: hovered
+              ? 'drop-shadow(0 0 18px rgba(232,201,140,0.6))'
+              : 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+            transform: hovered ? 'scale(1.05)' : 'scale(1)',
+          }}
+        />
+      ) : (
+        <div style={{
+          width: 170, height: 170,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 72, lineHeight: 1,
+          color: hovered ? '#f3d98f' : 'rgba(232,201,140,0.55)',
+          transition: 'color 0.2s, transform 0.2s, filter 0.2s',
           transform: hovered ? 'scale(1.05)' : 'scale(1)',
-        }}
-      />
+          filter: hovered ? 'drop-shadow(0 0 18px rgba(232,201,140,0.5))' : 'none',
+          userSelect: 'none',
+        }}>
+          {symbol}
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
         <span style={{
           fontFamily: "'Crimson Pro', Georgia, serif",
@@ -93,6 +115,7 @@ export default function MoreLightsRoom({ onRoom, onSettings }) {
             <RoomCard
               key={r.id}
               icon={r.icon}
+              symbol={r.symbol}
               title={r.title}
               subtitle={r.subtitle}
               onClick={() => onRoom(r.id)}

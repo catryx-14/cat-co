@@ -56,6 +56,23 @@
   /* NIGHT GARDEN THEME VALUE: amethyst — #7a4ad8 (lantern-03 / Library) */
   --color-accent-library: #7a4ad8;
 
+  /* ── Prototype token aliases ────────────────────────────────────────────
+     Tokens used in ported prototype components (Lost & Found, etc.)
+     that don't exist natively. Map them to real Night Garden values here
+     so the components work without modification.                           */
+  --color-text-info:         var(--candle-soft);           /* selected / active word text */
+  --color-background-info:   rgba(232, 201, 140, 0.14);   /* selected / active pill fill */
+  --color-border-info:       var(--candle);                /* selected / active border    */
+  --color-text-tertiary:     var(--color-text-dim);        /* hints, captions, labels     */
+  --color-border-secondary:  var(--color-border);          /* hairlines, spokes           */
+  --color-border-tertiary:   rgba(232, 201, 140, 0.15);   /* very subtle inner borders   */
+  --color-background-primary:    rgba(255, 255, 255, 0.03);   /* subtle raised card surface */
+  --color-background-secondary:  rgba(232, 201, 140, 0.06);   /* inactive pill background   */
+  --font-serif: "Crimson Pro", Georgia, serif;             /* body / expression text      */
+  --font-sans:  "Cagliostro", serif;                       /* chip / UI label text        */
+  --border-radius-lg: 12px;
+  --border-radius-md: 8px;
+
   /* NIGHT GARDEN THEME VALUE: display/title font was Italiana, serif */
   /* NIGHT GARDEN THEME VALUE: hero font was 'Cormorant Garamond', Georgia, serif italic */
   --font-primary: "Crimson Pro", Georgia, serif;

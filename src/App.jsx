@@ -6,6 +6,7 @@ import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import GamesRoom from './rooms/games/GamesRoom.jsx'
 import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
 import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
+import LostFoundRoom from './rooms/lost-found/LostFoundRoom.jsx'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 import { DEFAULT_AUTISTIC_TAX } from './shared/lib/math.js'
@@ -381,6 +382,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   }
   if (roomKey === 'ef-suite') {
     return <EFSuiteRoom key={efSuiteResetKey} onSettings={onSettings} />
+  }
+  if (roomKey === 'lost-found') {
+    return <LostFoundRoom onSettings={onSettings} />
   }
   if (roomKey === 'library') {
     return <LibraryPlaceholder onSettings={onSettings} />
