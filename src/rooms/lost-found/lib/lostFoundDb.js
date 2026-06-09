@@ -137,7 +137,7 @@ export async function loadAllVocab() {
   ] = await Promise.all([
     supabase.from('emotion_words').select('slug, word, family, neighbours').order('family').order('word'),
     supabase.from('meaning_taxonomy').select('slug, name, gloss, parent_slug, sort_order').order('sort_order'),
-    supabase.from('body_sensations').select('slug, name, kind, sort_order, parent_group').order('sort_order'),
+    supabase.from('body_sensations').select('slug, name, kind, sort_order, parent_group, only_parts').order('sort_order'),
     supabase.from('lost_found_situations').select('slug, name, sort_order, is_personal').order('sort_order'),
   ])
   if (e1 || e2 || e3 || e4) throw (e1 || e2 || e3 || e4)

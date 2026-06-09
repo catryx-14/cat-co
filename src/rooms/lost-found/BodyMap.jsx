@@ -218,7 +218,9 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
                     borderLeft: `1.5px solid var(--color-border-tertiary)`,
                   }}>
                     {CATEGORIES.map(cat => {
-                      const words     = qualitiesByCategory[cat.slug] || []
+                      // Filter by only_parts: include if null (universal) or part slug is listed
+                      const words = (qualitiesByCategory[cat.slug] || [])
+                        .filter(q => !q.only_parts || q.only_parts.includes(part.slug))
                       const isCatOpen = openCategory === cat.slug
                       if (!words.length) return null
 
