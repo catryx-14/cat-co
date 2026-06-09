@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { todayDateStr } from '../../shared/lib/dates.js'
 import EmotionCloud from './EmotionCloud.jsx'
 import BodyMap from './BodyMap.jsx'
 import MeaningPicker from './MeaningPicker.jsx'
@@ -241,6 +242,7 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
   const [emotionOutcome, setEmotionOutcome] = useState(null)
   const [meaningOutcome, setMeaningOutcome] = useState(null)
 
+  const [entryDate, setEntryDate] = useState(() => todayDateStr())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [bouquetExpanded, setBouquetExpanded] = useState(false)
@@ -353,7 +355,7 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
         }
         onSaved?.(initialEntry.id)
       } else {
-        const entryId = await saveEntry({ userId, ...payload })
+        const entryId = await saveEntry({ userId, entryDate, ...payload })
         if (askMessages.length > 0) {
           try { await saveAskTurns(userId, entryId, askMessages) } catch (e) { console.error('turn save', e) }
         }
@@ -459,6 +461,26 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
             </div>
           )}
         </div>
+
+        {/* Entry date — only on new entries (edits never change the date) */}
+        {!isEditing && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>this happened on</span>
+            <input
+              type="date"
+              value={entryDate}
+              onChange={e => setEntryDate(e.target.value)}
+              style={{
+                fontFamily: 'var(--font-serif)', fontSize: 12,
+                background: 'var(--color-background-primary)',
+                border: '0.5px solid var(--color-border)',
+                borderRadius: 6, padding: '3px 8px',
+                color: 'var(--color-text-primary)',
+                colorScheme: 'dark', outline: 'none',
+              }}
+            />
+          </div>
+        )}
 
         {/* Expression textarea — the hero */}
         <textarea

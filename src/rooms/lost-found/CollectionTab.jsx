@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { loadCollection, deleteEntry, CATEGORY_COLORS } from './lib/lostFoundDb.js'
+import { loadCollection, deleteEntry, toggleFavorite, CATEGORY_COLORS } from './lib/lostFoundDb.js'
 
-function formatDate(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+// Format a date string (YYYY-MM-DD) without timezone shift
+function formatEntryDate(dateStr) {
+  if (!dateStr) return ''
+  const [y, mo, da] = dateStr.split('-').map(Number)
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${months[mo - 1]} ${da} · ${y}`
 }
 
 // Friendly labels for the stored DB outcome values
@@ -16,6 +18,19 @@ const OUTCOME_LABEL = {
   skipped: 'set aside',
 }
 const outcomeText = v => OUTCOME_LABEL[v] ?? v
+
+// Derived: entry from tracker with no atoms and no outcomes set
+function needsLook(entry) {
+  return (
+    entry.source_event_id &&
+    !(entry.lost_found_entry_emotions?.length) &&
+    !(entry.lost_found_entry_body?.length) &&
+    !(entry.lost_found_entry_meanings?.length) &&
+    !(entry.lost_found_entry_situations?.length) &&
+    !entry.emotion_outcome &&
+    !entry.meaning_outcome
+  )
+}
 
 function Chip({ label, kind }) {
   const c = CATEGORY_COLORS[kind] ?? {
@@ -34,7 +49,25 @@ function Chip({ label, kind }) {
   )
 }
 
-function EntryDrawer({ entry, onClose, vocab, onDelete, onEdit }) {
+function StarButton({ on, onClick }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onClick() }}
+      title={on ? 'remove from favorites' : 'add to favorites'}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '0 2px', lineHeight: 1, flexShrink: 0,
+        fontSize: 15,
+        color: on ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)',
+        transition: 'color .15s',
+      }}
+    >
+      {on ? '★' : '☆'}
+    </button>
+  )
+}
+
+function EntryDrawer({ entry, onClose, vocab, onDelete, onEdit, onToggleFavorite }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   if (!entry) return null
@@ -67,8 +100,22 @@ function EntryDrawer({ entry, onClose, vocab, onDelete, onEdit }) {
         flexShrink: 0, position: 'sticky', top: 0,
         background: '#0c1530', zIndex: 1,
       }}>
-        <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>{formatDate(entry.created_at)}</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--color-text-tertiary)', cursor: 'pointer', padding: 4 }}>×</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+            {formatEntryDate(entry.entry_date)}
+          </span>
+          {entry.source_event_id && (
+            <span style={{
+              fontSize: 10, padding: '1px 7px', borderRadius: 999,
+              border: '0.5px solid var(--color-accent-primary)',
+              color: 'var(--color-accent-primary)', letterSpacing: '.04em',
+            }}>from tracker</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <StarButton on={entry.is_favorite} onClick={() => onToggleFavorite(entry.id, !entry.is_favorite)} />
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--color-text-tertiary)', cursor: 'pointer', padding: 4 }}>×</button>
+        </div>
       </div>
 
       <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -77,6 +124,18 @@ function EntryDrawer({ entry, onClose, vocab, onDelete, onEdit }) {
           <p style={{ fontFamily: 'var(--font-serif)', fontSize: 16, lineHeight: 1.7, color: 'var(--color-text-primary)', margin: 0 }}>
             {entry.expression}
           </p>
+        )}
+
+        {/* Needs a look banner */}
+        {needsLook(entry) && (
+          <div style={{
+            padding: '8px 12px', borderRadius: 8,
+            background: 'rgba(232,201,140,0.06)',
+            border: '0.5px solid rgba(232,201,140,0.25)',
+            fontSize: 12, color: 'var(--color-accent-primary)', fontStyle: 'italic',
+          }}>
+            needs a look — nothing gathered yet
+          </div>
         )}
 
         {/* Emotions */}
@@ -199,7 +258,7 @@ function EntryDrawer({ entry, onClose, vocab, onDelete, onEdit }) {
   )
 }
 
-function EntryCard({ entry, onClick, vocab }) {
+function EntryCard({ entry, onClick, vocab, onToggleFavorite }) {
   const emoBySlug = vocab?.emotions?.bySlug ?? {}
   const meaningBySlug = vocab?.meanings?.bySlug ?? {}
 
@@ -209,6 +268,8 @@ function EntryCard({ entry, onClick, vocab }) {
   const situations = entry.lost_found_entry_situations ?? []
 
   const hasChips = emotions.length || meanings.length || body.length || situations.length
+  const isSeeded = !!entry.source_event_id
+  const looksEmpty = needsLook(entry)
 
   return (
     <button
@@ -223,9 +284,28 @@ function EntryCard({ entry, onClick, vocab }) {
       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-border-info)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
     >
-      {/* Date */}
-      <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '.05em' }}>
-        {formatDate(entry.created_at)}
+      {/* Top row: date + badges + star */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '.05em' }}>
+            {formatEntryDate(entry.entry_date)}
+          </span>
+          {isSeeded && (
+            <span style={{
+              fontSize: 10, padding: '1px 6px', borderRadius: 999,
+              border: '0.5px solid var(--color-accent-primary)',
+              color: 'var(--color-accent-primary)', letterSpacing: '.04em',
+            }}>from tracker</span>
+          )}
+          {looksEmpty && (
+            <span style={{
+              fontSize: 10, padding: '1px 6px', borderRadius: 999,
+              border: '0.5px solid rgba(232,201,140,0.3)',
+              color: 'rgba(232,201,140,0.55)', letterSpacing: '.04em', fontStyle: 'italic',
+            }}>needs a look</span>
+          )}
+        </div>
+        <StarButton on={entry.is_favorite} onClick={() => onToggleFavorite(entry.id, !entry.is_favorite)} />
       </div>
 
       {/* Expression */}
@@ -262,11 +342,18 @@ function EntryCard({ entry, onClick, vocab }) {
   )
 }
 
+const FILTER_TABS = [
+  { key: 'all',     label: 'all' },
+  { key: 'faves',   label: 'favorites' },
+  { key: 'tracker', label: 'from the tracker' },
+]
+
 export default function CollectionTab({ userId, vocab, refreshTrigger, onEdit }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selected, setSelected] = useState(null)
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     if (!userId) return
@@ -282,36 +369,81 @@ export default function CollectionTab({ userId, vocab, refreshTrigger, onEdit })
     setSelected(null)
   }
 
+  async function handleToggleFavorite(entryId, isFavorite) {
+    try {
+      await toggleFavorite(entryId, isFavorite)
+      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, is_favorite: isFavorite } : e))
+      // Keep drawer in sync
+      if (selected?.id === entryId) setSelected(prev => ({ ...prev, is_favorite: isFavorite }))
+    } catch (err) {
+      console.error('favorite toggle failed', err)
+    }
+  }
+
+  // Filter the list
+  const visible = entries.filter(e => {
+    if (filter === 'faves')   return e.is_favorite
+    if (filter === 'tracker') return !!e.source_event_id
+    return true
+  })
+
   if (loading) {
     return <div style={{ padding: 24, fontSize: 14, color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>loading your collection…</div>
   }
   if (error) {
     return <div style={{ padding: 24, fontSize: 14, color: 'var(--color-text-tertiary)' }}>{error}</div>
   }
-  if (entries.length === 0) {
-    return (
-      <div style={{
-        padding: 32, textAlign: 'center',
-        border: '1px dashed var(--color-border)', borderRadius: 14,
-        fontSize: 14, color: 'var(--color-text-tertiary)', fontStyle: 'italic', lineHeight: 1.8,
-      }}>
-        nothing here yet —<br />lay something down and it'll appear in your collection
-      </div>
-    )
-  }
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {entries.map(entry => (
-          <EntryCard
-            key={entry.id}
-            entry={entry}
-            vocab={vocab}
-            onClick={() => setSelected(entry)}
-          />
+      {/* Filter tabs — Book Pile pattern */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {FILTER_TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            style={{
+              padding: '4px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+              background: filter === tab.key ? 'rgba(232,201,140,0.10)' : 'transparent',
+              border: `0.5px solid ${filter === tab.key ? 'var(--color-accent-primary)' : 'var(--color-border)'}`,
+              color: filter === tab.key ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)',
+              transition: 'all .15s',
+            }}
+          >
+            {tab.label}
+            {tab.key === 'faves'   && entries.filter(e => e.is_favorite).length > 0 && (
+              <span style={{ marginLeft: 5, opacity: 0.7 }}>({entries.filter(e => e.is_favorite).length})</span>
+            )}
+            {tab.key === 'tracker' && entries.filter(e => e.source_event_id).length > 0 && (
+              <span style={{ marginLeft: 5, opacity: 0.7 }}>({entries.filter(e => e.source_event_id).length})</span>
+            )}
+          </button>
         ))}
       </div>
+
+      {visible.length === 0 ? (
+        <div style={{
+          padding: 32, textAlign: 'center',
+          border: '1px dashed var(--color-border)', borderRadius: 14,
+          fontSize: 14, color: 'var(--color-text-tertiary)', fontStyle: 'italic', lineHeight: 1.8,
+        }}>
+          {filter === 'faves'   && 'no favorites yet — star an entry to save it here'}
+          {filter === 'tracker' && 'nothing from the tracker yet'}
+          {filter === 'all'     && 'nothing here yet —\nlay something down and it\'ll appear in your collection'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {visible.map(entry => (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              vocab={vocab}
+              onClick={() => setSelected(entry)}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          ))}
+        </div>
+      )}
 
       {selected && (
         <EntryDrawer
@@ -320,6 +452,7 @@ export default function CollectionTab({ userId, vocab, refreshTrigger, onEdit })
           onClose={() => setSelected(null)}
           onDelete={handleDelete}
           onEdit={(entry) => { setSelected(null); onEdit?.(entry) }}
+          onToggleFavorite={handleToggleFavorite}
         />
       )}
     </>

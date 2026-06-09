@@ -14,6 +14,7 @@ import {
   dbToInternal,
   internalToDb,
 } from '../../shared/lib/db-v2.js'
+import { seedEntry, loadSeededEventIds } from '../lost-found/lib/lostFoundDb.js'
 import { saveThresholds, saveTaxValue } from '../../shared/lib/db.js'
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX } from '../../shared/lib/math.js'
@@ -86,7 +87,7 @@ function AxisLabel({ axisKey, className }) {
 }
 
 // ─── EventRow ───
-function EventRow({ e, onUpdate, onDelete }) {
+function EventRow({ e, onUpdate, onDelete, seededIds, onSeed }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(e)
   useEffect(() => setDraft(e), [e])
@@ -207,6 +208,20 @@ function EventRow({ e, onUpdate, onDelete }) {
                 </span>
               </div>
             ))}
+          </div>
+        )}
+        {e.E > 0 && e._v2id && (
+          <div style={{ marginTop: 6 }} onClick={ev => ev.stopPropagation()}>
+            {seededIds?.has(e._v2id)
+              ? <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>in Lost + Found</span>
+              : <button
+                  onClick={() => onSeed?.(e._v2id, e.text)}
+                  style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontSize: 11, color: 'var(--color-accent-primary)', fontFamily: 'inherit',
+                  }}
+                >lay it down →</button>
+            }
           </div>
         )}
       </div>
@@ -830,6 +845,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [stampedTax,    setStampedTax]    = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
   const [autoFilledDays,setAutoFilledDays]= useState([])
   const [bannerDismissed,setBannerDismissed] = useState(false)
+  const [seededIds,      setSeededIds]      = useState(new Set())
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
@@ -865,6 +881,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
         }
+        loadSeededEventIds(session.user.id).then(ids => setSeededIds(ids)).catch(() => {})
       } catch (err) {
         console.error('failed to load entry (v2)', err)
       } finally {
@@ -913,6 +930,15 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
   const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
 
+  async function handleSeed(eventId, eventText) {
+    try {
+      await seedEntry({ userId: session.user.id, expression: eventText, sourceEventId: eventId, entryDate: dateStr })
+      setSeededIds(prev => new Set([...prev, eventId]))
+    } catch (err) {
+      console.error('seed to L+F failed', err)
+    }
+  }
+
   return (
     <>
       {onBack && (
@@ -955,7 +981,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
                 </div>
                 <div className="events">
                   {userEvents.map(e => (
-                    <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                    <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} seededIds={seededIds} onSeed={handleSeed} />
                   ))}
                 </div>
                 <Composer onAdd={onAdd} />
@@ -1089,6 +1115,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
   const [stampedTax, setStampedTax] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [seededIds,  setSeededIds]  = useState(new Set())
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1132,6 +1159,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
           setGoodSigns({ flow: false, crisis: false })
           setMeltdown(false)
         }
+        loadSeededEventIds(session.user.id).then(ids => setSeededIds(ids)).catch(() => {})
       } catch (err) { console.error('failed to load entry (v2)', err) }
       finally { setLoading(false) }
     }
@@ -1182,6 +1210,15 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
   const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+
+  async function handleSeed(eventId, eventText) {
+    try {
+      await seedEntry({ userId: session.user.id, expression: eventText, sourceEventId: eventId, entryDate: dateStr })
+      setSeededIds(prev => new Set([...prev, eventId]))
+    } catch (err) {
+      console.error('seed to L+F failed', err)
+    }
+  }
 
   function handleSelectDate(ds) {
     setDateStr(ds)
@@ -1247,7 +1284,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
               </div>
               <div className="events">
                 {userEvents.map(e => (
-                  <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} />
+                  <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} seededIds={seededIds} onSeed={handleSeed} />
                 ))}
               </div>
               <Composer onAdd={onAdd} />

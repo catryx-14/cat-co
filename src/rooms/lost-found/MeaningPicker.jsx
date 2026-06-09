@@ -75,7 +75,7 @@ export default function MeaningPicker({ meaningData, selected, onAdd, onRemove, 
     },
     familyName: {
       fontFamily: 'var(--font-serif)', fontSize: 15,
-      color: 'var(--color-text-primary)', flexShrink: 0,
+      color: 'var(--color-accent-primary)', flexShrink: 0,
     },
     famGloss: {
       fontFamily: 'var(--font-serif)', fontStyle: 'italic',

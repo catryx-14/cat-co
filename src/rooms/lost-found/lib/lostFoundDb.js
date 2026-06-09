@@ -250,21 +250,59 @@ async function insertAtoms(entryId, { situations, emotions, bodyEntries, meaning
 }
 
 // Save a complete entry with all atoms
-export async function saveEntry({ userId, expression, situations, emotions, bodyEntries, meanings, emotionOutcome, meaningOutcome }) {
+export async function saveEntry({ userId, expression, situations, emotions, bodyEntries, meanings, emotionOutcome, meaningOutcome, entryDate }) {
+  const row = {
+    user_id: userId,
+    expression: expression?.trim() || null,
+    emotion_outcome: emotionOutcome ? (EMOTION_OUTCOME_MAP[emotionOutcome] ?? null) : null,
+    meaning_outcome: meaningOutcome ? (MEANING_OUTCOME_MAP[meaningOutcome] ?? null) : null,
+  }
+  if (entryDate) row.entry_date = entryDate
   const { data: entry, error: entryErr } = await supabase
     .from('lost_found_entries')
-    .insert({
-      user_id: userId,
-      expression: expression?.trim() || null,
-      emotion_outcome: emotionOutcome ? (EMOTION_OUTCOME_MAP[emotionOutcome] ?? null) : null,
-      meaning_outcome: meaningOutcome ? (MEANING_OUTCOME_MAP[meaningOutcome] ?? null) : null,
-    })
+    .insert(row)
     .select('id')
     .single()
   if (entryErr) throw entryErr
 
   await insertAtoms(entry.id, { situations, emotions, bodyEntries, meanings })
   return entry.id
+}
+
+// Seed a Lost + Found entry from a Capacity Tracker event (no atoms, no navigation)
+export async function seedEntry({ userId, expression, sourceEventId, entryDate }) {
+  const { data, error } = await supabase
+    .from('lost_found_entries')
+    .insert({
+      user_id: userId,
+      expression: expression?.trim() || null,
+      source_event_id: sourceEventId,
+      entry_date: entryDate,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+// Load the set of energy_events.id values that have already been seeded into L+F
+export async function loadSeededEventIds(userId) {
+  const { data, error } = await supabase
+    .from('lost_found_entries')
+    .select('source_event_id')
+    .eq('user_id', userId)
+    .not('source_event_id', 'is', null)
+  if (error) throw error
+  return new Set((data ?? []).map(r => r.source_event_id))
+}
+
+// Toggle the is_favorite flag on a collection entry
+export async function toggleFavorite(entryId, isFavorite) {
+  const { error } = await supabase
+    .from('lost_found_entries')
+    .update({ is_favorite: isFavorite })
+    .eq('id', entryId)
+  if (error) throw error
 }
 
 // Update an existing entry: rewrite the parent row, then replace all atoms.
@@ -320,18 +358,20 @@ export async function saveAskTurns(userId, entryId, messages) {
   if (error) throw error
 }
 
-// Load collection entries for Tab 2
+// Load collection entries for Tab 2 — sorted by entry_date DESC then created_at DESC
 export async function loadCollection(userId) {
   const { data, error } = await supabase
     .from('lost_found_entries')
     .select(`
       id, expression, emotion_outcome, meaning_outcome, created_at,
+      is_favorite, entry_date, source_event_id,
       lost_found_entry_emotions(emotion_slug, source),
       lost_found_entry_meanings(meaning_slug, source),
       lost_found_entry_body(location_slug, quality_slugs),
       lost_found_entry_situations(situation_slug)
     `)
     .eq('user_id', userId)
+    .order('entry_date', { ascending: false })
     .order('created_at', { ascending: false })
   if (error) throw error
   return data

@@ -49,6 +49,7 @@ export function dbToInternal(row) {
     openingBalance: d.openingBalance ?? 0,
     userEvents: (d.events ?? []).map((e, i) => ({
       id: `e${i}_${d.date}_${Date.now()}`,
+      _v2id: e._v2id ?? null,
       bucket: e.bucket || 'morning',
       text: e.summary ?? '',
       E: e.emotional ?? 0,
