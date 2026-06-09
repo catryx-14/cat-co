@@ -45,8 +45,20 @@ function buildBouquetSection(bouquet, vocab) {
     parts.push(`- feelings: ${words.join(', ')}`)
   }
   if (meanings.length) {
-    const names = meanings.map(m => vocab?.meanings?.bySlug?.[m.slug]?.name ?? m.name ?? m.slug)
-    parts.push(`- meaning: ${names.join(', ')}`)
+    const included = new Set()
+    const nameList = []
+    for (const m of meanings) {
+      const row = vocab?.meanings?.bySlug?.[m.slug]
+      const name = row?.name ?? m.name ?? m.slug
+      if (!included.has(name)) { included.add(name); nameList.push(name) }
+      // If this is a granular word, also include its parent family so Claude
+      // doesn't offer the parent as if it's an unexplored area
+      if (row?.parent_slug) {
+        const parentName = vocab?.meanings?.bySlug?.[row.parent_slug]?.name ?? row.parent_slug
+        if (!included.has(parentName)) { included.add(parentName); nameList.push(parentName) }
+      }
+    }
+    parts.push(`- meaning: ${nameList.join(', ')}`)
   }
   if (bodyEntries.length) {
     const bodyStr = bodyEntries
