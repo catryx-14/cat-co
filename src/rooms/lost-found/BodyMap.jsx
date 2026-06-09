@@ -138,7 +138,7 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
 
   // ── render ────────────────────────────────────────────────────────────────
 
-  const showFigure = activeRegion !== 'all-over'
+  const isAllOver = activeRegion === 'all-over'
 
   return (
     <div>
@@ -285,9 +285,8 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
           })}
         </div>
 
-        {/* Centre: body figure — coarse region selector (hidden for 'all over') */}
-        {showFigure && (
-          <div style={{ flex: '0 0 auto', width: 148 }} className="lf-body-figure">
+        {/* Centre: body figure — coarse region selector; glows fully when 'all over' */}
+        <div style={{ flex: '0 0 auto', width: 148 }} className="lf-body-figure">
             <svg
               viewBox="0 0 240 510"
               style={{ width: '100%', height: 'auto', display: 'block' }}
@@ -325,7 +324,7 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
 
               {/* Region hit-areas — last element wins the click (paint on top) */}
               {FIGURE_ZONES.map(z => {
-                const isActive  = activeRegion === z.regionSlug
+                const isActive  = isAllOver || activeRegion === z.regionSlug
                 const isHovered = hoveredRegion === z.regionSlug && !isActive
                 const hasItems  = gatheredRegions.has(z.regionSlug) && !isActive
                 const fill = isActive
@@ -355,11 +354,10 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
               textAlign: 'center', fontSize: 11,
               color: 'var(--color-text-tertiary)', marginTop: 4,
             }}>
-              tap to switch region
+              {isAllOver ? 'tap a region to focus' : 'tap to switch region'}
             </div>
           </div>
-        )}
-      </div>
+      </div>  {/* end tree + figure */}
 
       {/* ── Bottom bouquet: gathered items as compound pills ─────────────── */}
       {bodyEntries.length > 0 && (
