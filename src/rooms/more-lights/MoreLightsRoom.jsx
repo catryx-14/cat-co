@@ -18,11 +18,11 @@ const MORE_ROOMS = [
     subtitle: 'stories · collected things',
   },
   {
-    id: 'lost-found',
+    id: 'ef-suite',
     icon: null,
-    symbol: '⟡',
-    title: 'lost & found',
-    subtitle: "name what's here",
+    symbol: '◈',
+    title: 'executive suite',
+    subtitle: 'tools for doing things',
   },
 ]
 
