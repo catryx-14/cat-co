@@ -34,30 +34,31 @@ async function loadSystemPrompt(vocab) {
   }
 }
 
-// Build a context note of Cat's current gathered atoms for the API call
-function buildBouquetNote(bouquet, vocab) {
+// Builds a system-prompt appendix listing what Cat has already gathered.
+// Appended to the system string on every API call so Claude can't miss it.
+function buildBouquetSection(bouquet, vocab) {
   if (!bouquet) return ''
   const { situations = [], emotions = [], bodyEntries = [], meanings = [] } = bouquet
   const parts = []
   if (emotions.length) {
     const words = emotions.map(e => vocab?.emotions?.bySlug?.[e.slug]?.word ?? e.word ?? e.slug)
-    parts.push(`feelings: ${words.join(', ')}`)
+    parts.push(`- feelings: ${words.join(', ')}`)
   }
   if (meanings.length) {
     const names = meanings.map(m => vocab?.meanings?.bySlug?.[m.slug]?.name ?? m.name ?? m.slug)
-    parts.push(`meaning: ${names.join(', ')}`)
+    parts.push(`- meaning: ${names.join(', ')}`)
   }
   if (bodyEntries.length) {
     const bodyStr = bodyEntries
       .map(b => b.location_slug + (b.quality_slugs?.length ? ` (${b.quality_slugs.join(', ')})` : ''))
       .join(', ')
-    parts.push(`body: ${bodyStr}`)
+    parts.push(`- body: ${bodyStr}`)
   }
   if (situations.length) {
-    parts.push(`situation: ${situations.map(s => s.name ?? s.slug).join(', ')}`)
+    parts.push(`- situation: ${situations.map(s => s.name ?? s.slug).join(', ')}`)
   }
   if (!parts.length) return ''
-  return `[Already in her bouquet — ${parts.join('; ')}. Already hers — don't re-offer these.]\n\n`
+  return `## Current bouquet — already hers, do not re-offer\n\n${parts.join('\n')}`
 }
 
 function parseResponse(text) {
@@ -107,7 +108,7 @@ function HelpfulTick({ active, onToggle }) {
         letterSpacing: '0.04em',
         color: active ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)',
         cursor: 'pointer',
-        opacity: active ? 1 : hovered ? 0.65 : 0.28,
+        opacity: active ? 1 : hovered ? 0.7 : 0.45,
         transition: 'color 0.15s, opacity 0.15s, background 0.15s, border-color 0.15s',
         display: 'inline-flex',
         alignItems: 'center',
@@ -119,7 +120,7 @@ function HelpfulTick({ active, onToggle }) {
   )
 }
 
-export default function AskClaudePanel({ open, onClose, vocab, expression, onAcceptOffer, currentPhase, bouquet, onMessagesChange }) {
+export default function AskClaudePanel({ open, onClose, vocab, expression, onAcceptOffer, onRemoveOffer, currentPhase, bouquet, onMessagesChange }) {
   const [systemPrompt, setSystemPrompt] = useState(null)
   const [messages, setMessages] = useState([]) // [{role, content, offers?}]
   const [input, setInput] = useState('')
@@ -162,20 +163,19 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
       const contextNote = expression?.trim()
         ? `[Cat's entry so far: "${expression.trim()}"]\n\n`
         : ''
-      const bouquetNote = buildBouquetNote(bouquet, vocab)
-      const lastIdx = newMessages.length - 1
-      const apiMessages = newMessages.map((m, i) => {
-        let content = m.rawContent ?? m.content
-        // Bouquet first (applied to last/current user message), then entry context (applied to first)
-        if (i === lastIdx && bouquetNote) content = bouquetNote + content
-        if (i === 0 && contextNote) content = contextNote + content
-        return { role: m.role, content }
-      })
+      const apiMessages = newMessages.map((m, i) => ({
+        role: m.role,
+        content: i === 0 ? contextNote + (m.rawContent ?? m.content) : (m.rawContent ?? m.content),
+      }))
+
+      // Append current bouquet to system prompt on every call so Claude always sees it
+      const bouquetSection = buildBouquetSection(bouquet, vocab)
+      const effectiveSystem = bouquetSection ? `${systemPrompt}\n\n${bouquetSection}` : systemPrompt
 
       const res = await client.messages.create({
         model: LF_MODEL,
         max_tokens: 800,
-        system: systemPrompt,
+        system: effectiveSystem,
         messages: apiMessages,
       })
 
@@ -200,6 +200,11 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
   function handleAccept(offer) {
     onAcceptOffer(offer)
     setGathered(prev => prev.find(g => g.word === offer.word) ? prev : [...prev, offer])
+  }
+
+  function handleRemove(offer) {
+    onRemoveOffer?.(offer)
+    setGathered(prev => prev.filter(g => g.word !== offer.word))
   }
 
   function handleKeyDown(e) {
@@ -382,7 +387,8 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
                       return (
                         <button
                           key={j}
-                          onClick={() => !taken && handleAccept(offer)}
+                          onClick={() => taken ? handleRemove(offer) : handleAccept(offer)}
+                          title={taken ? 'tap to remove' : undefined}
                           style={{
                             background: taken ? 'var(--color-background-info)' : 'rgba(255,255,255,0.04)',
                             border: `0.5px solid ${taken ? 'var(--color-border-info)' : 'var(--color-border)'}`,
@@ -390,7 +396,7 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
                             borderRadius: 999,
                             padding: '5px 13px',
                             fontSize: 13,
-                            cursor: taken ? 'default' : 'pointer',
+                            cursor: 'pointer',
                             fontFamily: 'var(--font-serif)',
                             transition: 'border-color 0.15s, color 0.15s',
                           }}

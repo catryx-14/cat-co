@@ -324,6 +324,18 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
     }
   }
 
+  function removeOffer(offer) {
+    const kind = offer.kind?.toLowerCase() ?? ''
+    const slug = offer.word.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    if (kind === 'emotion' || kind === 'feeling') {
+      removeEmotion(slug)
+    } else if (kind === 'meaning') {
+      removeMeaning(slug)
+    } else if (kind === 'situation') {
+      setSituations(prev => prev.filter(s => s.slug !== slug))
+    }
+  }
+
   async function handleSetItDown() {
     if (saving) return
     setSaving(true)
@@ -591,6 +603,7 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
         vocab={vocab}
         expression={expression}
         onAcceptOffer={acceptOffer}
+        onRemoveOffer={removeOffer}
         currentPhase={openPhase}
         bouquet={bouquet}
         onMessagesChange={setAskMessages}
