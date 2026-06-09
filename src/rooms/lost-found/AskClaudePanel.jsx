@@ -12,7 +12,12 @@ const client = new Anthropic({
   dangerouslyAllowBrowser: true,
 })
 
-const FALLBACK_SYSTEM = `You are the thinking-partner inside Cat's Lost & Found room. Help Cat read her own emotions and meanings. Ask questions — you never tell her what she feels. Respond only as JSON: {"message": "...", "offers": []}.`
+const FALLBACK_SYSTEM = `You are the thinking-partner inside Cat's Lost & Found room. Help Cat read her own emotions and meanings. Ask questions — you never tell her what she feels. Respond only as JSON: {"message": "...", "offers": [], "moves": [], "primary_move": null}.`
+
+const VALID_MOVES = new Set([
+  'mirroring-back', 'separating-threads', 'naming-a-shape', 'offering-a-lens', 'making-room',
+  'sitting-with', 'what-matters', 'more-than-one', 'what-came-before', 'whats-underneath', 'meaning-path',
+])
 
 // Load system prompt from engine room (id=126) at runtime
 async function loadSystemPrompt(vocab) {
@@ -29,12 +34,44 @@ async function loadSystemPrompt(vocab) {
   }
 }
 
+// Build a context note of Cat's current gathered atoms for the API call
+function buildBouquetNote(bouquet, vocab) {
+  if (!bouquet) return ''
+  const { situations = [], emotions = [], bodyEntries = [], meanings = [] } = bouquet
+  const parts = []
+  if (emotions.length) {
+    const words = emotions.map(e => vocab?.emotions?.bySlug?.[e.slug]?.word ?? e.word ?? e.slug)
+    parts.push(`feelings: ${words.join(', ')}`)
+  }
+  if (meanings.length) {
+    const names = meanings.map(m => vocab?.meanings?.bySlug?.[m.slug]?.name ?? m.name ?? m.slug)
+    parts.push(`meaning: ${names.join(', ')}`)
+  }
+  if (bodyEntries.length) {
+    const bodyStr = bodyEntries
+      .map(b => b.location_slug + (b.quality_slugs?.length ? ` (${b.quality_slugs.join(', ')})` : ''))
+      .join(', ')
+    parts.push(`body: ${bodyStr}`)
+  }
+  if (situations.length) {
+    parts.push(`situation: ${situations.map(s => s.name ?? s.slug).join(', ')}`)
+  }
+  if (!parts.length) return ''
+  return `[Already in her bouquet — ${parts.join('; ')}. Already hers — don't re-offer these.]\n\n`
+}
+
 function parseResponse(text) {
   const tryParse = (str) => {
     const parsed = JSON.parse(str)
+    const rawMoves = Array.isArray(parsed.moves) ? parsed.moves : []
+    const moves = rawMoves.filter(m => VALID_MOVES.has(m))
+    const pm = parsed.primary_move
+    const primaryMove = (typeof pm === 'string' && VALID_MOVES.has(pm)) ? pm : (moves[0] ?? null)
     return {
-      message: typeof parsed.message === 'string' ? parsed.message : text,
+      message: typeof parsed.message === 'string' ? parsed.message : str,
       offers: Array.isArray(parsed.offers) ? parsed.offers : [],
+      moves,
+      primaryMove,
     }
   }
   // Try code-fenced block anywhere in the text
@@ -50,10 +87,39 @@ function parseResponse(text) {
     const end = text.lastIndexOf('}')
     if (start !== -1 && end > start) return tryParse(text.slice(start, end + 1))
   } catch { /**/ }
-  return { message: text, offers: [] }
+  return { message: text, offers: [], moves: [], primaryMove: null }
 }
 
-export default function AskClaudePanel({ open, onClose, vocab, expression, onAcceptOffer, currentPhase }) {
+function HelpfulTick({ active, onToggle }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: active ? 'rgba(230,200,120,.08)' : 'transparent',
+        border: `0.5px solid ${active ? 'var(--color-accent-primary)' : 'transparent'}`,
+        borderRadius: 999,
+        padding: '3px 10px',
+        fontSize: 11,
+        fontFamily: 'var(--font-sans)',
+        letterSpacing: '0.04em',
+        color: active ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)',
+        cursor: 'pointer',
+        opacity: active ? 1 : hovered ? 0.65 : 0.28,
+        transition: 'color 0.15s, opacity 0.15s, background 0.15s, border-color 0.15s',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+      }}
+    >
+      ✦ this helped
+    </button>
+  )
+}
+
+export default function AskClaudePanel({ open, onClose, vocab, expression, onAcceptOffer, currentPhase, bouquet, onMessagesChange }) {
   const [systemPrompt, setSystemPrompt] = useState(null)
   const [messages, setMessages] = useState([]) // [{role, content, offers?}]
   const [input, setInput] = useState('')
@@ -61,6 +127,15 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
   const [error, setError] = useState(null)
   const [gathered, setGathered] = useState([]) // words accepted from Claude's offers
   const bottomRef = useRef(null)
+
+  function toggleHelpful(idx) {
+    setMessages(prev => prev.map((m, i) => i === idx ? { ...m, markedHelpful: !m.markedHelpful } : m))
+  }
+
+  // Notify parent whenever messages change (for turn persistence on save)
+  useEffect(() => {
+    onMessagesChange?.(messages)
+  }, [messages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load system prompt when first opened
   useEffect(() => {
@@ -87,10 +162,15 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
       const contextNote = expression?.trim()
         ? `[Cat's entry so far: "${expression.trim()}"]\n\n`
         : ''
-      const apiMessages = newMessages.map((m, i) => ({
-        role: m.role,
-        content: i === 0 ? contextNote + (m.rawContent ?? m.content) : (m.rawContent ?? m.content),
-      }))
+      const bouquetNote = buildBouquetNote(bouquet, vocab)
+      const lastIdx = newMessages.length - 1
+      const apiMessages = newMessages.map((m, i) => {
+        let content = m.rawContent ?? m.content
+        // Bouquet first (applied to last/current user message), then entry context (applied to first)
+        if (i === lastIdx && bouquetNote) content = bouquetNote + content
+        if (i === 0 && contextNote) content = contextNote + content
+        return { role: m.role, content }
+      })
 
       const res = await client.messages.create({
         model: LF_MODEL,
@@ -100,12 +180,15 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
       })
 
       const raw = res.content[0]?.text ?? ''
-      const { message, offers } = parseResponse(raw)
+      const { message, offers, moves, primaryMove } = parseResponse(raw)
 
       const validOffers = offers.filter(o => o.word && o.kind)
       const finalOffers = validOffers.length === 1 ? [] : validOffers
 
-      setMessages(prev => [...prev, { role: 'assistant', content: message, rawContent: raw, offers: finalOffers }])
+      setMessages(prev => [...prev, {
+        role: 'assistant', content: message, rawContent: raw,
+        offers: finalOffers, moves, primaryMove, markedHelpful: false,
+      }])
     } catch (err) {
       console.error('ask-claude error', err)
       setError('Something went wrong. Try again.')
@@ -272,6 +355,13 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
                     {m.content}
                   </div>
                 </div>
+
+                {/* Helpful tick — faint until hovered, gold when active */}
+                {m.role === 'assistant' && (
+                  <div style={{ paddingLeft: 4, marginTop: 6 }}>
+                    <HelpfulTick active={m.markedHelpful ?? false} onToggle={() => toggleHelpful(i)} />
+                  </div>
+                )}
 
                 {/* Offer chips */}
                 {m.offers?.length > 0 && (

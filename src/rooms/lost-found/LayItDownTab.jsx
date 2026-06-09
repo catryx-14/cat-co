@@ -4,7 +4,7 @@ import BodyMap from './BodyMap.jsx'
 import MeaningPicker from './MeaningPicker.jsx'
 import AskClaudePanel from './AskClaudePanel.jsx'
 import {
-  saveEntry, updateEntry, addEmotionWord, addMeaningWord,
+  saveEntry, updateEntry, addEmotionWord, addMeaningWord, saveAskTurns,
   EMOTION_OUTCOME_TO_UI, MEANING_OUTCOME_TO_UI, CATEGORY_COLORS,
 } from './lib/lostFoundDb.js'
 
@@ -244,6 +244,7 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [bouquetExpanded, setBouquetExpanded] = useState(false)
+  const [askMessages, setAskMessages] = useState([])
 
   // When opened to edit an existing entry, hydrate all fields from it
   useEffect(() => {
@@ -335,9 +336,15 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
       }
       if (isEditing) {
         await updateEntry({ entryId: initialEntry.id, ...payload })
+        if (askMessages.length > 0) {
+          try { await saveAskTurns(userId, initialEntry.id, askMessages) } catch (e) { console.error('turn save', e) }
+        }
         onSaved?.(initialEntry.id)
       } else {
         const entryId = await saveEntry({ userId, ...payload })
+        if (askMessages.length > 0) {
+          try { await saveAskTurns(userId, entryId, askMessages) } catch (e) { console.error('turn save', e) }
+        }
         onSaved?.(entryId)
       }
     } catch (err) {
@@ -351,6 +358,12 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
   const bouquetCount = situations.length + emotions.length + bodyEntries.length + meanings.length
     + (emotionOutcome ? 1 : 0) + (meaningOutcome ? 1 : 0)
   const togglePhase = (phase) => setOpenPhase(prev => prev === phase ? null : phase)
+
+  // Passed to AskClaudePanel so Claude knows what's already been gathered
+  const bouquet = useMemo(
+    () => ({ situations, emotions, bodyEntries, meanings }),
+    [situations, emotions, bodyEntries, meanings],
+  )
 
   const bouquetProps = {
     vocab, situations, emotions, bodyEntries, meanings,
@@ -579,6 +592,8 @@ export default function LayItDownTab({ vocab, userId, onSaved, addVocabWord, ini
         expression={expression}
         onAcceptOffer={acceptOffer}
         currentPhase={openPhase}
+        bouquet={bouquet}
+        onMessagesChange={setAskMessages}
       />
 
       <style>{`

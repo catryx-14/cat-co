@@ -301,6 +301,25 @@ export async function deleteEntry(entryId) {
   if (error) throw error
 }
 
+// Persist every Claude turn from an ask-Claude exchange.
+// Called on entry save — turns are not kept if the entry is abandoned.
+export async function saveAskTurns(userId, entryId, messages) {
+  const turns = messages
+    .filter(m => m.role === 'assistant')
+    .map((m, idx) => ({
+      user_id: userId,
+      entry_id: entryId,
+      turn_index: idx,
+      question_text: m.content ?? null,
+      moves: m.moves ?? [],
+      primary_move: m.primaryMove ?? null,
+      marked_helpful: m.markedHelpful ?? false,
+    }))
+  if (!turns.length) return
+  const { error } = await supabase.from('lost_found_ask_turns').insert(turns)
+  if (error) throw error
+}
+
 // Load collection entries for Tab 2
 export async function loadCollection(userId) {
   const { data, error } = await supabase
