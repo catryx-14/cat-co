@@ -1,262 +1,415 @@
 import { useState, useMemo } from 'react'
-import { QUALITY_GROUP_MAP, QUALITY_GROUP_ORDER, BUTTON_LOCATION_SLUGS } from './lib/lostFoundDb.js'
 
-// SVG zone definitions (locked geometry from approved prototype)
-const SVG_ZONES = [
-  { slug: 'shoulders', shape: 'rect',    props: { x: 58,  y: 92,  width: 124, height: 18, rx: 9 } },
-  { slug: 'chest',     shape: 'ellipse', props: { cx: 120, cy: 132, rx: 42, ry: 30 } },
-  { slug: 'stomach',   shape: 'ellipse', props: { cx: 120, cy: 194, rx: 38, ry: 32 } },
-  { slug: 'arms',      shape: 'rect',    props: { x: 48,  y: 112, width: 28, height: 138, rx: 14 }, key: 'arms-l' },
-  { slug: 'arms',      shape: 'rect',    props: { x: 164, y: 112, width: 28, height: 138, rx: 14 }, key: 'arms-r' },
-  { slug: 'hands',     shape: 'circle',  props: { cx: 62,  cy: 268, r: 16 }, key: 'hands-l' },
-  { slug: 'hands',     shape: 'circle',  props: { cx: 178, cy: 268, r: 16 }, key: 'hands-r' },
-  { slug: 'legs',      shape: 'rect',    props: { x: 90,  y: 258, width: 32, height: 196, rx: 16 }, key: 'legs-l' },
-  { slug: 'legs',      shape: 'rect',    props: { x: 118, y: 258, width: 32, height: 196, rx: 16 }, key: 'legs-r' },
-  { slug: 'feet',      shape: 'ellipse', props: { cx: 100, cy: 476, rx: 22, ry: 13 }, key: 'feet-l' },
-  { slug: 'feet',      shape: 'ellipse', props: { cx: 140, cy: 476, rx: 22, ry: 13 }, key: 'feet-r' },
-  { slug: 'head',      shape: 'ellipse', props: { cx: 120, cy: 34,  rx: 22, ry: 15 } },
-  { slug: 'face',      shape: 'ellipse', props: { cx: 120, cy: 52,  rx: 20, ry: 13 } },
-  { slug: 'jaw',       shape: 'ellipse', props: { cx: 120, cy: 70,  rx: 17, ry: 10 } },
-  { slug: 'neck',      shape: 'ellipse', props: { cx: 120, cy: 92,  rx: 15, ry: 8 } },
-  { slug: 'throat',    shape: 'ellipse', props: { cx: 120, cy: 80,  rx: 10, ry: 6 } },
+// ── Frontend taxonomy constants (source of truth for display order / labels) ──
+
+const REGIONS = [
+  { slug: 'head-face',   label: 'head & face' },
+  { slug: 'chest-belly', label: 'chest & belly' },
+  { slug: 'arms-legs',   label: 'arms & legs' },
+  { slug: 'all-over',    label: 'all over' },
 ]
 
-function ZoneShape({ shape, props, on, onTap, onHover, onLeave }) {
-  const baseStyle = {
-    fill: on ? 'rgba(230,200,120,.30)' : 'transparent',
-    stroke: on ? 'var(--color-accent-primary)' : 'transparent',
-    strokeWidth: 2,
-    cursor: 'pointer',
-    transition: 'fill .15s, stroke .15s',
-  }
-  const hoverHandlers = {
-    onMouseEnter: onHover,
-    onMouseLeave: onLeave,
-    onClick: onTap,
-  }
-  if (shape === 'rect') return <rect {...props} style={baseStyle} {...hoverHandlers} />
-  if (shape === 'ellipse') return <ellipse {...props} style={baseStyle} {...hoverHandlers} />
-  if (shape === 'circle') return <circle {...props} style={baseStyle} {...hoverHandlers} />
-  return null
+const CATEGORIES = [
+  { slug: 'energy',           label: 'energy' },
+  { slug: 'temperature',      label: 'temperature' },
+  { slug: 'weight-tightness', label: 'weight & tightness' },
+  { slug: 'everything-else',  label: 'everything else' },
+]
+
+// SVG region hit-areas (drawn on top of silhouette; order = back-to-front paint order)
+const FIGURE_ZONES = [
+  { regionSlug: 'chest-belly', key: 'cb',    shape: 'rect',
+    props: { x: 78,  y: 90,  width: 84,  height: 150, rx: 20 } },
+  { regionSlug: 'head-face',   key: 'hf',    shape: 'ellipse',
+    props: { cx: 120, cy: 44, rx: 36,  ry: 46 } },
+  { regionSlug: 'arms-legs',   key: 'al-la', shape: 'rect',
+    props: { x: 44,  y: 98,  width: 34,  height: 190, rx: 17 } },
+  { regionSlug: 'arms-legs',   key: 'al-ra', shape: 'rect',
+    props: { x: 162, y: 98,  width: 34,  height: 190, rx: 17 } },
+  { regionSlug: 'arms-legs',   key: 'al-ll', shape: 'rect',
+    props: { x: 84,  y: 238, width: 36,  height: 250, rx: 18 } },
+  { regionSlug: 'arms-legs',   key: 'al-rl', shape: 'rect',
+    props: { x: 120, y: 238, width: 36,  height: 250, rx: 18 } },
+]
+
+// Colour tokens — body = gold family
+const BODY_C = {
+  text:   '#e8c98c',
+  border: 'rgba(232,201,140,0.45)',
+  bg:     'rgba(232,201,140,0.12)',
 }
+const GOLD    = 'var(--color-accent-primary)'
+const SIL_FILL = '#1d2747'
+const SIL_LINE = '#3a4878'
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemoveLocation, onToggleQuality }) {
-  const [hovered, setHovered] = useState(null)
-  const [paletteFor, setPaletteFor] = useState(null) // slug whose quality palette is open
+  const [activeRegion,  setActiveRegion]  = useState('head-face')
+  const [openPart,      setOpenPart]      = useState(null)
+  const [openCategory,  setOpenCategory]  = useState(null)
+  const [hoveredRegion, setHoveredRegion] = useState(null)
 
-  const { locations, qualities } = bodyData
+  const { locations = [], qualities = [] } = bodyData
 
-  // Build lookup: slug → name
+  // ── derived lookups ────────────────────────────────────────────────────────
+
   const locationBySlug = useMemo(() => {
-    const map = {}
-    for (const l of locations) map[l.slug] = l
-    return map
+    const m = {}
+    for (const l of locations) m[l.slug] = l
+    return m
   }, [locations])
 
-  // Build quality groups
-  const qualityGroups = useMemo(() => {
-    const ungrouped = []
-    const groups = {}
-    for (const q of qualities) {
-      const g = QUALITY_GROUP_MAP[q.slug]
-      if (g) {
-        if (!groups[g]) groups[g] = []
-        groups[g].push(q)
-      } else {
-        ungrouped.push(q)
-      }
+  const locationsByRegion = useMemo(() => {
+    const m = {}
+    for (const r of REGIONS) m[r.slug] = []
+    for (const l of locations) {
+      if (l.parent_group && m[l.parent_group]) m[l.parent_group].push(l)
     }
-    const ordered = QUALITY_GROUP_ORDER
-      .filter(g => groups[g])
-      .map(g => ({ label: g, items: groups[g] }))
-    if (ungrouped.length) ordered.push({ label: 'other', items: ungrouped })
-    return ordered
+    return m
+  }, [locations])
+
+  const qualitiesByCategory = useMemo(() => {
+    const m = {}
+    for (const c of CATEGORIES) m[c.slug] = []
+    for (const q of qualities) {
+      if (q.parent_group && m[q.parent_group]) m[q.parent_group].push(q)
+    }
+    return m
   }, [qualities])
 
-  const selectedSlugs = useMemo(() => new Set(bodyEntries.map(e => e.location_slug)), [bodyEntries])
-  const isWhole = selectedSlugs.has('whole-body')
+  const entryByPart = useMemo(() => {
+    const m = {}
+    for (const e of bodyEntries) m[e.location_slug] = e
+    return m
+  }, [bodyEntries])
 
-  // Button locations (back, skin, whole-body, joints)
-  const buttonLocations = locations.filter(l => BUTTON_LOCATION_SLUGS.includes(l.slug))
+  // Which regions have at least one gathered part (for figure visual feedback)
+  const gatheredRegions = useMemo(() => {
+    const s = new Set()
+    for (const e of bodyEntries) {
+      const loc = locationBySlug[e.location_slug]
+      if (loc?.parent_group) s.add(loc.parent_group)
+    }
+    return s
+  }, [bodyEntries, locationBySlug])
 
-  function tapLocation(slug) {
-    if (selectedSlugs.has(slug)) {
-      // Re-tap: open quality palette
-      setPaletteFor(prev => prev === slug ? null : slug)
+  // ── interaction handlers ──────────────────────────────────────────────────
+
+  function switchRegion(slug) {
+    setActiveRegion(slug)
+    setOpenPart(null)
+    setOpenCategory(null)
+  }
+
+  function togglePart(slug) {
+    if (openPart === slug) {
+      setOpenPart(null)
+      setOpenCategory(null)
     } else {
-      onAddLocation(slug)
-      setPaletteFor(slug) // open palette on add
+      setOpenPart(slug)
+      setOpenCategory(null)
     }
   }
 
-  function getEntryFor(slug) {
-    return bodyEntries.find(e => e.location_slug === slug)
+  function toggleCategory(slug) {
+    setOpenCategory(prev => prev === slug ? null : slug)
   }
 
-  const bodyfill = isWhole ? 'rgba(230,200,120,.10)' : '#1d2747'
-  const bodyline = isWhole ? 'var(--color-accent-primary)' : '#3a4878'
+  // Tap a quality word: auto-add the part if not yet gathered, then toggle the quality.
+  // Both calls use functional updaters in the parent, so the second sees the result of
+  // the first even when batched in the same React 18 event.
+  function handleWordTap(partSlug, qualitySlug) {
+    if (!entryByPart[partSlug]) onAddLocation(partSlug)
+    onToggleQuality(partSlug, qualitySlug)
+  }
+
+  // Tap a bouquet pill → scroll-to-edit: open that part's region and expand its row
+  function openPartForEdit(locationSlug) {
+    const loc = locationBySlug[locationSlug]
+    if (!loc?.parent_group) return
+    setActiveRegion(loc.parent_group)
+    setOpenPart(locationSlug)
+    setOpenCategory(null)
+  }
+
+  // ── render ────────────────────────────────────────────────────────────────
+
+  const showFigure = activeRegion !== 'all-over'
 
   return (
     <div>
-      <style>{`
-        .lf-body-zone { fill: transparent; stroke: transparent; stroke-width: 2; cursor: pointer; transition: fill .15s; }
-        .lf-body-zone:hover { fill: rgba(230,200,120,.16); }
-        .lf-body-zone.on { fill: rgba(230,200,120,.30); stroke: var(--color-accent-primary); }
-      `}</style>
 
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        {/* Figure column */}
-        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 220 }}>
-          <svg viewBox="0 0 240 510" style={{ display: 'block', width: 200, height: 'auto', touchAction: 'manipulation' }}
-            aria-label="body figure">
-            {/* Base silhouette */}
-            <g>
-              <ellipse className="body-base" cx="120" cy="46" rx="26" ry="32" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="110" y="74" width="20" height="20" rx="7" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="84" y="96" width="72" height="70" rx="18" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="88" y="162" width="64" height="62" rx="18" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="86" y="220" width="68" height="40" rx="16" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="52" y="104" width="20" height="152" rx="10" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="168" y="104" width="20" height="152" rx="10" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <circle className="body-base" cx="62" cy="268" r="13" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <circle className="body-base" cx="178" cy="268" r="13" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="94" y="256" width="24" height="210" rx="12" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <rect className="body-base" x="122" y="256" width="24" height="210" rx="12" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <ellipse className="body-base" cx="100" cy="476" rx="20" ry="11" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              <ellipse className="body-base" cx="140" cy="476" rx="20" ry="11" fill={bodyfill} stroke={bodyline} strokeWidth="1.4" />
-              {/* Joint dots */}
-              <circle fill={bodyline} cx="88" cy="104" r="4" /><circle fill={bodyline} cx="152" cy="104" r="4" />
-              <circle fill={bodyline} cx="62" cy="178" r="4" /><circle fill={bodyline} cx="178" cy="178" r="4" />
-              <circle fill={bodyline} cx="62" cy="256" r="4" /><circle fill={bodyline} cx="178" cy="256" r="4" />
-              <circle fill={bodyline} cx="106" cy="258" r="4" /><circle fill={bodyline} cx="134" cy="258" r="4" />
-              <circle fill={bodyline} cx="106" cy="362" r="4" /><circle fill={bodyline} cx="134" cy="362" r="4" />
-              <circle fill={bodyline} cx="106" cy="464" r="4" /><circle fill={bodyline} cx="134" cy="464" r="4" />
-            </g>
-            {/* Tappable zones */}
-            {SVG_ZONES.map(z => {
-              const key = z.key ?? z.slug
-              const on = selectedSlugs.has(z.slug)
-              return (
-                <ZoneShape
-                  key={key}
-                  shape={z.shape}
-                  props={z.props}
-                  on={on}
-                  onTap={() => tapLocation(z.slug)}
-                  onHover={() => setHovered(z.slug)}
-                  onLeave={() => setHovered(null)}
-                />
-              )
-            })}
-          </svg>
+      {/* ── Region pills ─────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        {REGIONS.map(r => {
+          const active = activeRegion === r.slug
+          const has    = gatheredRegions.has(r.slug)
+          return (
+            <button
+              key={r.slug}
+              onClick={() => switchRegion(r.slug)}
+              style={{
+                background:   active ? BODY_C.bg : 'transparent',
+                border:       `1px solid ${active ? BODY_C.border : has ? 'rgba(232,201,140,0.28)' : 'var(--color-border)'}`,
+                color:        active ? BODY_C.text : has ? BODY_C.text : 'var(--color-text-secondary)',
+                borderRadius: 999, padding: '5px 13px', fontSize: 13, cursor: 'pointer',
+                fontWeight:   active ? 500 : 400,
+                opacity:      has && !active ? 0.85 : 1,
+                transition:   'background .12s, border-color .12s',
+              }}
+            >
+              {r.label}
+            </button>
+          )
+        })}
+      </div>
 
-          {/* Hover label */}
-          <div style={{ height: 20, marginTop: 2, fontSize: 13, color: 'var(--color-text-secondary)', fontStyle: hovered ? 'normal' : 'italic' }}>
-            {hovered ? <b style={{ color: 'var(--color-accent-primary)', fontWeight: 600 }}>{locationBySlug[hovered]?.name ?? hovered}</b> : 'tap where you feel it'}
-          </div>
+      {/* ── Tree + figure (side by side) ─────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
 
-          {/* Button locations */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            {buttonLocations.map(l => {
-              const on = selectedSlugs.has(l.slug)
-              return (
-                <button key={l.slug} onClick={() => tapLocation(l.slug)} style={{
-                  background: on ? 'rgba(230,200,120,.12)' : 'transparent',
-                  border: on ? '1px solid var(--color-accent-primary)' : '1px dashed var(--color-border)',
-                  color: on ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
-                  borderRadius: 999, padding: '5px 12px', fontSize: 12.5, cursor: 'pointer',
-                }}>
-                  {l.name}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Cards column */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {bodyEntries.length === 0 && (
-            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', fontStyle: 'italic', border: '1px dashed var(--color-border)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-              what you find gathers here —<br />tap where it lives in your body, if anywhere
-            </div>
-          )}
-
-          {bodyEntries.map(entry => {
-            const locName = locationBySlug[entry.location_slug]?.name ?? entry.location_slug
-            const isPaletteOpen = paletteFor === entry.location_slug
-            const entryQualities = entry.quality_slugs || []
+        {/* Left lane: three-level expanding tree */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {(locationsByRegion[activeRegion] || []).map(part => {
+            const isPartOpen = openPart === part.slug
+            const entry      = entryByPart[part.slug]
+            const hasEntry   = !!entry
+            const qualCount  = entry?.quality_slugs?.length ?? 0
 
             return (
-              <div key={entry.location_slug} style={{
-                border: '1px solid var(--color-border)',
-                borderRadius: 12, padding: '9px 12px',
-                background: 'rgba(20,29,54,.4)',
-              }}>
-                {/* Card head */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, color: 'var(--color-accent-primary)', fontWeight: 600 }}>{locName}</span>
-                  {/* Quality tags */}
-                  {entryQualities.map(qSlug => {
-                    const qName = qualities.find(q => q.slug === qSlug)?.name ?? qSlug
-                    return (
-                      <span key={qSlug} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: 'rgba(230,200,120,.10)', border: '1px solid rgba(230,200,120,.4)',
-                        color: 'var(--color-accent-primary)', borderRadius: 999, fontSize: 12, padding: '2px 6px 2px 9px',
-                      }}>
-                        {qName}
-                        <button onClick={() => onToggleQuality(entry.location_slug, qSlug)} style={{
-                          background: 'none', border: 'none', color: 'var(--color-accent-primary)', opacity: 0.65,
-                          cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0,
-                        }}>×</button>
-                      </span>
-                    )
-                  })}
-                  {/* Actions */}
-                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <button onClick={() => setPaletteFor(prev => prev === entry.location_slug ? null : entry.location_slug)}
-                      style={{ background: 'none', border: 'none', color: 'var(--color-text-tertiary)', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      {isPaletteOpen ? 'done' : entryQualities.length ? 'edit quality' : '+ quality'}
-                    </button>
-                    <button onClick={() => { onRemoveLocation(entry.location_slug); if (paletteFor === entry.location_slug) setPaletteFor(null) }}
-                      style={{ background: 'none', border: 'none', color: 'var(--color-text-tertiary)', fontSize: 16, lineHeight: 1, cursor: 'pointer' }}>
-                      ×
-                    </button>
-                  </span>
-                </div>
+              <div key={part.slug}>
 
-                {/* Quality palette */}
-                {isPaletteOpen && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--color-border)' }}>
-                    {qualityGroups.map(grp => (
-                      <div key={grp.label} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)', marginBottom: 5 }}>
-                          {grp.label}
+                {/* Part row (level 1) */}
+                <button
+                  onClick={() => togglePart(part.slug)}
+                  style={{
+                    width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                    borderBottom: `0.5px solid ${isPartOpen ? 'transparent' : 'var(--color-border-tertiary)'}`,
+                    padding: '7px 2px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}
+                >
+                  <span style={{
+                    fontFamily: 'var(--font-serif)', fontSize: 14, flex: 1,
+                    color:      hasEntry ? BODY_C.text : 'var(--color-text-primary)',
+                    fontWeight: hasEntry ? 500 : 400,
+                  }}>
+                    {part.name}
+                  </span>
+                  {hasEntry && (
+                    <span style={{ fontSize: 11, color: BODY_C.text, opacity: 0.7 }}>
+                      {qualCount > 0 ? qualCount : '·'}
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: 10, color: 'var(--color-text-tertiary)', flexShrink: 0,
+                    transform:  isPartOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform .12s',
+                  }}>▼</span>
+                </button>
+
+                {/* Sensation groups (level 2) — only when part is open */}
+                {isPartOpen && (
+                  <div style={{
+                    marginLeft: 10, paddingLeft: 12, paddingBottom: 8, marginBottom: 4,
+                    borderLeft: `1.5px solid var(--color-border-tertiary)`,
+                  }}>
+                    {CATEGORIES.map(cat => {
+                      const words     = qualitiesByCategory[cat.slug] || []
+                      const isCatOpen = openCategory === cat.slug
+                      if (!words.length) return null
+
+                      return (
+                        <div key={cat.slug}>
+
+                          {/* Category header (level 2) */}
+                          <button
+                            onClick={() => toggleCategory(cat.slug)}
+                            style={{
+                              width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                              padding: '5px 0', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            }}
+                          >
+                            <span style={{
+                              fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase',
+                              color: isCatOpen ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)',
+                            }}>
+                              {cat.label}
+                            </span>
+                            <span style={{
+                              fontSize: 9, color: 'var(--color-text-tertiary)', flexShrink: 0,
+                              transform:  isCatOpen ? 'rotate(180deg)' : 'none',
+                              transition: 'transform .12s',
+                            }}>▼</span>
+                          </button>
+
+                          {/* Quality words (level 3) — plain text, one per row */}
+                          {isCatOpen && (
+                            <div style={{ paddingBottom: 6 }}>
+                              {words.map(q => {
+                                const on = entry?.quality_slugs?.includes(q.slug) ?? false
+                                return (
+                                  <button
+                                    key={q.slug}
+                                    onClick={() => handleWordTap(part.slug, q.slug)}
+                                    style={{
+                                      display: 'block', width: '100%', textAlign: 'left',
+                                      background: 'none', border: 'none', cursor: 'pointer',
+                                      padding: '4px 0',
+                                      fontFamily: 'var(--font-serif)', fontSize: 14,
+                                      color:      on ? GOLD : 'var(--color-text-secondary)',
+                                      fontWeight: on ? 600 : 400,
+                                      transition: 'color .1s',
+                                    }}
+                                  >
+                                    {on && (
+                                      <span style={{ marginRight: 5, fontSize: 11, opacity: 0.8 }}>✓</span>
+                                    )}
+                                    {q.name}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {grp.items.map(q => {
-                            const on = entryQualities.includes(q.slug)
-                            return (
-                              <button key={q.slug} onClick={() => onToggleQuality(entry.location_slug, q.slug)} style={{
-                                background: on ? 'rgba(230,200,120,.12)' : 'var(--color-background-primary)',
-                                border: on ? '1px solid var(--color-accent-primary)' : '1px solid var(--color-border)',
-                                color: on ? 'var(--color-accent-primary)' : 'var(--color-text-primary)',
-                                borderRadius: 999, padding: '4px 11px', fontSize: 13, cursor: 'pointer',
-                              }}>
-                                {q.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
             )
           })}
         </div>
+
+        {/* Centre: body figure — coarse region selector (hidden for 'all over') */}
+        {showFigure && (
+          <div style={{ flex: '0 0 auto', width: 148 }} className="lf-body-figure">
+            <svg
+              viewBox="0 0 240 510"
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+              aria-label="body figure — tap to switch region"
+            >
+              {/* Base silhouette */}
+              <g>
+                <ellipse cx="120" cy="46"  rx="26" ry="32"  fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="110" y="74"   width="20"  height="22"  rx="7"  fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="84"  y="94"   width="72"  height="70"  rx="18" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="88"  y="160"  width="64"  height="64"  rx="18" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="86"  y="220"  width="68"  height="44"  rx="16" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="52"  y="104"  width="20"  height="152" rx="10" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="168" y="104"  width="20"  height="152" rx="10" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <circle  cx="62"  cy="268" r="13"     fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <circle  cx="178" cy="268" r="13"     fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="94"  y="258"  width="24"  height="210" rx="12" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <rect    x="122" y="258"  width="24"  height="210" rx="12" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <ellipse cx="100" cy="478" rx="20" ry="11" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                <ellipse cx="140" cy="478" rx="20" ry="11" fill={SIL_FILL} stroke={SIL_LINE} strokeWidth="1.4" />
+                {/* Joint dots */}
+                <circle fill={SIL_LINE} cx="88"  cy="104" r="3.5" />
+                <circle fill={SIL_LINE} cx="152" cy="104" r="3.5" />
+                <circle fill={SIL_LINE} cx="62"  cy="178" r="3.5" />
+                <circle fill={SIL_LINE} cx="178" cy="178" r="3.5" />
+                <circle fill={SIL_LINE} cx="62"  cy="256" r="3.5" />
+                <circle fill={SIL_LINE} cx="178" cy="256" r="3.5" />
+                <circle fill={SIL_LINE} cx="106" cy="260" r="3.5" />
+                <circle fill={SIL_LINE} cx="134" cy="260" r="3.5" />
+                <circle fill={SIL_LINE} cx="106" cy="365" r="3.5" />
+                <circle fill={SIL_LINE} cx="134" cy="365" r="3.5" />
+                <circle fill={SIL_LINE} cx="106" cy="466" r="3.5" />
+                <circle fill={SIL_LINE} cx="134" cy="466" r="3.5" />
+              </g>
+
+              {/* Region hit-areas — last element wins the click (paint on top) */}
+              {FIGURE_ZONES.map(z => {
+                const isActive  = activeRegion === z.regionSlug
+                const isHovered = hoveredRegion === z.regionSlug && !isActive
+                const hasItems  = gatheredRegions.has(z.regionSlug) && !isActive
+                const fill = isActive
+                  ? 'rgba(232,201,140,0.22)'
+                  : isHovered
+                    ? 'rgba(232,201,140,0.14)'
+                    : hasItems
+                      ? 'rgba(232,201,140,0.07)'
+                      : 'transparent'
+                const stroke = isActive
+                  ? 'rgba(232,201,140,0.55)'
+                  : hasItems
+                    ? 'rgba(232,201,140,0.28)'
+                    : 'transparent'
+                const commonProps = {
+                  style:        { fill, stroke, strokeWidth: 2, cursor: 'pointer', transition: 'fill .15s' },
+                  onClick:      () => switchRegion(z.regionSlug),
+                  onMouseEnter: () => setHoveredRegion(z.regionSlug),
+                  onMouseLeave: () => setHoveredRegion(null),
+                }
+                if (z.shape === 'ellipse') return <ellipse key={z.key} {...z.props} {...commonProps} />
+                if (z.shape === 'rect')    return <rect    key={z.key} {...z.props} {...commonProps} />
+                return null
+              })}
+            </svg>
+            <div style={{
+              textAlign: 'center', fontSize: 11,
+              color: 'var(--color-text-tertiary)', marginTop: 4,
+            }}>
+              tap to switch region
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ── Bottom bouquet: gathered items as compound pills ─────────────── */}
+      {bodyEntries.length > 0 && (
+        <div style={{
+          marginTop: 14, paddingTop: 12,
+          borderTop: '0.5px solid var(--color-border-tertiary)',
+          display: 'flex', flexWrap: 'wrap', gap: 7,
+        }}>
+          {bodyEntries.map(entry => {
+            const locName   = locationBySlug[entry.location_slug]?.name ?? entry.location_slug
+            const qualNames = (entry.quality_slugs || [])
+              .map(qs => qualities.find(q => q.slug === qs)?.name ?? qs)
+            const label = qualNames.length
+              ? `${locName} · ${qualNames.join(', ')}`
+              : locName
+
+            return (
+              <span
+                key={entry.location_slug}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: BODY_C.bg, border: `0.5px solid ${BODY_C.border}`,
+                  color: BODY_C.text, borderRadius: 999, fontSize: 12,
+                  padding: '4px 8px 4px 10px',
+                }}
+              >
+                {/* Tappable label — re-opens this part in the tree for editing */}
+                <span
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => openPartForEdit(entry.location_slug)}
+                  title="tap to edit"
+                >
+                  {label}
+                </span>
+                {/* Remove */}
+                <span
+                  onClick={() => onRemoveLocation(entry.location_slug)}
+                  style={{
+                    cursor: 'pointer', opacity: 0.6, fontSize: 14,
+                    lineHeight: 1, padding: '0 3px',
+                  }}
+                  aria-label="remove"
+                >×</span>
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Hide figure on very narrow screens */}
+      <style>{`
+        @media (max-width: 460px) { .lf-body-figure { display: none !important; } }
+      `}</style>
     </div>
   )
 }
