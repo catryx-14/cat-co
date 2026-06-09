@@ -30,16 +30,27 @@ async function loadSystemPrompt(vocab) {
 }
 
 function parseResponse(text) {
-  try {
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-    const parsed = JSON.parse(cleaned)
+  const tryParse = (str) => {
+    const parsed = JSON.parse(str)
     return {
       message: typeof parsed.message === 'string' ? parsed.message : text,
       offers: Array.isArray(parsed.offers) ? parsed.offers : [],
     }
-  } catch {
-    return { message: text, offers: [] }
   }
+  // Try code-fenced block anywhere in the text
+  try {
+    const block = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    if (block) return tryParse(block[1].trim())
+  } catch { /**/ }
+  // Try parsing the whole text (no fences)
+  try { return tryParse(text.trim()) } catch { /**/ }
+  // Fall back: first { to last }
+  try {
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start !== -1 && end > start) return tryParse(text.slice(start, end + 1))
+  } catch { /**/ }
+  return { message: text, offers: [] }
 }
 
 export default function AskClaudePanel({ open, onClose, vocab, expression, onAcceptOffer, currentPhase }) {
@@ -78,7 +89,7 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
         : ''
       const apiMessages = newMessages.map((m, i) => ({
         role: m.role,
-        content: i === 0 ? contextNote + m.content : m.content,
+        content: i === 0 ? contextNote + (m.rawContent ?? m.content) : (m.rawContent ?? m.content),
       }))
 
       const res = await client.messages.create({
@@ -94,7 +105,7 @@ export default function AskClaudePanel({ open, onClose, vocab, expression, onAcc
       const validOffers = offers.filter(o => o.word && o.kind)
       const finalOffers = validOffers.length === 1 ? [] : validOffers
 
-      setMessages(prev => [...prev, { role: 'assistant', content: message, offers: finalOffers }])
+      setMessages(prev => [...prev, { role: 'assistant', content: message, rawContent: raw, offers: finalOffers }])
     } catch (err) {
       console.error('ask-claude error', err)
       setError('Something went wrong. Try again.')
