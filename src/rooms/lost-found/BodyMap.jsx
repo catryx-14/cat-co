@@ -109,6 +109,9 @@ export default function BodyMap({ bodyData, bodyEntries, onAddLocation, onRemove
     } else {
       setOpenPart(slug)
       setOpenCategory(null)
+      // Opening a part automatically gathers it — shows in bouquet as just the name
+      // if no qualities are added. (Remove via × on the bouquet pill.)
+      if (!entryByPart[slug]) onAddLocation(slug)
     }
   }
 
