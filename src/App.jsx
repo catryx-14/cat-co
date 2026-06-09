@@ -18,7 +18,7 @@ const ROOMS = [
   { key: 'tracker',     name: 'Capacity Tracker', sub: 'today · history',         tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
   { key: 'sparks',      name: 'Sparks',           sub: 'hold them gently',         tone: 'rose'   },
   { key: 'physio',      name: 'First Aid',         sub: 'gentle attention',         tone: 'teal'   },
-  { key: 'lost-found',  name: 'Lost & Found',       sub: "name what's here",         tone: 'blue'   },
+  { key: 'lost-found',  name: 'Lost + Found',       sub: "name what's here",         tone: 'blue'   },
   { key: 'more-lights', name: 'More this way',      sub: 'more this way',            tone: 'purple' },
 ]
 
@@ -44,7 +44,7 @@ function ThresholdNavLinks({ onPick, isMobile }) {
     { key: 'tracker',  name: 'Capacity Tracker' },
     { key: 'physio',   name: 'First Aid'        },
     { key: 'sparks',   name: 'Sparks'           },
-    { key: 'lost-found', name: 'Lost & Found'    },
+    { key: 'lost-found', name: 'Lost + Found'    },
   ]
   const btnStyle = {
     background: 'transparent',

@@ -12,7 +12,7 @@ const client = new Anthropic({
   dangerouslyAllowBrowser: true,
 })
 
-const FALLBACK_SYSTEM = `You are the thinking-partner inside Cat's Lost & Found room. Help Cat read her own emotions and meanings. Ask questions — you never tell her what she feels. Respond only as JSON: {"message": "...", "offers": [], "moves": [], "primary_move": null}.`
+const FALLBACK_SYSTEM = `You are the thinking-partner inside Cat's Lost + Found room. Help Cat read her own emotions and meanings. Ask questions — you never tell her what she feels. Respond only as JSON: {"message": "...", "offers": [], "moves": [], "primary_move": null}.`
 
 const VALID_MOVES = new Set([
   'mirroring-back', 'separating-threads', 'naming-a-shape', 'offering-a-lens', 'making-room',
