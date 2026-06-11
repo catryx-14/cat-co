@@ -1038,8 +1038,8 @@ const burlapCss = `
 `
 
 // ── Main GamesRoom ────────────────────────────────────────────────────────────
-export default function GamesRoom({ roomName = 'games', onSettings }) {
-  const [activeGame, setActiveGame] = useState(null)
+export default function GamesRoom({ roomName = 'games', onSettings, initialGame = null }) {
+  const [activeGame, setActiveGame] = useState(initialGame)
   const inGame = activeGame === 'cat-sort'
 
   // Lock scrolling on the parent container while in game

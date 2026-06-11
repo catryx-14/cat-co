@@ -1,26 +1,37 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import GamesRoom from './rooms/games/GamesRoom.jsx'
 import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
-import EFSuiteRoom from './rooms/ef-suite/EFSuiteRoom.jsx'
+import BookPileRoom from './rooms/ef-suite/BookPileRoom.jsx'
 import LostFoundRoom from './rooms/lost-found/LostFoundRoom.jsx'
+import { supabase } from './shared/lib/supabase.js'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
 import { DEFAULT_AUTISTIC_TAX } from './shared/lib/math.js'
 import { todayDisplayStr } from './shared/lib/dates.js'
 import RoomMark from './shared/components/RoomMark.jsx'
 
-// ── Room registry (nav + routing) ───────────────────────────────────────────
+// ── Room registry — fallback names only (rail no longer uses this) ──────────
 const ROOMS = [
-  { key: 'tracker',     name: 'Capacity Tracker', sub: 'today · history',         tone: 'warm'   }, /* HORIZON TAB — DEFERRED: sub was 'today · horizon · history' */
-  { key: 'sparks',      name: 'Sparks',           sub: 'hold them gently',         tone: 'rose'   },
-  { key: 'physio',      name: 'First Aid',         sub: 'gentle attention',         tone: 'teal'   },
-  { key: 'lost-found',  name: 'Lost + Found',       sub: "name what's here",         tone: 'blue'   },
-  { key: 'more-lights', name: 'More this way',      sub: 'more this way',            tone: 'purple' },
+  { key: 'tracker',     name: 'Capacity Tracker' }, /* HORIZON TAB — DEFERRED */
+  { key: 'sparks',      name: 'Sparks'           },
+  { key: 'physio',      name: 'First Aid'        },
+  { key: 'lost-found',  name: 'Lost + Found'     },
+  { key: 'more-lights', name: 'More this way'    },
 ]
+
+// Tone class per room slug — drives rail dot colour
+const SLUG_TONE = {
+  'capacity-tracker': 'warm',
+  'first-aid':        'teal',
+  'sparks':           'rose',
+  'lost-found':       'blue',
+  'book-pile':        'purple',
+  'herding-cats':     'teal',
+}
 
 function useViewport() {
   const [vp, setVp] = useState(() => {
@@ -39,13 +50,7 @@ function useViewport() {
 // Row 1: Capacity Tracker | First Aid
 // Row 2: Sparks           | Executive Suite
 // Row 3: More Rooms (full width)
-function ThresholdNavLinks({ onPick, isMobile }) {
-  const mainLinks = [
-    { key: 'tracker',  name: 'Capacity Tracker' },
-    { key: 'physio',   name: 'First Aid'        },
-    { key: 'sparks',   name: 'Sparks'           },
-    { key: 'lost-found', name: 'Lost + Found'    },
-  ]
+function ThresholdNavLinks({ links, onPick, isMobile }) {
   const btnStyle = {
     background: 'transparent',
     border: '1px solid var(--color-border)',
@@ -62,16 +67,19 @@ function ThresholdNavLinks({ onPick, isMobile }) {
   }
   const onEnter = e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }
   const onLeave = e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }
+  const visibleLinks = links ?? []
   return (
     <nav style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 12, width: '100%' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12 }}>
-        {mainLinks.map(l => (
-          <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
-            onMouseEnter={onEnter} onMouseLeave={onLeave}>
-            {l.name}
-          </button>
-        ))}
-      </div>
+      {visibleLinks.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12 }}>
+          {visibleLinks.map(l => (
+            <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
+              onMouseEnter={onEnter} onMouseLeave={onLeave}>
+              {l.name}
+            </button>
+          ))}
+        </div>
+      )}
       <button onClick={() => onPick('more-lights')} style={btnStyle}
         onMouseEnter={onEnter} onMouseLeave={onLeave}>
         More this way
@@ -194,9 +202,24 @@ function LibraryPlaceholder({ title = 'Library', onSettings }) {
   )
 }
 
+function BookPileStandalone({ onSettings }) {
+  return (
+    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="room-header-wrap">
+        <div className="room-head">
+          <h2 className="room-title">the book pile</h2>
+          <RoomMark date={todayDisplayStr()} onSettings={onSettings} />
+        </div>
+      </div>
+      <BookPileRoom />
+    </div>
+  )
+}
+
 // ── HubView — The Threshold landing page ─────────────────────────────────────
-function HubView({ onPick }) {
+function HubView({ onPick, pins }) {
   const { mobile: isMobile } = useViewport()
+  const links = (pins || []).map(p => ({ key: p.key, name: p.name }))
 
   return (
     <div style={{
@@ -322,7 +345,7 @@ function HubView({ onPick }) {
         {/* Right: 2×3 room grid */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: isMobile ? 'stretch' : 'center' }}>
           <div style={{ width: isMobile ? '100%' : 'clamp(280px, 38vw, 460px)' }}>
-            <ThresholdNavLinks onPick={onPick} isMobile={isMobile} />
+            <ThresholdNavLinks links={links} onPick={onPick} isMobile={isMobile} />
           </div>
         </div>
 
@@ -333,7 +356,7 @@ function HubView({ onPick }) {
 }
 
 // ─── Rail ───
-function Rail({ inRoom, current, onPick, onHome }) {
+function Rail({ inRoom, current, onPick, onHome, railPins }) {
   return (
     <div className={`rail ${inRoom ? 'expanded' : ''}`} aria-label="navigation">
       <button
@@ -345,22 +368,29 @@ function Rail({ inRoom, current, onPick, onHome }) {
         <img src="/assets/logo.png" alt="" className="rail-threshold-icon" draggable={false} />
       </button>
       <nav className="rail-nav" aria-hidden={!inRoom}>
-        {ROOMS.map(r => (
-          <button key={r.key}
-             type="button"
-             className={`rail-nav-item ${r.tone} ${current === r.key ? 'active' : ''}`}
-             onClick={() => onPick(r.key)}>
+        {(railPins || []).map(p => (
+          <button key={p.key}
+            type="button"
+            className={`rail-nav-item ${SLUG_TONE[p.slug] ?? 'warm'} ${current === p.key ? 'active' : ''}`}
+            onClick={() => onPick(p.key)}>
             <span className="dot" />
-            <span className="label-text">{r.name}</span>
+            <span className="label-text">{p.name}</span>
           </button>
         ))}
+        <button
+          type="button"
+          className={`rail-nav-item purple ${current === 'more-lights' ? 'active' : ''}`}
+          onClick={() => onPick('more-lights')}>
+          <span className="dot" />
+          <span className="label-text">More this way</span>
+        </button>
       </nav>
     </div>
   )
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, efSuiteResetKey }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, pins, onAddPin, onRemovePin }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
     return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
@@ -374,14 +404,15 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   if (roomKey === 'physio') {
     return <FirstAidRoom onSettings={onSettings} />
   }
-  if (roomKey === 'games') {
-    return <GamesRoom roomName="games" onSettings={onSettings} />
+  if (roomKey === 'herding-cats') {
+    return <GamesRoom roomName="herding cats" onSettings={onSettings} initialGame="cat-sort" />
   }
   if (roomKey === 'more-lights') {
-    return <MoreLightsRoom onRoom={onRoom} onSettings={onSettings} />
+    const pinSlugs = new Set((pins || []).map(p => p.slug))
+    return <MoreLightsRoom onRoom={onRoom} onSettings={onSettings} pinSlugs={pinSlugs} pinCount={(pins || []).length} onAddPin={onAddPin} onRemovePin={onRemovePin} />
   }
-  if (roomKey === 'ef-suite') {
-    return <EFSuiteRoom key={efSuiteResetKey} onSettings={onSettings} />
+  if (roomKey === 'book-pile') {
+    return <BookPileStandalone onSettings={onSettings} />
   }
   if (roomKey === 'lost-found') {
     return <LostFoundRoom onSettings={onSettings} />
@@ -404,6 +435,7 @@ function HubApp({ session }) {
     return params.get('room') || 'hub'
   })
   const [settings, setSettings] = useState(null)
+  const [pins, setPins] = useState(null)
   const inRoom = view !== 'hub'
 
   useEffect(() => {
@@ -414,6 +446,36 @@ function HubApp({ session }) {
         setSettings({ taxValue: DEFAULT_AUTISTIC_TAX, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
       })
   }, [])
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+    supabase
+      .from('threshold_pins')
+      .select('room_slug, sort_order, hub_rooms(name, route)')
+      .eq('user_id', session.user.id)
+      .order('sort_order')
+      .then(({ data }) => {
+        setPins((data || []).map(p => ({
+          slug: p.room_slug,
+          name: p.hub_rooms?.name ?? p.room_slug,
+          key: p.hub_rooms?.route ?? p.room_slug,
+          sort_order: p.sort_order,
+        })))
+      })
+  }, [session?.user?.id])
+
+  const addPin = useCallback(async (slug, name, routeKey) => {
+    if (!session?.user?.id || pins === null || pins.length >= 5) return
+    const sortOrder = pins.reduce((m, p) => Math.max(m, p.sort_order), 0) + 1
+    setPins(prev => prev ? [...prev, { slug, name, key: routeKey, sort_order: sortOrder }] : prev)
+    await supabase.from('threshold_pins').insert({ user_id: session.user.id, room_slug: slug, sort_order: sortOrder })
+  }, [pins, session?.user?.id])
+
+  const removePin = useCallback(async (slug) => {
+    if (!session?.user?.id) return
+    setPins(prev => prev ? prev.filter(p => p.slug !== slug) : prev)
+    await supabase.from('threshold_pins').delete().eq('user_id', session.user.id).eq('room_slug', slug)
+  }, [session?.user?.id])
 
   const updateThresholds = ({ leYellow, leCritical }) => {
     setSettings(prev => ({
@@ -460,15 +522,9 @@ function HubApp({ session }) {
   }, [view])
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)
-  const [efSuiteResetKey, setEfSuiteResetKey] = useState(0)
 
   const goRoom = (key) => {
-    if (key === 'tracker') {
-      setTrackerInitTab(null)
-    }
-    if (key === 'ef-suite') {
-      setEfSuiteResetKey(k => k + 1)
-    }
+    if (key === 'tracker') setTrackerInitTab(null)
     setView(key)
   }
   const goHome = () => setView('hub')
@@ -481,12 +537,12 @@ function HubApp({ session }) {
   return (
     <>
       <div className="stage">
-        {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} />}
+        {inRoom && <Rail inRoom={inRoom} current={view} onPick={goRoom} onHome={goHome} railPins={pins} />}
         <main className="view">
           <div className={fadeClass} key={view}>
             {view === 'hub'
-              ? <HubView onPick={goRoom} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} efSuiteResetKey={efSuiteResetKey} />}
+              ? <HubView onPick={goRoom} pins={pins} />
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} pins={pins} onAddPin={addPin} onRemovePin={removePin} />}
           </div>
         </main>
       </div>
