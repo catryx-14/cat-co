@@ -20,10 +20,16 @@ export async function loadSettings() {
   const s = {}
   for (const row of data) s[row.key] = row.value
   const stored = s.thresholds ?? {}
+  const thr = {
+    yellow:   stored.yellow   ?? stored.leYellow   ?? 15,
+    orange:   stored.orange   ?? stored.leOrange   ?? 25,
+    critical: stored.critical ?? stored.leCritical ?? 30,
+  }
   return {
     taxValue: s.autistic_tax?.value ?? DEFAULT_AUTISTIC_TAX,
-    thresholds: { yellow: stored.yellow ?? 15, critical: stored.critical ?? 30 },
-    livedExperienceThresholds: { yellow: stored.leYellow ?? 15, critical: stored.leCritical ?? 30 },
+    thresholds: { ...thr },
+    livedExperienceThresholds: { ...thr },
+    purpleFloors: s.purple ?? { floor_day1: 25, floor_day2: 15 },
     taxStartDate: s.tax_start_date?.date ?? '2000-01-01',
   }
 }
@@ -32,6 +38,13 @@ export async function saveThresholds(thresholds) {
   const { error } = await supabase
     .from('almanac_settings')
     .upsert({ key: 'thresholds', value: thresholds }, { onConflict: 'key' })
+  if (error) throw error
+}
+
+export async function savePurpleFloors(purple) {
+  const { error } = await supabase
+    .from('almanac_settings')
+    .upsert({ key: 'purple', value: purple }, { onConflict: 'key' })
   if (error) throw error
 }
 
@@ -87,7 +100,8 @@ export function dbToInternal(row) {
 
 // Internal UI state → DB entry_data blob + computed peak
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
-                                warning, goodSigns, settings, yesterdayClosing, meltdown }) {
+                                warning, goodSigns, settings, yesterdayClosing, meltdown,
+                                purpleOverride = null }) {
   const { thresholds } = settings
 
   // Map events from UI shape (E/S/P/M/X) to stored shape (emotional/sensory/…)
@@ -145,7 +159,9 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     autisticTaxRate: settings.taxValue ?? DEFAULT_AUTISTIC_TAX,
     flowActivity: goodSigns.flow,
     yellowThreshold: thresholds.yellow,
+    orangeThreshold: thresholds.orange ?? 25,
     criticalThreshold: thresholds.critical,
+    purpleOverride: purpleOverride ?? null,
     yesterdayClosing: yesterdayClosing ?? 0,
     delayedReactionSource: false,
     delayedReactionRealized: false,

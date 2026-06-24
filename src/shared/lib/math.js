@@ -170,3 +170,51 @@ export function computeLivedExperience(peakDebit, activeRegulation, siFlowBonus)
 export function taxActive(dateStr, taxStartDate, userEvents) {
   return dateStr >= taxStartDate && !anyFlowEvent(userEvents)
 }
+
+// ── Band helpers ──────────────────────────────────────────────────────────────
+
+export function bandOf(leVal, thresholds) {
+  const thr = thresholds ?? {}
+  if (leVal >= (thr.critical ?? 30)) return 'red'
+  if (leVal >= (thr.orange   ?? 25)) return 'orange'
+  if (leVal >= (thr.yellow   ?? 15)) return 'yellow'
+  return 'green'
+}
+
+export function bandColor(leVal, thresholds, isPurple = false) {
+  if (isPurple) return '#A673E4'
+  const band = bandOf(leVal, thresholds)
+  if (band === 'red')    return '#D8283A'  // vivid ruby-red
+  if (band === 'orange') return '#FF8419'  // vivid bright orange
+  if (band === 'yellow') return '#D6A520'  // deep gold
+  return '#2FBE86'                         // jade
+}
+
+export function bandGlowClass(leVal, thresholds, isPurple = false) {
+  if (isPurple) return 'arc-glow--purple'
+  const band = bandOf(leVal, thresholds)
+  if (band === 'red')    return 'arc-glow--red'
+  if (band === 'orange') return 'arc-glow--orange'
+  if (band === 'yellow') return 'arc-glow--amber'
+  return 'arc-glow--green'
+}
+
+// Returns { isPurple, floor } for the given day.
+// override: null | 'cancel' | 'extend'  (energy_daily.purple_override)
+// allEntries: array of { date, entry_data: { meltdown } }
+export function getPurpleState(dateStr, allEntries, purpleFloors, override) {
+  if (override === 'cancel') return { isPurple: false, floor: null }
+  if (override === 'extend') return { isPurple: true, floor: purpleFloors?.floor_day2 ?? 15 }
+
+  const byDate = {}
+  for (const e of allEntries) byDate[e.date] = e
+
+  const d1 = addDaysStr(dateStr, -1)
+  const d2 = addDaysStr(dateStr, -2)
+  const melt1 = byDate[d1]?.entry_data?.meltdown ?? false
+  const melt2 = byDate[d2]?.entry_data?.meltdown ?? false
+
+  if (!melt1 && !melt2) return { isPurple: false, floor: null }
+  const floor = melt1 ? (purpleFloors?.floor_day1 ?? 25) : (purpleFloors?.floor_day2 ?? 15)
+  return { isPurple: true, floor }
+}

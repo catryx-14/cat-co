@@ -15,9 +15,9 @@ import {
   internalToDb,
 } from '../../shared/lib/db-v2.js'
 import { seedEntry, loadSeededEventIds } from '../lost-found/lib/lostFoundDb.js'
-import { saveThresholds, saveTaxValue } from '../../shared/lib/db.js'
+import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib/db.js'
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
-import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX } from '../../shared/lib/math.js'
+import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState } from '../../shared/lib/math.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
@@ -417,12 +417,50 @@ function MeltdownSection({ active, onToggle }) {
   return (
     <section className="signals-section">
       <div className="ledger-head">
-        <div className="ledger-title">meltdown / shutdown</div>
+        <div className="ledger-title">crisis</div>
       </div>
       <div className="signals-row">
         <button className={`signal ${active ? 'lit' : ''}`} onClick={onToggle}>
           <span className="signal-glyph">▽</span>
           <span className="signal-name">{active ? 'yes' : 'no'}</span>
+        </button>
+      </div>
+    </section>
+  )
+}
+
+// ─── PurpleOverrideSection ───
+function PurpleOverrideSection({ isPurple, override, onChange }) {
+  if (!isPurple && override !== 'extend') {
+    return (
+      <section className="signals-section">
+        <div className="ledger-head">
+          <div className="ledger-title" style={{ color: 'rgba(168,144,212,0.5)' }}>recovery mode</div>
+        </div>
+        <div className="purple-override-section">
+          <span className="purple-override-label">not active</span>
+          <button className={`purple-override-btn ${override === 'extend' ? 'active' : ''}`}
+            onClick={() => onChange(override === 'extend' ? null : 'extend')}>
+            extend
+          </button>
+        </div>
+      </section>
+    )
+  }
+  return (
+    <section className="signals-section">
+      <div className="ledger-head">
+        <div className="ledger-title" style={{ color: '#A673E4' }}>recovery mode</div>
+      </div>
+      <div className="purple-override-section">
+        <span className="purple-override-label">active</span>
+        <button className={`purple-override-btn ${override === 'cancel' ? 'active' : ''}`}
+          onClick={() => onChange(override === 'cancel' ? null : 'cancel')}>
+          cancel
+        </button>
+        <button className={`purple-override-btn ${override === 'extend' ? 'active' : ''}`}
+          onClick={() => onChange(override === 'extend' ? null : 'extend')}>
+          extend
         </button>
       </div>
     </section>
@@ -446,43 +484,80 @@ function sparklePath(cx, cy, outer, inner) {
   return `M ${pts[0]} ` + pts.slice(1).map(p => `L ${p}`).join(' ') + ' Z'
 }
 
+// Silver ring stops — shared by peak and regulation orbs
+const _SILVER_STOPS = [
+  { o: '0%',   c: '#18182a' }, { o: '14%',  c: '#50506a' },
+  { o: '30%',  c: '#9898b0' }, { o: '48%',  c: '#c8c8dc' },
+  { o: '60%',  c: '#e8e8f4' }, { o: '67%',  c: '#ffffff' },
+  { o: '76%',  c: '#cccce0' }, { o: '89%',  c: '#606078' },
+  { o: '100%', c: '#1c1c2c' },
+]
+
 const SKY_COLORS = {
   peak: {
-    id: 'sky-gold-v2',
-    ringStops: [
-      { o: '0%',   c: '#1c0e00' }, { o: '14%',  c: '#6a3e04' },
-      { o: '30%',  c: '#a8680e' }, { o: '48%',  c: '#d4901a' },
-      { o: '60%',  c: '#f4cc3a' }, { o: '67%',  c: '#fff8a0' },
-      { o: '76%',  c: '#e0b028' }, { o: '89%',  c: '#7a4a08' },
-      { o: '100%', c: '#1c0e00' },
-    ],
-    glowColor: '#fffce8', glowDuration: 28,
-    barMid: '#d4a020', number: '#d4a020', star: '#e8c040',
+    id: 'sky-silver-peak',
+    ringStops: _SILVER_STOPS,
+    glowColor: '#e8e8ff', glowDuration: 28,
+    barMid: '#b8b8cc', number: '#c8c8dc', star: '#d0d0e8',
   },
   le: {
-    id: 'sky-silver-v2',
-    ringStops: [
-      { o: '0%',   c: '#18182a' }, { o: '14%',  c: '#50506a' },
-      { o: '30%',  c: '#9898b0' }, { o: '48%',  c: '#c8c8dc' },
-      { o: '60%',  c: '#e8e8f4' }, { o: '67%',  c: '#ffffff' },
-      { o: '76%',  c: '#cccce0' }, { o: '89%',  c: '#606078' },
-      { o: '100%', c: '#1c1c2c' },
-    ],
+    id: 'sky-silver-le',
+    ringStops: _SILVER_STOPS,
     glowColor: '#ffffff', glowDuration: 38,
     barMid: '#c8c8d8', number: '#e0e0f0', star: '#d8d8ec',
   },
   reg: {
-    id: 'sky-teal-v2',
-    ringStops: [
-      { o: '0%',   c: '#061e1a' }, { o: '14%',  c: '#1a5e52' },
-      { o: '30%',  c: '#228878' }, { o: '48%',  c: '#30aa92' },
-      { o: '60%',  c: '#50d0b0' }, { o: '67%',  c: '#a8fff0' },
-      { o: '76%',  c: '#3ab898' }, { o: '89%',  c: '#1a6055' },
-      { o: '100%', c: '#061e1a' },
-    ],
-    glowColor: '#c8fff4', glowDuration: 50,
-    barMid: '#2a9d8f', number: '#4ab8a0', star: '#40c8a8',
+    id: 'sky-silver-reg',
+    ringStops: _SILVER_STOPS,
+    glowColor: '#e8e8ff', glowDuration: 50,
+    barMid: '#b8b8cc', number: '#c8c8dc', star: '#d0d0e8',
   },
+}
+
+// Jewel-tone ring stops for the LE orb, keyed by band name
+const BAND_RING_STOPS = {
+  green: [
+    { o: '0%',   c: '#051a10' }, { o: '14%',  c: '#0e5430' },
+    { o: '30%',  c: '#178a55' }, { o: '48%',  c: '#22aa6e' },
+    { o: '60%',  c: '#2FBE86' }, { o: '67%',  c: '#82e6bf' },
+    { o: '76%',  c: '#1fa068' }, { o: '89%',  c: '#0e5a38' },
+    { o: '100%', c: '#051a10' },
+  ],
+  yellow: [
+    { o: '0%',   c: '#161002' }, { o: '14%',  c: '#4e3a06' },
+    { o: '30%',  c: '#7e5e0e' }, { o: '48%',  c: '#ab8418' },
+    { o: '60%',  c: '#D6A520' }, { o: '67%',  c: '#ecca6a' },
+    { o: '76%',  c: '#ab8418' }, { o: '89%',  c: '#5e4a0c' },
+    { o: '100%', c: '#161002' },
+  ],
+  orange: [
+    { o: '0%',   c: '#1f0c02' }, { o: '14%',  c: '#6a2e06' },
+    { o: '30%',  c: '#a84e0e' }, { o: '48%',  c: '#e06c14' },
+    { o: '60%',  c: '#FF8419' }, { o: '67%',  c: '#ffb066' },
+    { o: '76%',  c: '#e06c14' }, { o: '89%',  c: '#7a3608' },
+    { o: '100%', c: '#1f0c02' },
+  ],
+  red: [
+    { o: '0%',   c: '#1c0408' }, { o: '14%',  c: '#5e0e16' },
+    { o: '30%',  c: '#9e1824' }, { o: '48%',  c: '#c42030' },
+    { o: '60%',  c: '#D8283A' }, { o: '67%',  c: '#f0707c' },
+    { o: '76%',  c: '#c42030' }, { o: '89%',  c: '#6e1018' },
+    { o: '100%', c: '#1c0408' },
+  ],
+  purple: [
+    { o: '0%',   c: '#110d1e' }, { o: '14%',  c: '#38286a' },
+    { o: '30%',  c: '#5c40a8' }, { o: '48%',  c: '#8060cc' },
+    { o: '60%',  c: '#A673E4' }, { o: '67%',  c: '#d4b8f4' },
+    { o: '76%',  c: '#8860cc' }, { o: '89%',  c: '#482880' },
+    { o: '100%', c: '#110d1e' },
+  ],
+}
+const BAND_GLOW_COLOR = {
+  green:  '#aaf0d0',
+  yellow: '#f0d480',
+  orange: '#ffb066',
+  red:    '#f08890',
+  purple: '#d8b8f8',
 }
 
 const PEAK_STARS = [
@@ -544,7 +619,7 @@ const REG_MOB_STARS = [
 ]
 
 // ─── SkyOrb ───
-function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animClass }) {
+function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animClass, bandBadge }) {
   const [hov, setHov] = useState(false)
   const [vis, setVis] = useState(false)
 
@@ -573,6 +648,10 @@ function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animC
             <linearGradient id={`${colors.id}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
               {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
             </linearGradient>
+            <radialGradient id={`${colors.id}-well`} cx="50%" cy="50%" r="50%">
+              <stop offset="30%" stopColor="#0D0E15" stopOpacity="0.88" />
+              <stop offset="100%" stopColor="#0D0E15" stopOpacity="0" />
+            </radialGradient>
             <filter id={`${colors.id}-glow`} x="-60%" y="-60%" width="220%" height="220%">
               <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -583,6 +662,7 @@ function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animC
               <feMerge><feMergeNode in="wide" /><feMergeNode in="tight" /></feMerge>
             </filter>
           </defs>
+          <circle cx={cx} cy={cy} r={outerR * 1.35} fill={`url(#${colors.id}-well)`} />
           <circle cx={cx} cy={cy} r={outerR} fill="none"
             stroke={`url(#${colors.id}-grad)`} strokeWidth="2"
             filter={`url(#${colors.id}-glow)`} />
@@ -611,6 +691,9 @@ function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animC
             {numStr}
           </div>
           <div className="sky-orb-lbl">{label}</div>
+          {bandBadge && (
+            <div className="sky-band-badge" style={{ color: bandBadge.color }}>{bandBadge.label}</div>
+          )}
         </div>
       </div>
       <div className={`sky-orb-detail${vis ? ' sky-orb-detail--show' : ''}`}>{detailNode}</div>
@@ -653,7 +736,7 @@ function SkyNavOrb({ colors, numStr, active, onClick }) {
 }
 
 // ─── SkyMobileRow ───
-function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick }) {
+function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick, bandBadge }) {
   const BAR_H = 92, SVG_W = 34
   return (
     <div className="sky-mob-row" onClick={onClick} style={{ cursor: onClick ? 'pointer' : undefined }}>
@@ -679,6 +762,9 @@ function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick 
         <div className="sky-mob-num-wrap">
           <div className="sky-orb-lbl sky-mob-lbl" style={{ color: colors.number, opacity: 0.75 }}>{label}</div>
           <div className="sky-mob-num" style={{ color: colors.number }}>{numStr}</div>
+          {bandBadge && (
+            <div className="sky-band-badge" style={{ color: bandBadge.color }}>{bandBadge.label}</div>
+          )}
         </div>
         <div className="sky-mob-detail">{detailNode}</div>
       </div>
@@ -687,7 +773,7 @@ function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick 
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus }) {
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus, isPurple = false }) {
   const [expanding, setExpanding] = useState(null)
 
   function handleOrbClick(key) {
@@ -774,6 +860,20 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   const leStr   = String(Math.round(livedExperience))
   const regStr  = String(Math.round(activeReg))
 
+  // Band-responsive colouring for the LE orb — ring, glow, number and star all jewel-toned
+  const leThr       = settings?.livedExperienceThresholds ?? { yellow: 15, orange: 25, critical: 30 }
+  const leBand      = isPurple ? 'purple' : bandOf(Math.round(livedExperience), leThr)
+  const leNumColor  = bandColor(Math.round(livedExperience), leThr, isPurple)
+  const leBandLabel = leBand
+  const LE_COLORS   = {
+    ...SKY_COLORS.le,
+    ringStops: BAND_RING_STOPS[leBand] ?? SKY_COLORS.le.ringStops,
+    glowColor: BAND_GLOW_COLOR[leBand] ?? SKY_COLORS.le.glowColor,
+    number: leNumColor,
+    star:   leNumColor,
+  }
+  const leBadge     = leBandLabel !== 'green' ? { label: leBandLabel, color: leNumColor } : null
+
   if (drillThrough) {
     return (
       <div className="sky sky--drill">
@@ -781,7 +881,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
           <SkyNavOrb colors={SKY_COLORS.peak} numStr={peakStr}
             active={drillThrough === 'peak'}
             onClick={() => drillThrough === 'peak' ? onClose?.() : onOrb?.('peak')} />
-          <SkyNavOrb colors={SKY_COLORS.le} numStr={leStr}
+          <SkyNavOrb colors={LE_COLORS} numStr={leStr}
             active={drillThrough === 'le'}
             onClick={() => drillThrough === 'le' ? onClose?.() : onOrb?.('le')} />
           <SkyNavOrb colors={SKY_COLORS.reg} numStr={regStr}
@@ -800,8 +900,9 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
           label="today's peak" stars={PEAK_STARS} detailNode={peakDetail}
           onClick={() => handleOrbClick('peak')}
           animClass={expanding === 'peak' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
-        <SkyOrb size={260} colors={SKY_COLORS.le} numStr={leStr}
+        <SkyOrb size={260} colors={LE_COLORS} numStr={leStr}
           label="lived experience" stars={LE_STARS} detailNode={leDetail}
+          bandBadge={leBadge}
           onClick={() => handleOrbClick('le')}
           animClass={expanding === 'le' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
         <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={regStr}
@@ -814,8 +915,9 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
           label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS}
           onClick={() => onOrb?.('peak')} />
         <div className="sky-mob-div" />
-        <SkyMobileRow colors={SKY_COLORS.le} numStr={leStr}
+        <SkyMobileRow colors={LE_COLORS} numStr={leStr}
           label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS}
+          bandBadge={leBadge}
           onClick={() => onOrb?.('le')} />
         <div className="sky-mob-div" />
         <SkyMobileRow colors={SKY_COLORS.reg} numStr={regStr}
@@ -832,20 +934,22 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
 function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough }) {
   const dateStr = dateProp || todayDateStr()
   const isToday = dateStr === todayDateStr()
-  const [loading,       setLoading]       = useState(true)
-  const [userEvents,    setUserEvents]    = useState([])
-  const [regulation,    setRegulation]    = useState({ sensory: 0, av: 0, env: 0, body: 0 })
-  const [recovery,      setRecovery]      = useState(false)
-  const [warning,       setWarning]       = useState({ skin: false, vision: false, thought: false, other: false })
-  const [goodSigns,     setGoodSigns]     = useState({ flow: false, crisis: false })
-  const [meltdown,      setMeltdown]      = useState(false)
-  const [openingBalance,setOpeningBalance]= useState(0)
-  const [yesterdayClosing,setYesterdayClosing] = useState(0)
-  const [saveStatus,    setSaveStatus]    = useState('')
-  const [stampedTax,    setStampedTax]    = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
-  const [autoFilledDays,setAutoFilledDays]= useState([])
-  const [bannerDismissed,setBannerDismissed] = useState(false)
+  const [loading,        setLoading]        = useState(true)
+  const [userEvents,     setUserEvents]     = useState([])
+  const [regulation,     setRegulation]     = useState({ sensory: 0, av: 0, env: 0, body: 0 })
+  const [recovery,       setRecovery]       = useState(false)
+  const [warning,        setWarning]        = useState({ skin: false, vision: false, thought: false, other: false })
+  const [goodSigns,      setGoodSigns]      = useState({ flow: false, crisis: false })
+  const [meltdown,       setMeltdown]       = useState(false)
+  const [openingBalance, setOpeningBalance] = useState(0)
+  const [yesterdayClosing, setYesterdayClosing] = useState(0)
+  const [saveStatus,     setSaveStatus]     = useState('')
+  const [stampedTax,     setStampedTax]     = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [autoFilledDays, setAutoFilledDays] = useState([])
+  const [bannerDismissed,setBannerDismissed]= useState(false)
   const [seededIds,      setSeededIds]      = useState(new Set())
+  const [allEntries,     setAllEntries]     = useState([])
+  const [purpleOverride, setPurpleOverride] = useState(null)
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
@@ -858,21 +962,23 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         if (isToday) {
           await backfillMissedDays(session.user.id, settings, dateStr)
         }
-        const allEntries = await loadAllEntriesV2(session.user.id)
-        setAutoFilledDays(allEntries.filter(e => e.entry_data?.autoFilled).map(e => e.date).sort())
+        const entries = await loadAllEntriesV2(session.user.id)
+        setAllEntries(entries)
+        setAutoFilledDays(entries.filter(e => e.entry_data?.autoFilled).map(e => e.date).sort())
         // Opening balance is ALWAYS derived from the chain — never trusted from the
         // day's own stored value — so a late-entered day or a gap of missed days
         // still carries forward correctly (sleep −5 and tax per missed day).
         const opening = resolveOpeningBalance(
-          dateStr, allEntries,
+          dateStr, entries,
           { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate },
         )
         setOpeningBalance(opening)
         setYesterdayClosing(opening)
 
-        const existing = allEntries.find(e => e.date === dateStr)
+        const existing = entries.find(e => e.date === dateStr)
         if (existing) {
           setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setPurpleOverride(existing.entry_data.purpleOverride ?? null)
           const state = dbToInternal(existing)
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
@@ -895,13 +1001,16 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
 
   if (loading) return <div className="history-loading">opening the almanac…</div>
 
+  const purpleState = getPurpleState(dateStr, allEntries, settings.purpleFloors, purpleOverride)
+
   async function autoSave(patch = {}) {
-    const evts = patch.userEvents ?? userEvents
-    const reg  = patch.regulation ?? regulation
-    const rec  = patch.recovery   ?? recovery
-    const warn = patch.warning    ?? warning
-    const gs   = patch.goodSigns  ?? goodSigns
-    const melt = patch.meltdown   ?? meltdown
+    const evts  = patch.userEvents    ?? userEvents
+    const reg   = patch.regulation    ?? regulation
+    const rec   = patch.recovery      ?? recovery
+    const warn  = patch.warning       ?? warning
+    const gs    = patch.goodSigns     ?? goodSigns
+    const melt  = patch.meltdown      ?? meltdown
+    const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
     setSaveStatus('saving…')
     try {
       const { entryData, peakDebit } = internalToDb({
@@ -909,7 +1018,15 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
+        purpleOverride: pOver,
       })
+      if (isToday) {
+        const ps = getPurpleState(dateStr, allEntries, settings.purpleFloors, pOver)
+        if (ps.isPurple && ps.floor != null) {
+          entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
+          entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
+        }
+      }
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       if (!isToday) await recalculateFromDateV2(session.user.id, dateStr, settings)
       setSaveStatus('saved')
@@ -929,6 +1046,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
   const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+  const onPurpleOverride = (val) => { setPurpleOverride(val); autoSave({ purpleOverride: val }) }
 
   async function handleSeed(eventId, eventText) {
     try {
@@ -968,6 +1086,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         onOrb={onDrillThrough}
         onClose={() => onDrillThrough?.(null)}
         saveStatus={saveStatus}
+        isPurple={purpleState.isPurple}
       />
       {drillThrough && (
         <div className="sky-drill" key={drillThrough}>
@@ -988,6 +1107,11 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
               </section>
               <WarningSigns flags={warning} onToggle={onWarning} />
               <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+              <PurpleOverrideSection
+                isPurple={purpleState.isPurple}
+                override={purpleOverride}
+                onChange={onPurpleOverride}
+              />
             </>
           )}
           {(drillThrough === 'reg' || drillThrough === 'le') && (
@@ -1022,8 +1146,9 @@ function hedWeekMonday(date) {
   return d
 }
 function hedPeakColor(peak, thr) {
-  if (peak >= thr.critical) return '#e84040'
-  if (peak >= thr.yellow)   return '#f0b825'
+  if (peak >= (thr.critical ?? 30)) return '#e84040'
+  if (peak >= (thr.orange   ?? 25)) return '#e8822a'
+  if (peak >= (thr.yellow   ?? 15)) return '#f0b825'
   return '#2ed468'
 }
 function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr) {
@@ -1113,9 +1238,10 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [meltdown, setMeltdown]     = useState(false)
   const [openingBalance, setOpeningBalance]   = useState(0)
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
-  const [saveStatus, setSaveStatus] = useState('')
-  const [stampedTax, setStampedTax] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
-  const [seededIds,  setSeededIds]  = useState(new Set())
+  const [saveStatus, setSaveStatus]   = useState('')
+  const [stampedTax, setStampedTax]   = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [seededIds,  setSeededIds]    = useState(new Set())
+  const [purpleOverride, setPurpleOverride] = useState(null)
   const todayStr = todayDateStr()
 
   useEffect(() => {
@@ -1144,6 +1270,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         const existing = rows.find(e => e.date === dateStr)
         if (existing) {
           setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setPurpleOverride(existing.entry_data.purpleOverride ?? null)
           const state = dbToInternal(existing)
           setUserEvents(state.userEvents)
           setRegulation(state.regulation)
@@ -1158,6 +1285,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
           setWarning({ skin: false, vision: false, thought: false, other: false })
           setGoodSigns({ flow: false, crisis: false })
           setMeltdown(false)
+          setPurpleOverride(null)
         }
         loadSeededEventIds(session.user.id).then(ids => setSeededIds(ids)).catch(() => {})
       } catch (err) { console.error('failed to load entry (v2)', err) }
@@ -1175,13 +1303,16 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
 
   const taxCancelled = !taxActive(dateStr, settings.taxStartDate, userEvents) || goodSigns.flow
 
+  const purpleState = getPurpleState(dateStr, allEntries ?? [], settings.purpleFloors, purpleOverride)
+
   async function autoSave(patch = {}) {
-    const evts = patch.userEvents ?? userEvents
-    const reg  = patch.regulation ?? regulation
-    const rec  = patch.recovery   ?? recovery
-    const warn = patch.warning    ?? warning
-    const gs   = patch.goodSigns  ?? goodSigns
-    const melt = patch.meltdown   ?? meltdown
+    const evts  = patch.userEvents    ?? userEvents
+    const reg   = patch.regulation    ?? regulation
+    const rec   = patch.recovery      ?? recovery
+    const warn  = patch.warning       ?? warning
+    const gs    = patch.goodSigns     ?? goodSigns
+    const melt  = patch.meltdown      ?? meltdown
+    const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
     setSaveStatus('saving…')
     try {
       const { entryData, peakDebit } = internalToDb({
@@ -1189,6 +1320,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
+        purpleOverride: pOver,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       await recalculateFromDateV2(session.user.id, dateStr, settings)
@@ -1210,6 +1342,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
   const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+  const onPurpleOverride = (val) => { setPurpleOverride(val); autoSave({ purpleOverride: val }) }
 
   async function handleSeed(eventId, eventText) {
     try {
@@ -1299,6 +1432,11 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
             />
             <WarningSigns flags={warning} onToggle={onWarning} />
             <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+            <PurpleOverrideSection
+              isPurple={purpleState.isPurple}
+              override={purpleOverride}
+              onChange={onPurpleOverride}
+            />
           </>
         )
       }
@@ -1318,6 +1456,7 @@ function AutisticTaxLine({ rate, cancelled }) {
 // ─── ThresholdSettings ───
 function ThresholdSettings({ settings, onThresholdsChange }) {
   const [leYellow,   setLeYellow]   = useState(settings.livedExperienceThresholds?.yellow   ?? 15)
+  const [leOrange,   setLeOrange]   = useState(settings.livedExperienceThresholds?.orange   ?? 25)
   const [leCritical, setLeCritical] = useState(settings.livedExperienceThresholds?.critical ?? 30)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
@@ -1325,7 +1464,7 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
   async function handleSave() {
     setSaving(true); setStatus('')
     try {
-      const updated = { leYellow: Number(leYellow), leCritical: Number(leCritical) }
+      const updated = { yellow: Number(leYellow), orange: Number(leOrange), critical: Number(leCritical) }
       await saveThresholds(updated)
       onThresholdsChange?.(updated)
       setStatus('saved')
@@ -1345,6 +1484,13 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
           <div className="settings-field-desc">day reads as caution when lived experience reaches this number</div>
         </div>
         <input type="number" className="settings-number-input" value={leYellow} min={1} onChange={e => setLeYellow(e.target.value)} />
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>orange threshold</label>
+          <div className="settings-field-desc">day reads as escalating when lived experience reaches this number</div>
+        </div>
+        <input type="number" className="settings-number-input" value={leOrange} min={1} onChange={e => setLeOrange(e.target.value)} />
       </div>
       <div className="settings-field-row">
         <div>
@@ -1402,6 +1548,54 @@ function AutisticTaxSettings({ settings, onTaxChange }) {
   )
 }
 
+// ─── PurpleSettings ───
+function PurpleSettings({ settings, onPurpleChange }) {
+  const [day1Floor, setDay1Floor] = useState(settings.purpleFloors?.floor_day1 ?? 25)
+  const [day2Floor, setDay2Floor] = useState(settings.purpleFloors?.floor_day2 ?? 15)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function handleSave() {
+    setSaving(true); setStatus('')
+    try {
+      const updated = { floor_day1: Number(day1Floor), floor_day2: Number(day2Floor) }
+      await savePurpleFloors(updated)
+      onPurpleChange?.(updated)
+      setStatus('saved')
+      setTimeout(() => setStatus(''), 3000)
+    } catch { setStatus('failed to save') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="settings-section">
+      <div className="ledger-head">
+        <div className="ledger-title">purple recovery mode</div>
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>day 1 floor</label>
+          <div className="settings-field-desc">minimum lived experience the day after a crisis (and the closing balance that carries forward)</div>
+        </div>
+        <input type="number" className="settings-number-input" value={day1Floor} min={0} onChange={e => setDay1Floor(e.target.value)} />
+      </div>
+      <div className="settings-field-row">
+        <div>
+          <label>day 2 floor</label>
+          <div className="settings-field-desc">minimum for the second day after a crisis</div>
+        </div>
+        <input type="number" className="settings-number-input" value={day2Floor} min={0} onChange={e => setDay2Floor(e.target.value)} />
+      </div>
+      <div className="save-bar">
+        <span className="save-bar-status">{status}</span>
+        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+          {saving ? 'saving…' : 'save'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
 const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -1420,6 +1614,19 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
 
   const handleTaxChange = (newVal) => {
     setSettings(prev => ({ ...prev, taxValue: newVal }))
+  }
+
+  const handleThresholdsChange = (updated) => {
+    setSettings(prev => ({
+      ...prev,
+      thresholds: { yellow: updated.yellow, orange: updated.orange ?? 25, critical: updated.critical },
+      livedExperienceThresholds: { yellow: updated.yellow, orange: updated.orange ?? 25, critical: updated.critical },
+    }))
+    onThresholdsChange?.(updated)
+  }
+
+  const handlePurpleChange = (updated) => {
+    setSettings(prev => ({ ...prev, purpleFloors: updated }))
   }
 
   function prevMonth() {
@@ -1527,7 +1734,8 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
       )}
       {tab === 'settings' && (
         <>
-          <ThresholdSettings settings={settings} onThresholdsChange={onThresholdsChange} />
+          <ThresholdSettings settings={settings} onThresholdsChange={handleThresholdsChange} />
+          <PurpleSettings settings={settings} onPurpleChange={handlePurpleChange} />
           <AutisticTaxSettings settings={settings} onTaxChange={handleTaxChange} />
           {onRoom && (
             <div className="settings-section">

@@ -32,14 +32,16 @@ function weekMonday(date) {
 // ── Colour / display helpers ──────────────────────────────────────────────────
 
 function peakColor(peak, thr) {
-  if (peak >= thr.critical) return '#e84040'
-  if (peak >= thr.yellow)   return '#f0b825'
-  return '#2ed468'
+  if (peak >= (thr.critical ?? 30)) return '#D8283A'  // vivid ruby-red
+  if (peak >= (thr.orange   ?? 25)) return '#FF8419'  // vivid bright orange
+  if (peak >= (thr.yellow   ?? 15)) return '#D6A520'  // deep gold
+  return '#2FBE86'                                    // jade
 }
 
 function peakGlowClass(peak, thr) {
-  if (peak >= thr.critical) return 'arc-glow--red'
-  if (peak >= thr.yellow)   return 'arc-glow--amber'
+  if (peak >= (thr.critical ?? 30)) return 'arc-glow--red'
+  if (peak >= (thr.orange   ?? 25)) return 'arc-glow--orange'
+  if (peak >= (thr.yellow   ?? 15)) return 'arc-glow--amber'
   return 'arc-glow--green'
 }
 
@@ -223,7 +225,7 @@ function DayTooltip({ entry, date, col, settings }) {
       {(hasSI || hasMelt) && (
         <div className="cal-tip-icons">
           {hasSI   && <span className="cal-tip-badge cal-tip-badge--si">SI flow</span>}
-          {hasMelt && <span className="cal-tip-badge cal-tip-badge--melt">shutdown</span>}
+          {hasMelt && <span className="cal-tip-badge cal-tip-badge--melt">crisis</span>}
         </div>
       )}
     </div>
@@ -232,7 +234,7 @@ function DayTooltip({ entry, date, col, settings }) {
 
 // ── Day cell ──────────────────────────────────────────────────────────────────
 
-function DayCell({ date, entry, thresholds, settings, onClick, isToday, isFuture, isOutOfMonth, col }) {
+function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday, isFuture, isOutOfMonth, col }) {
   const [showTip, setShowTip] = useState(false)
   const tipTimer = useRef(null)
 
@@ -251,11 +253,38 @@ function DayCell({ date, entry, thresholds, settings, onClick, isToday, isFuture
   const leVal = d ? computeDisplayValues(d, settings).livedExperience : 0
   const isPastEmpty = !isFuture && !entry
 
+  // Purple detection — check meltdown on the two prior days
+  let isPurple = false
+  if (entry && !isFuture) {
+    const override = d?.purpleOverride ?? null
+    if (override === 'cancel') {
+      isPurple = false
+    } else if (override === 'extend') {
+      isPurple = true
+    } else {
+      const d1 = toDateStr(addDays(date, -1))
+      const d2 = toDateStr(addDays(date, -2))
+      const melt1 = entryMap?.[d1]?.entry_data?.meltdown ?? false
+      const melt2 = entryMap?.[d2]?.entry_data?.meltdown ?? false
+      isPurple = melt1 || melt2
+    }
+  }
+
   let stars, starColor, glowClass = ''
   if (entry) {
     stars = ARC_STARS
-    starColor = peakColor(leVal, thresholds)
-    glowClass = peakGlowClass(leVal, thresholds)
+    const isCritical = leVal >= (thresholds.critical ?? 30)
+    if (isCritical) {
+      // Red (crisis) takes priority over purple — purple is a recovery state, not a crisis state
+      starColor = peakColor(leVal, thresholds)
+      glowClass = peakGlowClass(leVal, thresholds)
+    } else if (isPurple) {
+      starColor = '#A673E4'
+      glowClass = 'arc-glow--purple'
+    } else {
+      starColor = peakColor(leVal, thresholds)
+      glowClass = peakGlowClass(leVal, thresholds)
+    }
   } else if (isFuture) {
     stars = FUTURE_DOTS
     starColor = '#c9a460'
@@ -281,8 +310,24 @@ function DayCell({ date, entry, thresholds, settings, onClick, isToday, isFuture
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <svg className={`cal-arc${glowClass ? ` ${glowClass}` : ''}`} viewBox="0 0 88 96">
-        <ArcStars stars={stars} color={starColor} live={!!entry} />
+      <svg className="cal-arc" viewBox="0 0 88 96">
+        <defs>
+          <radialGradient id="arc-well" cx="50%" cy="50%" r="50%">
+            <stop offset="40%" stopColor="#0D0E15" stopOpacity="0.82" />
+            <stop offset="100%" stopColor="#0D0E15" stopOpacity="0" />
+          </radialGradient>
+          <filter id="arc-star-glow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <ellipse cx="44" cy="46" rx="46" ry="50" fill="url(#arc-well)" />
+        <g filter="url(#arc-star-glow)">
+          <ArcStars stars={stars} color={starColor} live={!!entry} />
+        </g>
       </svg>
 
       <div className="cal-inner">
@@ -324,6 +369,7 @@ function WeekRow({ week, entryMap, thresholds, settings, todayStr, onEdit, viewM
               key={ds}
               date={day}
               entry={outOfMonth ? null : (entryMap[ds] || null)}
+              entryMap={outOfMonth ? undefined : entryMap}
               thresholds={thresholds}
               settings={settings}
               onClick={outOfMonth ? undefined : onEdit}

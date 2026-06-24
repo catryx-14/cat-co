@@ -1023,6 +1023,51 @@ body {
   text-transform: uppercase;
   color: rgba(255,255,255,0.38);
 }
+.sky-band-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  opacity: 0.85;
+}
+
+/* Purple override controls */
+.purple-override-section {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.purple-override-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a890d4;
+  opacity: 0.8;
+}
+.purple-override-btn {
+  background: transparent;
+  border: 1px solid rgba(168,144,212,0.35);
+  border-radius: 4px;
+  color: rgba(168,144,212,0.75);
+  font-family: "Cagliostro", serif;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+.purple-override-btn:hover {
+  border-color: rgba(168,144,212,0.75);
+  color: #a890d4;
+}
+.purple-override-btn.active {
+  border-color: #a890d4;
+  color: #a890d4;
+  background: rgba(168,144,212,0.12);
+}
 
 /* Hover detail panel — floats below each circle */
 .sky-orb-detail {
@@ -1878,25 +1923,13 @@ body {
   background: linear-gradient(90deg, rgba(232,184,124,0.55) 0%, transparent 100%);
 }
 
-/* Arc star glow — CSS drop-shadow on the SVG element */
-.arc-glow--green {
-  filter:
-    drop-shadow(0 0 2px rgba(46,212,104,1.00))
-    drop-shadow(0 0 5px rgba(46,212,104,0.65))
-    drop-shadow(0 0 10px rgba(46,212,104,0.28));
-}
-.arc-glow--amber {
-  filter:
-    drop-shadow(0 0 2px rgba(240,184,37,1.00))
-    drop-shadow(0 0 5px rgba(240,184,37,0.65))
-    drop-shadow(0 0 10px rgba(240,184,37,0.28));
-}
-.arc-glow--red {
-  filter:
-    drop-shadow(0 0 2px rgba(232,64,64,1.00))
-    drop-shadow(0 0 5px rgba(232,64,64,0.65))
-    drop-shadow(0 0 10px rgba(232,64,64,0.28));
-}
+/* Arc band classes — colour is applied via inline fill on the star dots; no outer glow */
+/* Jewel-tone palette: jade / warm-gold / bright-amber / deep-garnet / amethyst */
+.arc-glow--green  {}
+.arc-glow--amber  {}
+.arc-glow--orange {}
+.arc-glow--red    {}
+.arc-glow--purple {}
 
 /* Day cell */
 .cal-cell {

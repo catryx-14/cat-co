@@ -393,7 +393,7 @@ function Rail({ inRoom, current, onPick, onHome, railPins }) {
 function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, pins, onAddPin, onRemovePin }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} initialTab={trackerInitTab} />
+    return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} />
@@ -443,7 +443,7 @@ function HubApp({ session }) {
       .then(setSettings)
       .catch(err => {
         console.error('failed to load settings', err)
-        setSettings({ taxValue: DEFAULT_AUTISTIC_TAX, thresholds: { yellow: 15, critical: 30 }, livedExperienceThresholds: { yellow: 15, critical: 30 }, taxStartDate: '2000-01-01' })
+        setSettings({ taxValue: DEFAULT_AUTISTIC_TAX, thresholds: { yellow: 15, orange: 25, critical: 30 }, livedExperienceThresholds: { yellow: 15, orange: 25, critical: 30 }, purpleFloors: { floor_day1: 25, floor_day2: 15 }, taxStartDate: '2000-01-01' })
       })
   }, [])
 
@@ -477,10 +477,14 @@ function HubApp({ session }) {
     await supabase.from('threshold_pins').delete().eq('user_id', session.user.id).eq('room_slug', slug)
   }, [session?.user?.id])
 
-  const updateThresholds = ({ leYellow, leCritical }) => {
+  const updateThresholds = ({ yellow, orange, critical, leYellow, leCritical }) => {
+    const y = yellow   ?? leYellow   ?? 15
+    const o = orange   ?? 25
+    const c = critical ?? leCritical ?? 30
     setSettings(prev => ({
       ...prev,
-      livedExperienceThresholds: { yellow: leYellow ?? 15, critical: leCritical ?? 30 },
+      thresholds: { yellow: y, orange: o, critical: c },
+      livedExperienceThresholds: { yellow: y, orange: o, critical: c },
     }))
   }
 

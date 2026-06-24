@@ -83,7 +83,9 @@ function buildEntryData(daily, events) {
     autoFilled: daily.auto_filled ?? false,
     meltdown: daily.meltdown ?? false,
     yellowThreshold: daily.yellow_threshold ?? 15,
+    orangeThreshold: daily.orange_threshold ?? 25,
     criticalThreshold: daily.critical_threshold ?? 30,
+    purpleOverride: daily.purple_override ?? null,
     events: mappedEvents,
     regulation,
     warningSign: {
@@ -121,8 +123,10 @@ function entryDataToDailyRow(dateStr, entryData, userId) {
     flow_activity:  d.flowActivity ?? false,
     auto_filled:    d.autoFilled ?? false,   // a real user edit always lands here as false → clears the flag
     autistic_tax:   d.autisticTaxRate ?? DEFAULT_AUTISTIC_TAX,
-    yellow_threshold:   d.yellowThreshold ?? 15,
+    yellow_threshold:   d.yellowThreshold   ?? 15,
+    orange_threshold:   d.orangeThreshold   ?? 25,
     critical_threshold: d.criticalThreshold ?? 30,
+    purple_override:    d.purpleOverride    ?? null,
   }
 }
 
@@ -340,8 +344,10 @@ export async function backfillMissedDays(userId, settings = {}, todayStr) {
       siFlowActive: false,
       meltdown: false,
       warningSign: { skin: false, vision: false, thought: false, sunny: false, crisisResponse: false },
-      yellowThreshold: settings.thresholds?.yellow ?? 15,
+      yellowThreshold:   settings.thresholds?.yellow   ?? 15,
+      orangeThreshold:   settings.thresholds?.orange   ?? 25,
       criticalThreshold: settings.thresholds?.critical ?? 30,
+      purpleOverride: null,
     }
     await saveEntryV2({ dateStr: cursor, entryData, userId })
     // append in date order (cursor only moves forward) so the next gap day chains off this one
