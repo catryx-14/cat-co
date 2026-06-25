@@ -7,6 +7,7 @@ import GamesRoom from './rooms/games/GamesRoom.jsx'
 import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
 import BookPileRoom from './rooms/ef-suite/BookPileRoom.jsx'
 import LostFoundRoom from './rooms/lost-found/LostFoundRoom.jsx'
+import RegulationRoom from './rooms/regulation/RegulationRoom.jsx'
 import { supabase } from './shared/lib/supabase.js'
 import SupporterApp from './SupporterApp.jsx'
 import { loadSettings } from './shared/lib/db.js'
@@ -19,6 +20,7 @@ const ROOMS = [
   { key: 'tracker',     name: 'Capacity Tracker' }, /* HORIZON TAB — DEFERRED */
   { key: 'sparks',      name: 'Sparks'           },
   { key: 'physio',      name: 'First Aid'        },
+  { key: 'regulation',  name: 'Regulation Plan'  },
   { key: 'lost-found',  name: 'Lost + Found'     },
   { key: 'more-lights', name: 'More this way'    },
 ]
@@ -403,6 +405,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
   }
   if (roomKey === 'physio') {
     return <FirstAidRoom onSettings={onSettings} />
+  }
+  if (roomKey === 'regulation') {
+    return <RegulationRoom onSettings={onSettings} />
   }
   if (roomKey === 'herding-cats') {
     return <GamesRoom roomName="herding cats" onSettings={onSettings} initialGame="cat-sort" />
