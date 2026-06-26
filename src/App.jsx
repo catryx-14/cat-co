@@ -20,7 +20,7 @@ const ROOMS = [
   { key: 'tracker',     name: 'Capacity Tracker' }, /* HORIZON TAB — DEFERRED */
   { key: 'sparks',      name: 'Sparks'           },
   { key: 'physio',      name: 'First Aid'        },
-  { key: 'regulation',  name: 'Regulation Plan'  },
+  { key: 'regulation',  name: 'Regulation'       },
   { key: 'lost-found',  name: 'Lost + Found'     },
   { key: 'more-lights', name: 'More this way'    },
 ]

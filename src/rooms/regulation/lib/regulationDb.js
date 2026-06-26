@@ -11,6 +11,22 @@ const bandRank = b => ({ green: 1, caution: 2, purple: 3 }[b] ?? 9)
 const nowIso = () => new Date().toISOString()
 const bySort = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
 
+// ── Channel map (id=146 canonical vocabulary) — aisle is derivable, not stored ─
+// The Shelf groups cards by aisle → channel using this static map. Strings must
+// match regulation_tools.channel_primary exactly.
+export const CHANNEL_AISLES = [
+  ['Body / sensory',       ['Deep pressure', 'Tactile', 'Movement', 'Breath', 'Thermal', 'Orienting', 'Sound', 'Smell & taste', 'Release / discharge']],
+  ['Mind / attention',     ['Monotropic flow', 'Externalizing', 'Cognitive defusion', 'Effortful absorption', 'Gentle absorption', 'Aesthetic & awe']],
+  ['Relational',           ['Co-regulation', 'Tending & care', 'Shared joy']],
+  ['Shield — remove load', ['Sensory-shielding', 'Demand/social shielding']],
+  ['Proactive conditions', ['Predictability & structure', 'Restoration']],
+]
+export const ALL_CHANNELS = CHANNEL_AISLES.flatMap(([, chs]) => chs)
+// channel → a small note shown under its header on the Shelf
+export const CHANNEL_NOTES = {
+  'Monotropic flow': "Mostly handled by SI Flow — tracked separately (it cancels the autistic tax and earns the day's regulation %), so the doing-the-flow cards aren't kept here, to avoid counting it twice.",
+}
+
 // ── Gallery: every routine with the bands it spans ──────────────────────────
 export async function loadRoutines() {
   const { data, error } = await supabase
@@ -145,6 +161,74 @@ export async function loadAllTools() {
     .order('name')
   if (error) throw error
   return data || []
+}
+
+// ── Shelf tab: the whole regulation_tools pool (one library, filtered into views) ──
+export async function loadShelf() {
+  const { data, error } = await supabase
+    .from('regulation_tools')
+    .select('id, name, marker, channel_primary, channels_secondary, has_card, is_personal, tags, description, how_to_use, the_science, notes_variations, time_component, access_cost, created_by_user_id')
+    .order('name')
+  if (error) throw error
+  return data || []
+}
+
+// New card in a channel — usable while unfinished (has_card false; science later).
+// id is GENERATED ALWAYS (omit it). RLS requires created_by_user_id = auth.uid().
+export async function createTool({ name, channel, marker = null, userId }) {
+  const { data, error } = await supabase
+    .from('regulation_tools')
+    .insert({
+      name, channel_primary: channel, marker,
+      has_card: false, is_personal: true, tags: [],
+      created_by_user_id: userId,
+    })
+    .select('id, name, marker, channel_primary, channels_secondary, has_card, is_personal, tags, created_by_user_id')
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── Actions tab: single regulating acts, each backed 1:1 by a shelf card ──────
+export async function loadActions() {
+  const { data, error } = await supabase
+    .from('actions')
+    .select('id, name, points, action_type, tool_id, what_it_is, how_to_use, what_counts, stop_if, why_it_helps, sort_order, regulation_tools(name, channel_primary)')
+    .order('sort_order')
+  if (error) throw error
+  return (data || []).map(a => ({ ...a, backing: a.regulation_tools || null }))
+}
+
+export async function createAction({ userId, name, action_type, points, tool_id, sections = {} }) {
+  const { data: rows } = await supabase
+    .from('actions').select('sort_order').order('sort_order', { ascending: false }).limit(1)
+  const nextSort = ((rows && rows[0]?.sort_order) || 0) + 1
+  const { data, error } = await supabase
+    .from('actions')
+    .insert({
+      name, action_type, points, tool_id,
+      created_by_user_id: userId, sort_order: nextSort,
+      what_it_is:  sections.what_it_is  ?? null,
+      how_to_use:  sections.how_to_use  ?? null,
+      what_counts: sections.what_counts ?? null,
+      stop_if:     sections.stop_if     ?? null,
+      why_it_helps: sections.why_it_helps ?? null,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+export async function updateAction(id, fields) {
+  const { error } = await supabase
+    .from('actions').update({ ...fields, updated_at: nowIso() }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteAction(id) {
+  const { error } = await supabase.from('actions').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ── Remove a single built face (its doses / ingredients cascade) ────────────
