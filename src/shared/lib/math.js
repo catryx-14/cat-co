@@ -23,9 +23,16 @@ export const DEFAULT_AUTISTIC_TAX = 3
  */
 export function computeDisplayValues(entryData, settings = null) {
   const reg = entryData.regulation ?? {}
-  const activeRegulation =
+  // Regulation source: the daily grid log when the day has log rows, else the old
+  // four pip channels (so historical days keep their numbers). `regulationLogTotal`
+  // is null/undefined when the day has no log rows → fall back to the pips.
+  // Rule of thumb: log rows exist → use the log; none → use the pips.
+  const pipRegulation =
     (reg.sensoryComfort || 0) + (reg.audioVisual || 0) +
     (reg.environment    || 0) + (reg.bodyRest    || 0)
+  const activeRegulation = entryData.regulationLogTotal != null
+    ? entryData.regulationLogTotal
+    : pipRegulation
 
   const events = entryData.events ?? []
   let evPoints = 0, siFlowCost = 0

@@ -20,6 +20,7 @@ import {
   resolveOpeningBalance,
   DEFAULT_AUTISTIC_TAX,
 } from './math.js'
+import { loadRegLogTotalsByDate } from './regulationLog.js'
 
 // ── Conversion helpers ─────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ import {
  * that dbToInternal() already knows how to read.  This lets TrackerV2Room reuse
  * all the existing internal-state logic without duplication.
  */
-function buildEntryData(daily, events) {
+function buildEntryData(daily, events, regLogTotal = null) {
   const closingBalance = daily.closing_balance ?? 0
 
   // Build the regulation and events shape first so computeDisplayValues can use them
@@ -64,7 +65,7 @@ function buildEntryData(daily, events) {
     : null
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } =
     computeDisplayValues(
-      { date: daily.date, openingBalance: daily.opening_balance ?? 0, regulation, events: mappedEvents, flowActivity: daily.flow_activity ?? false },
+      { date: daily.date, openingBalance: daily.opening_balance ?? 0, regulation, events: mappedEvents, flowActivity: daily.flow_activity ?? false, regulationLogTotal: regLogTotal },
       taxSettings
     )
 
@@ -74,6 +75,9 @@ function buildEntryData(daily, events) {
     closingBalance,
     peakDebit,
     activeRegulation,
+    // Kept on the entry so the cascade recompute reuses the same regulation source
+    // (null = no grid rows → the pip fallback in computeDisplayValues applies).
+    regulationLogTotal: regLogTotal,
     autisticTax: 0,
     autisticTaxRate: daily.autistic_tax,          // column is NOT NULL (defaults to the tax setting)
     siFlowBonus,
@@ -162,9 +166,10 @@ function entryDataToEventRows(dateStr, entryData, userId) {
  * so all the existing internal-state logic can be reused unchanged.
  */
 export async function loadEntryV2(dateStr, userId) {
-  const [{ data: daily, error: dailyErr }, { data: events, error: eventsErr }] = await Promise.all([
+  const [{ data: daily, error: dailyErr }, { data: events, error: eventsErr }, regTotals] = await Promise.all([
     supabase.from('energy_daily').select('*').eq('user_id', userId).eq('date', dateStr).maybeSingle(),
     supabase.from('energy_events').select('*').eq('user_id', userId).eq('date', dateStr).order('sort_order'),
+    loadRegLogTotalsByDate(userId),
   ])
   if (dailyErr) throw dailyErr
   if (eventsErr) throw eventsErr
@@ -172,7 +177,7 @@ export async function loadEntryV2(dateStr, userId) {
   return {
     date: dateStr,
     user_id: userId,
-    entry_data: buildEntryData(daily, events ?? []),
+    entry_data: buildEntryData(daily, events ?? [], regTotals[dateStr] ?? null),
   }
 }
 
@@ -188,6 +193,9 @@ export async function loadAllEntriesV2(userId) {
     .order('date', { ascending: false })
   if (error) throw error
   if (!allDaily || allDaily.length === 0) return []
+
+  // Per-day regulation grid totals — the regulation source for any day with rows.
+  const regTotals = await loadRegLogTotalsByDate(userId)
 
   // Load all events in one query, then group by date
   const dates = allDaily.map(d => d.date)
@@ -208,7 +216,7 @@ export async function loadAllEntriesV2(userId) {
   return allDaily.map(daily => ({
     date: daily.date,
     user_id: userId,
-    entry_data: buildEntryData(daily, eventsByDate[daily.date] ?? []),
+    entry_data: buildEntryData(daily, eventsByDate[daily.date] ?? [], regTotals[daily.date] ?? null),
   }))
 }
 

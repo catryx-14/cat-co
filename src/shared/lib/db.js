@@ -101,7 +101,7 @@ export function dbToInternal(row) {
 // Internal UI state → DB entry_data blob + computed peak
 export function internalToDb({ dateStr, openingBalance, userEvents, regulation, recovery,
                                 warning, goodSigns, settings, yesterdayClosing, meltdown,
-                                purpleOverride = null }) {
+                                purpleOverride = null, regLogTotal = null }) {
   const { thresholds } = settings
 
   // Map events from UI shape (E/S/P/M/X) to stored shape (emotional/sensory/…)
@@ -134,9 +134,11 @@ export function internalToDb({ dateStr, openingBalance, userEvents, regulation, 
     recoverySleep:  recovery           || false,
   }
 
-  // Single canonical formula — same as the tooltip and calendar
+  // Single canonical formula — same as the tooltip and calendar. When the day has
+  // grid log rows, regLogTotal is the regulation source (closing balance and the
+  // carry-forward both honour it); otherwise it's null and the pips are used.
   const { peakDebit, activeRegulation, siFlowBonus, livedExperience } = computeDisplayValues(
-    { date: dateStr, openingBalance, regulation: storedRegulation, events, flowActivity: goodSigns.flow },
+    { date: dateStr, openingBalance, regulation: storedRegulation, events, flowActivity: goodSigns.flow, regulationLogTotal: regLogTotal },
     settings
   )
   const closingBalance = computeClosingBalance(peakDebit, activeRegulation)

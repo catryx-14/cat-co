@@ -58,6 +58,17 @@ export async function loadRoutine(routineId) {
   return { id: data.id, name: data.name, subtitle: data.subtitle, sort_order: data.sort_order, facesByBand }
 }
 
+// ── One action (the "Activity" card) with its five optional sections ─────────
+export async function loadAction(actionId) {
+  const { data, error } = await supabase
+    .from('actions')
+    .select('id, name, points, action_type, what_it_is, how_to_use, what_counts, stop_if, why_it_helps')
+    .eq('id', actionId)
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ── The science card behind an ingredient chip (only when tool_id is set) ────
 export async function loadTool(toolId) {
   const { data, error } = await supabase

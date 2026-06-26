@@ -18,6 +18,10 @@ import { seedEntry, loadSeededEventIds } from '../lost-found/lib/lostFoundDb.js'
 import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib/db.js'
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState } from '../../shared/lib/math.js'
+import RegulationGrid from './RegulationGrid.jsx'
+import {
+  loadRegulationLog, addRoutineLog, addActionLog, deleteRegLogRow, sumRegLog,
+} from '../../shared/lib/regulationLog.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
 
@@ -307,58 +311,68 @@ function Composer({ onAdd }) {
   )
 }
 
-// ─── RegChannel ───
-function RegChannel({ chan, value, onSet }) {
-  const useDial = chan.cap > 8
-  if (useDial) {
-    const pct = value / chan.cap
-    const r = 22, c = 2 * Math.PI * r
-    return (
-      <div className="reg-channel reg-dial-wrap">
-        <div className="reg-dial">
-          <svg width="56" height="56" viewBox="0 0 56 56">
-            <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(120,170,220,0.18)" strokeWidth="3"/>
-            <circle cx="28" cy="28" r={r} fill="none"
-              stroke="var(--reg-blue)" strokeWidth="3"
-              strokeDasharray={c}
-              strokeDashoffset={c * (1 - pct)}
-              transform="rotate(-90 28 28)"
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset .5s ease' }}
-            />
-            <text x="28" y="32" textAnchor="middle"
-              fontFamily="Cagliostro, serif" fontSize="16"
-              fill="var(--ink)">{value}</text>
-          </svg>
-          <div className="reg-dial-buttons">
-            <button onClick={() => onSet(Math.max(0, value - 1))} aria-label="decrement">−</button>
-            <button onClick={() => onSet(Math.min(chan.cap, value + 1))} aria-label="increment">+</button>
-          </div>
-        </div>
-        <div className="reg-name">{chan.name}</div>
-        <div className="reg-cap">/{chan.cap}</div>
-      </div>
-    )
+// ─── useRegLog — load + mutate a day's regulation_log rows ───
+// Each mutation writes the row, updates local state for an instant ring redraw,
+// then calls onAfterChange(nextRows) so the editor can re-save the day's closing
+// balance (which now depends on the log total) and carry it forward.
+function useRegLog(userId, dateStr, onAfterChange) {
+  const [rows, setRows]     = useState([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    setLoaded(false)
+    loadRegulationLog(userId, dateStr)
+      .then(r => { if (alive) { setRows(r); setLoaded(true) } })
+      .catch(err => { console.error('failed to load regulation log', err); if (alive) setLoaded(true) })
+    return () => { alive = false }
+  }, [userId, dateStr])
+
+  async function addRoutine(slot, routine) {
+    const inserted = await addRoutineLog({ userId, dateStr, slot, routine })
+    const next = [...rows.filter(r => !(r.kind === 'routine' && r.slot === slot)), inserted]
+    setRows(next)
+    await onAfterChange?.(next)
   }
+  async function addAction(action) {
+    const maxSort = rows.filter(r => r.kind === 'action').reduce((m, r) => Math.max(m, r.sort_order ?? 0), 1)
+    const inserted = await addActionLog({ userId, dateStr, action, sortOrder: maxSort + 1 })
+    const next = [...rows, inserted]
+    setRows(next)
+    await onAfterChange?.(next)
+  }
+  async function removeRow(row) {
+    await deleteRegLogRow(row.id)
+    const next = rows.filter(r => r.id !== row.id)
+    setRows(next)
+    await onAfterChange?.(next)
+  }
+
+  return { rows, loaded, total: sumRegLog(rows), hasRows: rows.length > 0, addRoutine, addAction, removeRow }
+}
+
+// ─── OldPipReadout — read-only view of an older day's retired pip regulation ───
+// Older days logged with the four pip channels keep their number, untouched.
+function OldPipReadout({ values }) {
+  const total = (values.sensory || 0) + (values.av || 0) + (values.env || 0) + (values.body || 0)
   return (
-    <div className="reg-channel">
-      <div className="reg-pips">
-        {Array.from({ length: chan.cap }, (_, i) => (
-          <button key={i}
-                  type="button"
-                  className={`reg-pip ${i < value ? 'on' : ''}`}
-                  onClick={() => onSet(i + 1 === value ? i : i + 1)}
-                  title={`${chan.name}: ${i + 1}/${chan.cap}`} />
+    <div style={{ border: '1px dashed #2b3a60', borderRadius: 12, padding: '13px 15px', background: 'rgba(20,29,54,.25)' }}>
+      <div style={{ fontStyle: 'italic', color: '#9aa6c6', fontSize: 13, marginBottom: 7 }}>
+        logged the old way · {total} regulation {total === 1 ? 'point' : 'points'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12, color: '#65718f' }}>
+        {REG_CHANNELS.map(c => (
+          <span key={c.k}>{c.name} {values[c.k] || 0}/{c.cap}</span>
         ))}
       </div>
-      <div className="reg-name">{chan.name}</div>
-      <div className="reg-cap">{value}/{chan.cap}</div>
     </div>
   )
 }
 
-// ─── Regulation ───
-function Regulation({ values, onChange, recovery, onRecovery, goodSigns, onGood }) {
+// ─── RegulationSection — recovery toggle + the grid (or old read-out) + good signs ───
+// The four pip channels retired; the daily grid takes their place. recovery-sleep
+// and the flow / crisis good-signs stay exactly as they were.
+function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, readOnly = false }) {
   return (
     <section className="reg-section">
       <div className="ledger-head">
@@ -368,12 +382,15 @@ function Regulation({ values, onChange, recovery, onRecovery, goodSigns, onGood 
           <span>recovery sleep <i>(beyond regular sleep)</i></span>
         </label>
       </div>
-      <div className="reg-row">
-        {REG_CHANNELS.map(c => (
-          <RegChannel key={c.k} chan={c} value={values[c.k] || 0}
-            onSet={v => onChange(c.k, v)} />
-        ))}
-      </div>
+      {oldPip
+        ? <OldPipReadout values={oldPip} />
+        : <RegulationGrid
+            rows={regLog.rows}
+            onAddRoutine={regLog.addRoutine}
+            onAddAction={regLog.addAction}
+            onRemove={regLog.removeRow}
+            readOnly={readOnly}
+          />}
       <div className="good-signs-row">
         {GOOD_SIGNS.map(s => (
           <button key={s.k}
@@ -773,7 +790,7 @@ function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick,
 }
 
 // ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus, isPurple = false }) {
+function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus, isPurple = false, regLogTotal = null, regLogRows = [] }) {
   const [expanding, setExpanding] = useState(null)
 
   function handleOrbClick(key) {
@@ -798,6 +815,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
       date:          dateStr || todayDateStr(),
       openingBalance,
       flowActivity:  flowOverride,
+      regulationLogTotal: regLogTotal,
       regulation: {
         sensoryComfort: regulation.sensory || 0,
         audioVisual:    regulation.av      || 0,
@@ -842,19 +860,29 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
       </>}
     </div>
   )
-  const regDetail = (
-    <div className="sky-detail sky-detail--grid">
-      {REG_CHANNELS.map(c => {
-        const cur = regulation[c.k] || 0
-        const under = (c.cap - cur) > 2
-        return (
-          <div key={c.k} className={`sky-det-cell${under ? ' sky-det-teal' : ''}`}>
-            <span>{c.name}</span><span>{Math.round(cur)}/{c.cap}</span>
+  const regDetail = regLogTotal != null
+    ? (
+      <div className="sky-detail sky-detail--grid">
+        {regLogRows.map(r => (
+          <div key={r.id} className="sky-det-cell">
+            <span>{r.label}</span><span>+{r.points}</span>
           </div>
-        )
-      })}
-    </div>
-  )
+        ))}
+      </div>
+    )
+    : (
+      <div className="sky-detail sky-detail--grid">
+        {REG_CHANNELS.map(c => {
+          const cur = regulation[c.k] || 0
+          const under = (c.cap - cur) > 2
+          return (
+            <div key={c.k} className={`sky-det-cell${under ? ' sky-det-teal' : ''}`}>
+              <span>{c.name}</span><span>{Math.round(cur)}/{c.cap}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
 
   const peakStr = String(Math.round(peak))
   const leStr   = String(Math.round(livedExperience))
@@ -951,6 +979,12 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [allEntries,     setAllEntries]     = useState([])
   const [purpleOverride, setPurpleOverride] = useState(null)
 
+  // The day's regulation grid. After each add/remove, re-save so the closing
+  // balance (now driven by the log total) carries forward correctly.
+  const regLog = useRegLog(session.user.id, dateStr, (next) =>
+    autoSave({ regLogTotal: next.length ? sumRegLog(next) : null }))
+  const regLogTotal = regLog.hasRows ? regLog.total : null
+
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
 
   useEffect(() => {
@@ -1011,6 +1045,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
     const gs    = patch.goodSigns     ?? goodSigns
     const melt  = patch.meltdown      ?? meltdown
     const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
+    const rlt   = patch.regLogTotal   !== undefined ? patch.regLogTotal : regLogTotal
     setSaveStatus('saving…')
     try {
       const { entryData, peakDebit } = internalToDb({
@@ -1018,7 +1053,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
-        purpleOverride: pOver,
+        purpleOverride: pOver, regLogTotal: rlt,
       })
       if (isToday) {
         const ps = getPurpleState(dateStr, allEntries, settings.purpleFloors, pOver)
@@ -1041,7 +1076,6 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const onAdd    = (ev) => { const n=[...userEvents,ev];              setUserEvents(n); autoSave({ userEvents: n }) }
   const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
   const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
-  const onRegChange = (k,v) => { const n={...regulation,[k]:v};         setRegulation(n); autoSave({ regulation: n }) }
   const onWarning   = (k)   => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
   const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
@@ -1087,6 +1121,8 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         onClose={() => onDrillThrough?.(null)}
         saveStatus={saveStatus}
         isPurple={purpleState.isPurple}
+        regLogTotal={regLogTotal}
+        regLogRows={regLog.rows}
       />
       {drillThrough && (
         <div className="sky-drill" key={drillThrough}>
@@ -1115,13 +1151,12 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
             </>
           )}
           {(drillThrough === 'reg' || drillThrough === 'le') && (
-            <Regulation
-              values={regulation}
-              onChange={onRegChange}
+            <RegulationSection
               recovery={recovery}
               onRecovery={onRecovery}
               goodSigns={goodSigns}
               onGood={onGood}
+              regLog={regLog}
             />
           )}
         </div>
@@ -1151,12 +1186,13 @@ function hedPeakColor(peak, thr) {
   if (peak >= (thr.yellow   ?? 15)) return '#f0b825'
   return '#2ed468'
 }
-function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr) {
+function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr, regLogTotal = null) {
   // Thin wrapper — delegates to computeDisplayValues so all three views share one formula
   const { peakDebit, activeRegulation, livedExperience } = computeDisplayValues({
     date:          dateStr,
     openingBalance,
     flowActivity:  goodSigns.flow,
+    regulationLogTotal: regLogTotal,
     regulation: {
       sensoryComfort: regulation.sensory || 0,
       audioVisual:    regulation.av      || 0,
@@ -1244,6 +1280,16 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const [purpleOverride, setPurpleOverride] = useState(null)
   const todayStr = todayDateStr()
 
+  // Day's regulation grid. Re-save on every change so the closing balance carries
+  // forward (history edits cascade to every following day).
+  const regLog = useRegLog(session.user.id, dateStr, (next) =>
+    autoSave({ regLogTotal: next.length ? sumRegLog(next) : null }))
+  const regLogTotal = regLog.hasRows ? regLog.total : null
+  // Older days logged with the retired pip channels stay read-only (no grid rows,
+  // but a saved pip number). New or empty days get the editable grid.
+  const pipSum = (regulation.sensory || 0) + (regulation.av || 0) + (regulation.env || 0) + (regulation.body || 0)
+  const showOldPip = regLog.loaded && !regLog.hasRows && pipSum > 0
+
   useEffect(() => {
     loadAllEntriesV2(session.user.id)
       .then(rows => setAllEntries(rows))
@@ -1313,6 +1359,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     const gs    = patch.goodSigns     ?? goodSigns
     const melt  = patch.meltdown      ?? meltdown
     const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
+    const rlt   = patch.regLogTotal   !== undefined ? patch.regLogTotal : regLogTotal
     setSaveStatus('saving…')
     try {
       const { entryData, peakDebit } = internalToDb({
@@ -1320,7 +1367,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
-        purpleOverride: pOver,
+        purpleOverride: pOver, regLogTotal: rlt,
       })
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       await recalculateFromDateV2(session.user.id, dateStr, settings)
@@ -1337,7 +1384,6 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
   const onAdd    = (ev) => { const n=[...userEvents,ev];              setUserEvents(n); autoSave({ userEvents: n }) }
   const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
   const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
-  const onRegChange = (k,v) => { const n={...regulation,[k]:v};         setRegulation(n); autoSave({ regulation: n }) }
   const onWarning   = (k)   => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
   const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
   const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
@@ -1359,7 +1405,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
     if (d < weekStart || d > hedAddDays(weekStart, 6)) setWeekStart(hedWeekMonday(d))
   }
 
-  const skyNums  = calcSkyNums(userEvents, regulation, openingBalance, { ...settings, taxValue: stampedTax }, goodSigns, dateStr)
+  const skyNums  = calcSkyNums(userEvents, regulation, openingBalance, { ...settings, taxValue: stampedTax }, goodSigns, dateStr, regLogTotal)
   const [y, mo, da] = dateStr.split('-').map(Number)
   const dateLabel    = `${HED_MON[mo-1]} ${da} · ${y}`
 
@@ -1422,13 +1468,13 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
               </div>
               <Composer onAdd={onAdd} />
             </section>
-            <Regulation
-              values={regulation}
-              onChange={onRegChange}
+            <RegulationSection
               recovery={recovery}
               onRecovery={onRecovery}
               goodSigns={goodSigns}
               onGood={onGood}
+              regLog={regLog}
+              oldPip={showOldPip ? regulation : null}
             />
             <WarningSigns flags={warning} onToggle={onWarning} />
             <MeltdownSection active={meltdown} onToggle={onMeltdown} />

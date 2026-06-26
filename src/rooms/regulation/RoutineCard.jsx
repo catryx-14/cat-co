@@ -60,7 +60,7 @@ function ScienceOverlay({ ingredient, onClose }) {
   )
 }
 
-export default function RoutineCard({ routineId, onBack, onEdit }) {
+export default function RoutineCard({ routineId, onBack, onEdit, backLabel = '‹ all routines' }) {
   const [routine, setRoutine] = useState(null)
   const [band, setBand] = useState(null)
   const [sci, setSci] = useState(null)
@@ -85,7 +85,7 @@ export default function RoutineCard({ routineId, onBack, onEdit }) {
 
   return (
     <div style={bandVars}>
-      <button className="reg-back" onClick={onBack}>‹ all routines</button>
+      <button className="reg-back" onClick={onBack}>{backLabel}</button>
 
       <div className="bands">
         {BANDS.map(b => {
@@ -186,9 +186,11 @@ export default function RoutineCard({ routineId, onBack, onEdit }) {
             {face.dose_note && <div className="dosenote">{face.dose_note}</div>}
             <div className="capnote">full is the cap — more isn’t better. PT, not a scoreboard.</div>
 
-            <div className="editrow">
-              <button className="editbtn" onClick={() => onEdit(band)}>edit this {BAND_LABEL[band]} face</button>
-            </div>
+            {onEdit && (
+              <div className="editrow">
+                <button className="editbtn" onClick={() => onEdit(band)}>edit this {BAND_LABEL[band]} face</button>
+              </div>
+            )}
           </div>
         </div>
       )}
