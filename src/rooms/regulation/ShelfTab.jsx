@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  loadShelf, loadActions, createTool,
+  loadShelf, loadActions, createTool, updateTool,
   CHANNEL_AISLES, CHANNEL_NOTES,
 } from './lib/regulationDb.js'
 
@@ -20,29 +20,52 @@ const DETAIL_FIELDS = [
   ['time', 'time_component'],
   ['effort to use', 'access_cost'],
 ]
+// The editable write-up fields (same set as the read view).
+const EDIT_FIELDS = DETAIL_FIELDS
 
-export default function ShelfTab({ userId, onJumpToActions }) {
+function blankToolDraft() {
+  return { id: null, name: '', channel_primary: '', marker: 'tool',
+    fields: { description: '', how_to_use: '', the_science: '', notes_variations: '', time_component: '', access_cost: '' } }
+}
+function toolDraftFrom(c) {
+  return { id: c.id, name: c.name, channel_primary: c.channel_primary || '', marker: c.marker && MK[c.marker] ? c.marker : 'tool',
+    fields: {
+      description: c.description || '', how_to_use: c.how_to_use || '', the_science: c.the_science || '',
+      notes_variations: c.notes_variations || '', time_component: c.time_component || '', access_cost: c.access_cost || '',
+    } }
+}
+
+export default function ShelfTab({ userId, onJumpToActions, focusToolId = null, onConsumedFocus }) {
   const [tools, setTools]     = useState(null)
   const [actions, setActions] = useState([])
   const [filter, setFilter]   = useState(null)
   const [query, setQuery]     = useState('')
-  const [openAisles, setOpenAisles] = useState({ 0: true })
+  const [openAisles, setOpenAisles] = useState({})   // all aisles closed on arrival
   const [sel, setSel]         = useState(null)   // selected card for the detail dock
   const [addTo, setAddTo]     = useState(null)   // channel name we're adding a card to
   const [addName, setAddName] = useState('')
   const [addMarker, setAddMarker] = useState('tool')
   const [busy, setBusy]       = useState(false)
+  const [draft, setDraft]     = useState(null)   // full card editor (new / edit)
 
   const refresh = () => loadShelf().then(setTools).catch(e => { console.error('[Regulation] load shelf', e); setTools([]) })
   useEffect(() => { refresh(); loadActions().then(setActions).catch(() => {}) }, [])
 
-  // tool_id → [action names]
+  // tool_id → [{ id, name }] of the actions backed by that card
   const actionsByTool = useMemo(() => {
     const m = {}
-    for (const a of actions) { if (a.tool_id != null) (m[a.tool_id] ||= []).push(a.name) }
+    for (const a of actions) { if (a.tool_id != null) (m[a.tool_id] ||= []).push({ id: a.id, name: a.name }) }
     return m
   }, [actions])
   const hasAction = (id) => !!actionsByTool[id]
+
+  // Deep-link in from an action card → open that backing shelf card.
+  useEffect(() => {
+    if (focusToolId == null || !tools) return
+    const t = tools.find(x => x.id === focusToolId)
+    if (t) setSel(t)
+    onConsumedFocus?.()
+  }, [focusToolId, tools])
 
   // channel → cards (from the live pool), plus any channels not in the static map
   const byChannel = useMemo(() => {
@@ -91,6 +114,35 @@ export default function ShelfTab({ userId, onJumpToActions }) {
       setAddName(''); setAddTo(null); setAddMarker('tool')
       await refresh()
     } catch (e) { console.error('[Regulation] add card', e) }
+    finally { setBusy(false) }
+  }
+
+  // ── Full card editor (new / edit) ──
+  const patch = (f) => setDraft(d => ({ ...d, ...f }))
+  const patchField = (k, v) => setDraft(d => ({ ...d, fields: { ...d.fields, [k]: v } }))
+  function openNewCard()  { setSel(null); setDraft(blankToolDraft()) }
+  function openEditCard(c){ setSel(null); setDraft(toolDraftFrom(c)) }
+  function closeDraft()   { setDraft(null) }
+
+  async function saveDraft() {
+    if (busy || !draft.name.trim() || !draft.channel_primary) return
+    setBusy(true)
+    try {
+      const f = draft.fields
+      const hasWriteup = !!(f.description.trim() || f.how_to_use.trim() || f.the_science.trim() || f.notes_variations.trim())
+      const textFields = {
+        description: f.description.trim() || null, how_to_use: f.how_to_use.trim() || null,
+        the_science: f.the_science.trim() || null, notes_variations: f.notes_variations.trim() || null,
+        time_component: f.time_component.trim() || null, access_cost: f.access_cost.trim() || null,
+      }
+      if (draft.id == null) {
+        await createTool({ name: draft.name.trim(), channel: draft.channel_primary, marker: draft.marker, userId, has_card: hasWriteup, fields: textFields })
+      } else {
+        await updateTool(draft.id, { name: draft.name.trim(), channel_primary: draft.channel_primary, marker: draft.marker, has_card: hasWriteup, ...textFields })
+      }
+      await refresh()
+      closeDraft()
+    } catch (e) { console.error('[Regulation] save card', e) }
     finally { setBusy(false) }
   }
 
@@ -177,6 +229,51 @@ export default function ShelfTab({ userId, onJumpToActions }) {
               </div>
             )
           })}
+          <button className="rr-addnew" onClick={openNewCard}>+ new card</button>
+        </>
+      )}
+
+      {/* full card editor (new / edit) */}
+      {draft && (
+        <>
+          <div className="rr-scrim" onClick={closeDraft} />
+          <div className="rr-dock up"><div className="dwrap">
+            <button className="dx" onClick={closeDraft}>×</button>
+            <input className="rr-nameinput" value={draft.name} autoFocus
+              placeholder="name this card…" onChange={e => patch({ name: e.target.value })} />
+
+            <div className="meta">
+              <span className="rr-ptsedit">kind
+                {['do', 'dont', 'tool', 'coreg'].map(m => (
+                  <button key={m} className={`rr-pb ${draft.marker === m ? 'on' : ''}`} onClick={() => patch({ marker: m })} title={MK[m][1]}>{MK[m][0]}</button>
+                ))}
+              </span>
+            </div>
+
+            <div className="rr-field">
+              <div className="rr-flabel">channel · how it regulates</div>
+              <select className="rr-select" value={draft.channel_primary} onChange={e => patch({ channel_primary: e.target.value })}>
+                <option value="">choose a channel…</option>
+                {CHANNEL_AISLES.map(([aisle, chans]) => (
+                  <optgroup key={aisle} label={aisle}>
+                    {chans.map(ch => <option key={ch} value={ch}>{ch}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            {EDIT_FIELDS.map(([label, key]) => (
+              <div className="rr-dsec" key={key}>
+                <div className="dl">{label}</div>
+                <textarea className="rr-ta" value={draft.fields[key]} placeholder={`${label}… (optional)`}
+                  onChange={e => patchField(key, e.target.value)} />
+              </div>
+            ))}
+
+            <button className="rr-savebtn" disabled={!draft.name.trim() || !draft.channel_primary || busy} onClick={saveDraft}>
+              {draft.id == null ? 'add card' : 'save'}
+            </button>
+          </div></div>
         </>
       )}
 
@@ -203,10 +300,11 @@ export default function ShelfTab({ userId, onJumpToActions }) {
               </div></div>
             )}
             {hasAction(sel.id) && (
-              <div className="rr-dsci">↳ used as the action <b>{actionsByTool[sel.id][0]}</b>
-                {onJumpToActions && <button className="rr-mini" style={{ marginLeft: 8 }} onClick={() => { setSel(null); onJumpToActions() }}>go to it →</button>}
+              <div className="rr-dsci">↳ used as the action <b>{actionsByTool[sel.id][0].name}</b>
+                {onJumpToActions && <button className="rr-mini" style={{ marginLeft: 8 }} onClick={() => { const aid = actionsByTool[sel.id][0].id; setSel(null); onJumpToActions(aid) }}>go to it →</button>}
               </div>
             )}
+            <button className="rr-savebtn" onClick={() => openEditCard(sel)}>edit this card</button>
           </div></div>
         </>
       )}

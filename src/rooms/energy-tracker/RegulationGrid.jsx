@@ -1,42 +1,48 @@
 /**
- * RegulationGrid — the daily regulation grid on the Capacity Tracker.
+ * RegulationGrid — the daily regulation surface on the Capacity Tracker: the
+ * "Today" (CHOSEN) half of the two-surface model (engine room id=145 "LOCKED
+ * pt 6"). Top to bottom:
+ *   • two routine slots (morning / evening) — tap to pick a routine (6 pts each)
+ *   • a GROWING "today's choices (N)" list — one chip per picked action
+ *     (name · type tag · +points · ×); the list stretches/shrinks to exactly
+ *     what was chosen (no fixed boxes)
+ *   • a quiet "regulation today" readout (running total). At the 20-point cap a
+ *     single gentle line shows — no bar, no "x of 20", no nudge (visited-not-fed).
  *
- * Two routine boxes (morning / evening) + an 8-box activity grid. Tapping a box
- * opens a searchable slide-up picker (routines for the routine boxes, actions for
- * the activity grid). Filling a box writes a regulation_log row via the parent's
- * handlers; the × removes it. At a 20-point cap the empty activity boxes gray out
- * and lock. Layout / styling / interactions ported from the locked prototype
- * regulation-on-tracker-prototype.html (engine room id=145 "LOCKED pt 5").
+ * Picking actions happens over in the Regulation room's Actions tab ("Manage");
+ * both surfaces write the same per-day `regulation_log`, so they share one day.
+ * Tapping any chip opens its card. The × removes the row.
  *
- * State of the day comes in as `rows` (regulation_log rows). All mutations go
- * through onAddRoutine / onAddAction / onRemove so the parent can recompute the
- * rings and re-save the day's carry-forward closing balance.
+ * State of the day comes in as `rows` (regulation_log rows); all mutations go
+ * through onAddRoutine / onRemove so the parent can recompute the day's rings
+ * and carry-forward closing balance.
  */
 
 import { useEffect, useState } from 'react'
-import { loadRoutineOptions, loadActionOptions, sumRegLog } from '../../shared/lib/regulationLog.js'
+import { loadRoutineOptions, sumRegLog } from '../../shared/lib/regulationLog.js'
 import RoutineCard from '../regulation/RoutineCard.jsx'
 import ActionCard from '../regulation/ActionCard.jsx'
+import ActionBrowser from '../regulation/ActionBrowser.jsx'
 import { REG_STYLES } from '../regulation/regStyles.js'
 
 const CAP = 20
-const NBOX = 8
 
-export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, onRemove, readOnly = false }) {
+export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, onRemove, onEditAction, readOnly = false }) {
   const [routineOpts, setRoutineOpts] = useState([])
-  const [actionOpts,  setActionOpts]  = useState([])
-  const [pick, setPick] = useState(null)   // { mode:'routine'|'activity', slot, q } | null
+  const [pick, setPick] = useState(null)   // { slot, q } | null  (routine picker)
   const [busy, setBusy] = useState(false)
   const [viewRow, setViewRow] = useState(null)   // a logged row whose card is open
+  const [pickerOpen, setPickerOpen] = useState(false)   // the action picker drawer
+  const [togglingId, setTogglingId] = useState(null)    // action id mid-write in the drawer
 
   const openCard = (row) => setViewRow(row)
   const closeCard = () => setViewRow(null)
 
   useEffect(() => {
     let alive = true
-    Promise.all([loadRoutineOptions(), loadActionOptions()])
-      .then(([r, a]) => { if (alive) { setRoutineOpts(r); setActionOpts(a) } })
-      .catch(err => console.error('failed to load picker options', err))
+    loadRoutineOptions()
+      .then(r => { if (alive) setRoutineOpts(r) })
+      .catch(err => console.error('failed to load routine options', err))
     return () => { alive = false }
   }, [])
 
@@ -45,10 +51,29 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
   const activities = rows.filter(r => r.kind === 'action').slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   const total = sumRegLog(rows)
   const capped = total >= CAP
+  const selectedIds = new Set(activities.map(a => a.action_id).filter(id => id != null))
 
-  function openPick(mode, slot) {
+  // Pick / unpick an action from the drawer — writes the same day's log the list reads.
+  async function toggleUse(action) {
+    if (readOnly || togglingId) return
+    setTogglingId(action.id)
+    try {
+      const existing = activities.filter(r => r.action_id === action.id)
+      if (existing.length) {
+        for (const r of existing) await onRemove?.(r)
+      } else if (!capped) {
+        await onAddAction?.(action)
+      }
+    } catch (err) {
+      console.error('failed to toggle action', err)
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  function openPick(slot) {
     if (readOnly) return
-    setPick({ mode, slot, q: '' })
+    setPick({ slot, q: '' })
   }
   function closeSheet() { setPick(null) }
 
@@ -56,14 +81,10 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
     if (busy) return
     setBusy(true)
     try {
-      if (pick.mode === 'routine') {
-        await onAddRoutine?.(pick.slot, opt)
-      } else {
-        if (!capped) await onAddAction?.(opt)
-      }
+      await onAddRoutine?.(pick.slot, opt)
       closeSheet()
     } catch (err) {
-      console.error('failed to log regulation', err)
+      console.error('failed to log routine', err)
     } finally {
       setBusy(false)
     }
@@ -92,50 +113,15 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
       )
     }
     return (
-      <div className={`rg-rbox ghost${readOnly ? ' readonly' : ''}`} onClick={() => openPick('routine', slot)}>
+      <div className={`rg-rbox ghost${readOnly ? ' readonly' : ''}`} onClick={() => openPick(slot)}>
         <span className="rg-g">{ghost}</span>
       </div>
     )
   }
 
-  // ── Activity cells ──
-  const cells = []
-  for (let i = 0; i < NBOX; i++) {
-    const a = activities[i]
-    if (a) {
-      cells.push(
-        <div className="rg-abox" key={a.id} onClick={() => openCard(a)} title="tap to see the card">
-          {!readOnly && <span className="rg-x" onClick={e => { e.stopPropagation(); remove(a) }}>×</span>}
-          <div className="rg-anm">{a.label}</div>
-          <div className="rg-arow">
-            <span className={`rg-atag ${a.action_type === 'all_day' ? 'allday' : 'oneoff'}`}>
-              {a.action_type === 'all_day' ? 'all-day' : 'one-off'}
-            </span>
-            <span className="rg-ap">+{a.points}</span>
-          </div>
-        </div>
-      )
-    } else if (capped) {
-      cells.push(<div className="rg-abox locked" key={`lock${i}`}><span className="rg-g">full</span></div>)
-    } else if (readOnly) {
-      cells.push(<div className="rg-abox ghost readonly" key={`empty${i}`}><span className="rg-g">—</span></div>)
-    } else {
-      cells.push(
-        <div className="rg-abox ghost" key={`add${i}`} onClick={() => openPick('activity', null)}>
-          <span className="rg-g">+ add an activity</span>
-        </div>
-      )
-    }
-  }
-
-  const capMsg = capped
-    ? <div className="rg-capmsg full">you've hit {CAP} — that's a full day's regulation. the rest rest. 🌙</div>
-    : <div className="rg-capmsg">fill what fits — nothing's owed</div>
-
-  // ── Picker sheet ──
-  const opts = pick?.mode === 'routine' ? routineOpts : actionOpts
+  // ── Picker sheet (routines only) ──
   const q = (pick?.q ?? '').toLowerCase()
-  const filtered = (opts || []).filter(o => o.name.toLowerCase().includes(q))
+  const filtered = (routineOpts || []).filter(o => o.name.toLowerCase().includes(q))
 
   return (
     <div className="reg-grid">
@@ -146,13 +132,39 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
         <RoutineBox slot="evening" row={evening} ghost="tap to choose your evening routine" />
       </div>
 
-      <div className="rg-activities">
-        <div className="rg-alabel">
-          activities
-          <span className="rg-cap">all-day choices set in the morning · one-offs as you go</span>
+      <div className="rg-chosen">
+        <div className="rg-chead">
+          <h3>today’s choices</h3>
+          <span className="rg-ct">({activities.length})</span>
+          <span className="rg-readout"><b>{total}</b><span>regulation today</span></span>
         </div>
-        <div className="rg-grid">{cells}</div>
-        {capMsg}
+
+        {activities.length ? (
+          <div className="rg-chiplist">
+            {activities.map(a => (
+              <div className="rg-chip" key={a.id} onClick={() => openCard(a)} title="tap to see the card">
+                <span className="rg-cnm">{a.label}</span>
+                <span className={`rg-ctag ${a.action_type === 'all_day' ? 'allday' : 'oneoff'}`}>
+                  {a.action_type === 'all_day' ? 'all-day' : 'one-off'}
+                </span>
+                <span className="rg-cp">+{a.points}</span>
+                {!readOnly && <button className="rg-cx" onClick={e => { e.stopPropagation(); remove(a) }} title="remove">×</button>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rg-emptynote">
+            {readOnly ? 'nothing was logged this day' : 'nothing logged yet — pick from the Regulation room’s Actions tab, or tap an action through the day'}
+          </div>
+        )}
+
+        {capped && (
+          <div className="rg-capmsg full">you’ve hit {CAP} — that’s a full day’s regulation. the rest rest. 🌙</div>
+        )}
+
+        {!readOnly && !capped && (
+          <button className="rg-addbtn" onClick={() => setPickerOpen(true)}>+ add an action</button>
+        )}
       </div>
 
       {pick && (
@@ -160,7 +172,7 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
           <div className="rg-scrim" onClick={closeSheet} />
           <div className="rg-sheet up">
             <div className="rg-sh">
-              <span className="rg-t">{pick.mode === 'routine' ? 'choose a routine' : 'add an activity'}</span>
+              <span className="rg-t">choose a routine</span>
               <span className="rg-sheet-x" onClick={closeSheet}>×</span>
             </div>
             <div className="rg-search">
@@ -168,7 +180,7 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
               <input
                 autoFocus
                 value={pick.q}
-                placeholder={pick.mode === 'routine' ? 'search your routines…' : 'search your actions…'}
+                placeholder="search your routines…"
                 autoComplete="off"
                 spellCheck={false}
                 onChange={e => setPick(p => ({ ...p, q: e.target.value }))}
@@ -178,15 +190,31 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
               {filtered.length ? filtered.map(o => (
                 <div className="rg-opt" key={o.id} onClick={() => choose(o)}>
                   <span className="rg-on">{o.name}</span>
-                  {pick.mode === 'routine'
-                    ? <span className="rg-src">routine · {o.points}</span>
-                    : <span className={`rg-otag ${o.action_type === 'all_day' ? 'allday' : 'oneoff'}`}>
-                        {o.action_type === 'all_day' ? 'all-day' : 'one-off'}
-                      </span>}
+                  <span className="rg-src">routine · {o.points}</span>
                   <span className="rg-op">+{o.points}</span>
                 </div>
               )) : <div className="rg-nomatch">no match — try a different word</div>}
             </div>
+          </div>
+        </>
+      )}
+
+      {pickerOpen && (
+        <>
+          <div className="rg-pscrim" onClick={() => setPickerOpen(false)} />
+          <div className="rg-pdrawer up">
+            <div className="rg-ph">
+              <span className="rg-pt">add an action</span>
+              <span className="rg-pclose" onClick={() => setPickerOpen(false)}>×</span>
+            </div>
+            <ActionBrowser
+              mode="pick"
+              selectedIds={selectedIds}
+              capped={capped}
+              busyId={togglingId}
+              onToggleUse={toggleUse}
+              onEditInRoom={onEditAction ? (id) => { setPickerOpen(false); onEditAction(id) } : undefined}
+            />
           </div>
         </>
       )}
@@ -206,7 +234,7 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
               {viewRow.kind === 'routine' && viewRow.routine_id && !readOnly && (
                 <div className="rg-swaprow">
                   <button className="rg-swapbtn"
-                    onClick={() => { const slot = viewRow.slot; closeCard(); openPick('routine', slot) }}>
+                    onClick={() => { const slot = viewRow.slot; closeCard(); openPick(slot) }}>
                     choose a different routine
                   </button>
                 </div>
@@ -231,14 +259,14 @@ function MissingCard({ onBack }) {
   )
 }
 
-// Styling ported from regulation-on-tracker-prototype.html, scoped under .reg-grid
-// and prefixed rg- so the generic prototype class names can't collide with the app.
+// Styling ported from the regulation-actions-wireframe "Today" surface, scoped
+// under .reg-grid and prefixed rg- so generic class names can't collide.
 const GRID_STYLES = `
 .reg-grid{
   --rg-ink:#e9edf8; --rg-dim:#9aa6c6; --rg-faint:#65718f; --rg-faint2:#4d587a;
   --rg-line:#243150; --rg-line2:#1c2742;
   --rg-gold:#e6c878; --rg-gold-soft:#f2dfa6;
-  --rg-green:#2FBE86; --rg-teal:#5aa9cf; --rg-rose:#e391b0;
+  --rg-green:#2FBE86; --rg-teal:#5aa9cf; --rg-rose:#e391b0; --rg-amethyst:#b08ae0;
   --rg-serif:"Cormorant Garamond",Georgia,serif;
   color:var(--rg-ink);
 }
@@ -255,31 +283,55 @@ const GRID_STYLES = `
 .reg-grid .rg-rbox .rg-x{color:var(--rg-faint);cursor:pointer;font-size:19px;line-height:1;padding-left:4px;}
 .reg-grid .rg-rbox .rg-x:hover{color:var(--rg-rose);}
 
-.reg-grid .rg-alabel{font-family:var(--rg-serif);font-style:italic;font-size:16px;color:var(--rg-faint);margin:18px 2px 10px;
-  display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
-.reg-grid .rg-alabel .rg-cap{font-size:12.5px;font-style:normal;text-align:right;}
-.reg-grid .rg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
-@media(max-width:560px){.reg-grid .rg-grid{grid-template-columns:repeat(2,1fr);}}
-.reg-grid .rg-abox{border:1.5px solid var(--rg-line);border-radius:12px;min-height:78px;padding:11px;cursor:pointer;transition:.13s;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:5px;background:rgba(20,29,54,.4);position:relative;}
-.reg-grid .rg-abox:hover{border-color:#46598f;}
-.reg-grid .rg-abox.ghost{border-style:dashed;border-color:#33405f;}
-.reg-grid .rg-abox.ghost.readonly{cursor:default;}
-.reg-grid .rg-abox.ghost.readonly:hover{border-color:#33405f;}
-.reg-grid .rg-abox.ghost .rg-g{font-family:var(--rg-serif);font-style:italic;font-size:15px;color:var(--rg-faint);}
-.reg-grid .rg-abox.locked{border-style:dashed;border-color:#1c2742;background:rgba(12,18,30,.4);cursor:default;opacity:.5;}
-.reg-grid .rg-abox.locked .rg-g{font-size:12px;color:var(--rg-faint2);font-style:italic;}
-.reg-grid .rg-abox .rg-anm{font-family:var(--rg-serif);font-size:16.5px;color:var(--rg-ink);line-height:1.15;}
-.reg-grid .rg-abox .rg-arow{display:flex;align-items:center;gap:7px;}
-.reg-grid .rg-abox .rg-atag{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid;border-radius:5px;padding:1px 5px;}
-.reg-grid .rg-abox .rg-atag.allday{color:var(--rg-gold-soft);border-color:rgba(230,200,120,.45);}
-.reg-grid .rg-abox .rg-atag.oneoff{color:var(--rg-teal);border-color:rgba(90,169,207,.4);}
-.reg-grid .rg-abox .rg-ap{font-family:var(--rg-serif);font-size:15px;color:var(--rg-teal);}
-.reg-grid .rg-abox .rg-x{position:absolute;top:5px;right:8px;color:var(--rg-faint);font-size:15px;cursor:pointer;line-height:1;}
-.reg-grid .rg-abox .rg-x:hover{color:var(--rg-rose);}
+/* today's choices — a growing list, not boxes */
+.reg-grid .rg-chosen{margin-top:20px;}
+.reg-grid .rg-chead{display:flex;align-items:baseline;gap:8px;margin:0 2px 11px;}
+.reg-grid .rg-chead h3{font-family:var(--rg-serif);font-size:20px;color:var(--rg-gold-soft);margin:0;font-weight:600;}
+.reg-grid .rg-chead .rg-ct{color:var(--rg-faint);font-size:14px;}
+.reg-grid .rg-readout{margin-left:auto;text-align:right;}
+.reg-grid .rg-readout b{font-family:var(--rg-serif);color:var(--rg-green);font-size:18px;font-variant-numeric:tabular-nums;}
+.reg-grid .rg-readout span{color:var(--rg-faint2);font-size:10.5px;display:block;letter-spacing:.04em;}
 
-.reg-grid .rg-capmsg{margin-top:13px;font-size:12.5px;color:var(--rg-faint);font-style:italic;line-height:1.5;text-align:center;}
-.reg-grid .rg-capmsg.full{color:var(--rg-gold-soft);}
+.reg-grid .rg-chiplist{display:flex;flex-direction:column;gap:7px;}
+.reg-grid .rg-chip{display:flex;align-items:center;gap:11px;background:rgba(20,29,54,.5);border:1px solid var(--rg-line);
+  border-radius:11px;padding:11px 13px;cursor:pointer;transition:.13s;animation:rgpop .18s ease;}
+.reg-grid .rg-chip:hover{border-color:#46598f;}
+@keyframes rgpop{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.reg-grid .rg-chip .rg-cnm{font-family:var(--rg-serif);font-size:17px;color:var(--rg-ink);}
+.reg-grid .rg-chip .rg-ctag{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid;border-radius:5px;padding:1px 6px;}
+.reg-grid .rg-chip .rg-ctag.allday{color:var(--rg-gold-soft);border-color:rgba(230,200,120,.45);}
+.reg-grid .rg-chip .rg-ctag.oneoff{color:var(--rg-teal);border-color:rgba(90,169,207,.4);}
+.reg-grid .rg-chip .rg-cp{margin-left:auto;font-family:var(--rg-serif);font-size:15px;color:var(--rg-teal);font-variant-numeric:tabular-nums;}
+.reg-grid .rg-chip .rg-cx{border:0;background:transparent;color:var(--rg-faint);font-size:17px;cursor:pointer;line-height:1;padding:0 2px;}
+.reg-grid .rg-chip .rg-cx:hover{color:var(--rg-rose);}
+
+.reg-grid .rg-emptynote{color:var(--rg-faint);font-style:italic;font-size:13px;border:1px dashed var(--rg-line2);
+  border-radius:11px;padding:16px;text-align:center;line-height:1.5;}
+.reg-grid .rg-capmsg{margin-top:13px;font-size:12.5px;color:var(--rg-gold-soft);font-style:italic;line-height:1.5;text-align:center;}
+
+/* + add an action — opens the picker drawer */
+.reg-grid .rg-addbtn{margin-top:13px;width:100%;border:1px dashed #33405f;background:rgba(20,29,54,.3);color:var(--rg-faint);
+  border-radius:12px;padding:13px;font-family:var(--rg-serif);font-style:italic;font-size:16px;cursor:pointer;transition:.13s;}
+.reg-grid .rg-addbtn:hover{border-color:#56689c;color:var(--rg-dim);}
+
+/* picker drawer — side on desktop, slide-up sheet on phone */
+.rg-pscrim{position:fixed;inset:0;background:rgba(4,8,16,.55);backdrop-filter:blur(2px);z-index:60;}
+.rg-pdrawer{position:fixed;z-index:61;background:linear-gradient(180deg,#0e1838 0%,#131f48 60%,#0f1a3a 100%);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.rg-pdrawer .rg-ph{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+.rg-pdrawer .rg-pt{font-family:"Cormorant Garamond",Georgia,serif;font-size:22px;color:#f2dfa6;}
+.rg-pdrawer .rg-pclose{margin-left:auto;color:#65718f;font-size:24px;cursor:pointer;line-height:1;}
+@media(min-width:721px){
+  .rg-pdrawer{right:0;top:0;bottom:0;width:clamp(360px,42vw,520px);border-left:1px solid rgba(232,201,140,.22);
+    padding:24px 26px 48px;transform:translateX(100%);transition:transform .26s cubic-bezier(.3,.7,.3,1);}
+  .rg-pdrawer.up{transform:translateX(0);}
+}
+@media(max-width:720px){
+  .rg-pdrawer{left:0;right:0;bottom:0;max-height:86vh;border-top:1px solid #2f3e63;border-radius:18px 18px 0 0;
+    max-width:660px;margin:0 auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(110%);transition:transform .26s cubic-bezier(.3,.7,.3,1);}
+  .rg-pdrawer.up{transform:translateY(0);}
+}
 
 /* card viewer — tap a filled entry to read its full Activity / Routine card */
 .rg-cardview{position:fixed;inset:0;background:rgba(4,7,15,.74);backdrop-filter:blur(3px);z-index:50;
@@ -310,9 +362,6 @@ const GRID_STYLES = `
   cursor:pointer;background:rgba(20,29,54,.45);transition:.13s;}
 .rg-sheet .rg-opt:hover{border-color:#56689c;background:rgba(28,39,68,.6);}
 .rg-sheet .rg-on{font-family:"Cormorant Garamond",Georgia,serif;font-size:18px;color:#e9edf8;}
-.rg-sheet .rg-otag{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid;border-radius:5px;padding:1px 6px;}
-.rg-sheet .rg-otag.allday{color:#f2dfa6;border-color:rgba(230,200,120,.45);}
-.rg-sheet .rg-otag.oneoff{color:#5aa9cf;border-color:rgba(90,169,207,.4);}
 .rg-sheet .rg-op{margin-left:auto;font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;color:#2FBE86;}
 .rg-sheet .rg-src{font-size:10.5px;color:#65718f;font-style:italic;margin-left:6px;}
 .rg-sheet .rg-nomatch{color:#65718f;font-style:italic;font-size:13px;padding:14px;text-align:center;}

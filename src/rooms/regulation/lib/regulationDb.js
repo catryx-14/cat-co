@@ -22,6 +22,42 @@ export const CHANNEL_AISLES = [
   ['Proactive conditions', ['Predictability & structure', 'Restoration']],
 ]
 export const ALL_CHANNELS = CHANNEL_AISLES.flatMap(([, chs]) => chs)
+
+// ── Action GROUPS — the "life-lived" clusters used by the Manage picker ───────
+// GROUP (how life is lived) is a friendlier layer than the raw channel. It is
+// DERIVED live from each action's backing-card channel_primary via this map —
+// nothing is stored on `actions`. (Engine room id=145 "LOCKED pt 6" §5.)
+export const CHANNEL_GROUP = {
+  'Restoration': 'Food, water & rest',
+  'Demand/social shielding': 'Taking load off',
+  'Predictability & structure': "Knowing what's next",
+  'Thermal': 'Warmth',
+  'Deep pressure': 'Pressure & body',
+  'Movement': 'Pressure & body',
+  'Tactile': 'Touch in hand',
+  'Sensory-shielding': 'Quiet & shielding',
+  'Sound': 'Sound',
+  'Orienting': 'Outside & senses',
+  'Aesthetic & awe': 'Outside & senses',
+  'Smell & taste': 'Outside & senses',
+  'Co-regulation': 'People nearby',
+  'Release / discharge': 'Release',
+  'Effortful absorption': 'Mind & absorption',
+  'Gentle absorption': 'Mind & absorption',
+  'Externalizing': 'Naming & offloading',
+  'Cognitive defusion': 'Naming & offloading',
+}
+// Display order: "setting up the day" groups first, then body, senses, mind.
+export const ACTION_GROUP_ORDER = [
+  'Food, water & rest', 'Taking load off', "Knowing what's next", 'Warmth',
+  'Pressure & body', 'Touch in hand', 'Quiet & shielding', 'Sound',
+  'Outside & senses', 'People nearby', 'Release', 'Mind & absorption', 'Naming & offloading',
+]
+const GROUP_FALLBACK = 'Other'
+// The group for one action, from its backing card's primary channel.
+export function groupForAction(a) {
+  return CHANNEL_GROUP[a?.backing?.channel_primary] || GROUP_FALLBACK
+}
 // channel → a small note shown under its header on the Shelf
 export const CHANNEL_NOTES = {
   'Monotropic flow': "Mostly handled by SI Flow — tracked separately (it cancels the autistic tax and earns the day's regulation %), so the doing-the-flow cards aren't kept here, to avoid counting it twice.",
@@ -75,14 +111,16 @@ export async function loadRoutine(routineId) {
 }
 
 // ── One action (the "Activity" card) with its five optional sections ─────────
+// Carries the backing shelf card (id/name/channels/tags) so the card can show
+// its channel tags, a "first aid" badge, and a link through to the science.
 export async function loadAction(actionId) {
   const { data, error } = await supabase
     .from('actions')
-    .select('id, name, points, action_type, what_it_is, how_to_use, what_counts, stop_if, why_it_helps')
+    .select('id, name, points, action_type, tool_id, what_it_is, how_to_use, what_counts, stop_if, why_it_helps, regulation_tools(id, name, channel_primary, channels_secondary, tags)')
     .eq('id', actionId)
     .single()
   if (error) throw error
-  return data
+  return { ...data, backing: data.regulation_tools || null }
 }
 
 // ── The science card behind an ingredient chip (only when tool_id is set) ────
@@ -175,28 +213,50 @@ export async function loadShelf() {
 
 // New card in a channel — usable while unfinished (has_card false; science later).
 // id is GENERATED ALWAYS (omit it). RLS requires created_by_user_id = auth.uid().
-export async function createTool({ name, channel, marker = null, userId }) {
+// `fields` carries the optional write-up columns (description / the_science / …)
+// when a card is authored in full from the Shelf editor.
+export async function createTool({ name, channel, marker = null, userId, has_card = false, fields = {} }) {
   const { data, error } = await supabase
     .from('regulation_tools')
     .insert({
       name, channel_primary: channel, marker,
-      has_card: false, is_personal: true, tags: [],
+      has_card, is_personal: true, tags: [],
       created_by_user_id: userId,
+      ...fields,
     })
-    .select('id, name, marker, channel_primary, channels_secondary, has_card, is_personal, tags, created_by_user_id')
+    .select('id, name, marker, channel_primary, channels_secondary, has_card, is_personal, tags, description, how_to_use, the_science, notes_variations, time_component, access_cost, created_by_user_id')
     .single()
   if (error) throw error
   return data
+}
+
+// Edit an existing shelf card (name / channel / marker / the write-up fields).
+export async function updateTool(id, fields) {
+  const { error } = await supabase.from('regulation_tools').update(fields).eq('id', id)
+  if (error) throw error
 }
 
 // ── Actions tab: single regulating acts, each backed 1:1 by a shelf card ──────
 export async function loadActions() {
   const { data, error } = await supabase
     .from('actions')
-    .select('id, name, points, action_type, tool_id, what_it_is, how_to_use, what_counts, stop_if, why_it_helps, sort_order, regulation_tools(name, channel_primary)')
+    .select('id, name, points, action_type, tool_id, what_it_is, how_to_use, what_counts, stop_if, why_it_helps, sort_order, regulation_tools(id, name, channel_primary, channels_secondary, tags)')
     .order('sort_order')
   if (error) throw error
-  return (data || []).map(a => ({ ...a, backing: a.regulation_tools || null }))
+  return (data || []).map(a => {
+    const backing = a.regulation_tools || null
+    return {
+      ...a,
+      backing,
+      // Channel tags (how it regulates) read live from the backing card.
+      channels: backing
+        ? [backing.channel_primary, ...(backing.channels_secondary || [])].filter(Boolean)
+        : [],
+      // "first aid" is a curation tag on the backing card — a separate badge.
+      firstAid: !!(backing?.tags || []).includes('first aid'),
+      group: CHANNEL_GROUP[backing?.channel_primary] || GROUP_FALLBACK,
+    }
+  })
 }
 
 export async function createAction({ userId, name, action_type, points, tool_id, sections = {} }) {

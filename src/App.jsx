@@ -392,10 +392,10 @@ function Rail({ inRoom, current, onPick, onHome, railPins }) {
 }
 
 // ─── RoomView ───
-function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onThresholdsChange, trackerInitTab, pins, onAddPin, onRemovePin }) {
+function RoomView({ roomKey, onHome, onRoom, onSettings, onEditAction, session, settings, onThresholdsChange, trackerInitTab, regulationInitAction, onConsumedInitAction, pins, onAddPin, onRemovePin }) {
   const room = ROOMS.find(r => r.key === roomKey)
   if (roomKey === 'tracker') {
-    return <TrackerV2Room onHome={onHome} onRoom={onRoom} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
+    return <TrackerV2Room onHome={onHome} onRoom={onRoom} onEditAction={onEditAction} session={session} settings={settings} onThresholdsChange={onThresholdsChange} initialTab={trackerInitTab} />
   }
   if (roomKey === 'sparks') {
     return <SparksRoom roomName={room?.name ?? 'Sparks'} onSettings={onSettings} />
@@ -407,7 +407,8 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, session, settings, onTh
     return <FirstAidRoom onSettings={onSettings} />
   }
   if (roomKey === 'regulation') {
-    return <RegulationRoom onSettings={onSettings} />
+    return <RegulationRoom onSettings={onSettings} session={session}
+             initActionId={regulationInitAction} onConsumedInitAction={onConsumedInitAction} />
   }
   if (roomKey === 'herding-cats') {
     return <GamesRoom roomName="herding cats" onSettings={onSettings} initialGame="cat-sort" />
@@ -531,6 +532,7 @@ function HubApp({ session }) {
   }, [view])
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)
+  const [regulationInitAction, setRegulationInitAction] = useState(null)
 
   const goRoom = (key) => {
     if (key === 'tracker') setTrackerInitTab(null)
@@ -538,6 +540,8 @@ function HubApp({ session }) {
   }
   const goHome = () => setView('hub')
   const goSettings = () => { setTrackerInitTab('settings'); setView('tracker') }
+  // Jump from the Tracker's picker to a specific action's card in the Regulation room.
+  const goEditAction = (actionId) => { setRegulationInitAction(actionId); setView('regulation') }
 
   const fadeClass = `view-fade ${view === 'hub' ? 'is-hub' : 'is-room'}`
 
@@ -551,7 +555,7 @@ function HubApp({ session }) {
           <div className={fadeClass} key={view}>
             {view === 'hub'
               ? <HubView onPick={goRoom} pins={pins} />
-              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} pins={pins} onAddPin={addPin} onRemovePin={removePin} />}
+              : <RoomView roomKey={view} onHome={goHome} onRoom={goRoom} onSettings={goSettings} onEditAction={goEditAction} session={session} settings={settings} onThresholdsChange={updateThresholds} trackerInitTab={trackerInitTab} regulationInitAction={regulationInitAction} onConsumedInitAction={() => setRegulationInitAction(null)} pins={pins} onAddPin={addPin} onRemovePin={removePin} />}
           </div>
         </main>
       </div>

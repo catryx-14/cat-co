@@ -372,7 +372,7 @@ function OldPipReadout({ values }) {
 // ─── RegulationSection — recovery toggle + the grid (or old read-out) + good signs ───
 // The four pip channels retired; the daily grid takes their place. recovery-sleep
 // and the flow / crisis good-signs stay exactly as they were.
-function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, readOnly = false }) {
+function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, onEditAction, readOnly = false }) {
   return (
     <section className="reg-section">
       <div className="ledger-head">
@@ -389,6 +389,7 @@ function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, ol
             onAddRoutine={regLog.addRoutine}
             onAddAction={regLog.addAction}
             onRemove={regLog.removeRow}
+            onEditAction={onEditAction}
             readOnly={readOnly}
           />}
       <div className="good-signs-row">
@@ -959,7 +960,7 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
 // ─── TrackerDayEditor (V2) ───
 // Same as TrackerRoom's TrackerDayEditor but uses V2 data functions.
 // fillGapsBefore is omitted — V2 tables already have all historical data.
-function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough }) {
+function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough, onEditAction }) {
   const dateStr = dateProp || todayDateStr()
   const isToday = dateStr === todayDateStr()
   const [loading,        setLoading]        = useState(true)
@@ -1157,6 +1158,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
               goodSigns={goodSigns}
               onGood={onGood}
               regLog={regLog}
+              onEditAction={onEditAction}
             />
           )}
         </div>
@@ -1261,7 +1263,7 @@ function WeekStrip({ weekStart, selectedDate, entryMap, thresholds, todayStr, on
 }
 
 // ─── HistoryDateEditor (V2) ───
-function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack }) {
+function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack, onEditAction }) {
   const [dateStr, setDateStr]       = useState(initialDateStr)
   const [weekStart, setWeekStart]   = useState(() => hedWeekMonday(hedParseDate(initialDateStr)))
   const [allEntries, setAllEntries] = useState(null)
@@ -1475,6 +1477,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack 
               onGood={onGood}
               regLog={regLog}
               oldPip={showOldPip ? regulation : null}
+              onEditAction={onEditAction}
             />
             <WarningSigns flags={warning} onToggle={onWarning} />
             <MeltdownSection active={meltdown} onToggle={onMeltdown} />
@@ -1646,7 +1649,7 @@ const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct'
 const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 // ─── TrackerV2Room shell ───
-export default function TrackerV2Room({ onHome, onRoom, session, settings: settingsProp, onThresholdsChange, initialTab }) {
+export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, settings: settingsProp, onThresholdsChange, initialTab }) {
   const [settings, setSettings] = useState(settingsProp ?? null)
   const [tab,      setTab]      = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
@@ -1757,7 +1760,7 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
         justifyContent: 'center',
         minHeight: 'var(--today-h, calc(100svh - 100px))',
       }}>
-        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} />
+        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} onEditAction={onEditAction} />
       </div>
 
       {tab === 'history' && !editDate && (
@@ -1776,6 +1779,7 @@ export default function TrackerV2Room({ onHome, onRoom, session, settings: setti
           settings={settings}
           dateStr={editDate}
           onBack={() => setEditDate(null)}
+          onEditAction={onEditAction}
         />
       )}
       {tab === 'settings' && (

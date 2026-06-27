@@ -103,13 +103,29 @@ const TABS = [
   ['actions', 'Actions'],
 ]
 
-export default function RegulationRoom({ onSettings }) {
-  const [tab, setTab] = useState('shelf')
-  const [userId, setUserId] = useState(null)
+export default function RegulationRoom({ onSettings, session, initActionId = null, onConsumedInitAction }) {
+  // Arriving from the Tracker's "edit in the Regulation room" link lands on the
+  // Actions tab with that action's card already open.
+  const [tab, setTab] = useState(initActionId != null ? 'actions' : 'shelf')
+  // Prefer the app's in-memory session (same source every other room uses);
+  // fall back to an auth lookup if a session wasn't handed down.
+  const [authUserId, setAuthUserId] = useState(null)
+  const userId = session?.user?.id ?? authUserId
+  const [focusAction, setFocusAction] = useState(initActionId != null ? initActionId : null)
+  const [focusTool, setFocusTool]     = useState(null)   // action card → its backing shelf card
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data?.user?.id ?? null))
-  }, [])
+    if (session?.user?.id) return
+    supabase.auth.getUser().then(({ data }) => setAuthUserId(data?.user?.id ?? null))
+  }, [session?.user?.id])
+
+  // Consume the one-shot deep-link so re-entering the room later doesn't re-focus.
+  useEffect(() => { if (initActionId != null) onConsumedInitAction?.() }, [])
+
+  // Deep-link from a shelf card to the specific action that uses it.
+  const jumpToAction = (actionId) => { setFocusAction(actionId); setTab('actions') }
+  // Deep-link from an action card to its backing shelf card.
+  const openShelfCard = (toolId) => { setFocusTool(toolId); setTab('shelf') }
 
   return (
     <div className="reg-room">
@@ -129,9 +145,12 @@ export default function RegulationRoom({ onSettings }) {
           ))}
         </div>
 
-        {tab === 'shelf'    && <ShelfTab userId={userId} onJumpToActions={() => setTab('actions')} />}
+        {tab === 'shelf'    && <ShelfTab userId={userId} onJumpToActions={jumpToAction}
+                                 focusToolId={focusTool} onConsumedFocus={() => setFocusTool(null)} />}
         {tab === 'routines' && <RoutinesTab userId={userId} />}
-        {tab === 'actions'  && <ActionsTab userId={userId} />}
+        {tab === 'actions'  && <ActionsTab userId={userId}
+                                 focusActionId={focusAction} onConsumedFocus={() => setFocusAction(null)}
+                                 onOpenShelf={openShelfCard} />}
       </div>
     </div>
   )
