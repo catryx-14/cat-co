@@ -19,6 +19,8 @@ import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState } from '../../shared/lib/math.js'
 import RegulationGrid from './RegulationGrid.jsx'
+import SetTheDayBox from './SetTheDayBox.jsx'
+import { openingBand, greetingWindowFor } from '../../shared/lib/setTheDay.js'
 import {
   loadRegulationLog, addRoutineLog, addActionLog, deleteRegLogRow, sumRegLog,
   splitDayRows, persistDaySplit,
@@ -1165,6 +1167,14 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
         regLogTotal={regLogTotal}
         regLogRows={regLog.rows}
       />
+      {!drillThrough && isToday && (
+        <SetTheDayBox
+          userId={session.user.id}
+          band={openingBand(openingBalance, settings.livedExperienceThresholds, purpleState.isPurple)}
+          window={greetingWindowFor()}
+          dateStr={dateStr}
+        />
+      )}
       {drillThrough && (
         <div className="sky-drill" key={drillThrough}>
           {(drillThrough === 'peak' || drillThrough === 'le') && (
