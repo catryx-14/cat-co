@@ -1170,7 +1170,13 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
       {!drillThrough && isToday && (
         <SetTheDayBox
           userId={session.user.id}
-          band={openingBand(openingBalance, settings.livedExperienceThresholds, purpleState.isPurple)}
+          band={openingBand(
+            // The box reads the day's STARTING LOAD: the opening balance plus the
+            // unavoidable daily autistic tax (the +3 that tips a 13 into yellow).
+            // Events are still excluded, so the band stays stable through the day.
+            openingBalance + (taxCancelled ? 0 : stampedTax),
+            settings.livedExperienceThresholds, purpleState.isPurple
+          )}
           window={greetingWindowFor()}
           dateStr={dateStr}
         />
