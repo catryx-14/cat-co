@@ -1172,9 +1172,11 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
           userId={session.user.id}
           band={openingBand(
             // The box reads the day's STARTING LOAD: the opening balance plus the
-            // unavoidable daily autistic tax (the +3 that tips a 13 into yellow).
-            // Events are still excluded, so the band stays stable through the day.
-            openingBalance + (taxCancelled ? 0 : stampedTax),
+            // unavoidable daily autistic tax. Flow does NOT lighten it — flow / SI
+            // flow is regulation that happens LATER, not where the day started — so
+            // the tax is always counted (only gated by the tax start date). Events
+            // are excluded too, so the band stays the day's stable opening frame.
+            openingBalance + (dateStr >= (settings.taxStartDate ?? '2000-01-01') ? stampedTax : 0),
             settings.livedExperienceThresholds, purpleState.isPurple
           )}
           window={greetingWindowFor()}
