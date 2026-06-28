@@ -2,36 +2,22 @@ import { useState, useEffect, useCallback } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
 import { supabase } from '../../shared/lib/supabase.js'
-import { loadRoutines, createRoutine, BAND_COLOR, BAND_LABEL } from './lib/regulationDb.js'
+import { loadRoutines, createRoutine } from './lib/regulationDb.js'
 import RoutineCard from './RoutineCard.jsx'
 import RoutineEditor from './RoutineEditor.jsx'
 import ShelfTab from './ShelfTab.jsx'
 import ActionsTab from './ActionsTab.jsx'
 import { REG_STYLES } from './regStyles.js'
 
-// Gallery tile: name, subtitle, and the bands this routine spans.
+// Gallery tile: name + subtitle. Routines are flat anchors now (the three faces
+// are retired, id=145), so the tile no longer shows band dots or a "spans" line.
 function RoutineTile({ routine, onOpen }) {
-  const bands = routine.bands || []
-  const spanText = bands.length === 3
-    ? 'spans all three'
-    : bands.length === 0
-      ? 'not built yet'
-      : bands.map(b => BAND_LABEL[b]).join(' · ')
-
+  const built = (routine.bands || []).length > 0
   return (
     <button className="reg-tile" onClick={() => onOpen(routine.id)}>
-      <div className="reg-tile-dots">
-        {['green', 'caution', 'purple'].map(b => (
-          <span
-            key={b}
-            className={`reg-tile-dot ${bands.includes(b) ? 'on' : ''}`}
-            style={bands.includes(b) ? { background: BAND_COLOR[b] } : undefined}
-          />
-        ))}
-      </div>
       <div className="reg-tile-name">{routine.name}</div>
       {routine.subtitle && <div className="reg-tile-sub">{routine.subtitle}</div>}
-      <div className="reg-tile-span">{spanText}</div>
+      {!built && <div className="reg-tile-span">not built yet</div>}
     </button>
   )
 }
@@ -72,10 +58,10 @@ function RoutinesTab({ userId }) {
   }
 
   if (view === 'card' && currentId != null) {
-    return <RoutineCard routineId={currentId} onBack={backToGallery} onEdit={openEditor} />
+    return <RoutineCard routineId={currentId} onBack={backToGallery} onEdit={openEditor} flat />
   }
   if (view === 'editor' && currentId != null) {
-    return <RoutineEditor routineId={currentId} initialBand={editBand} onDone={() => setView('card')} onDeleted={backToGallery} />
+    return <RoutineEditor routineId={currentId} initialBand={editBand} onDone={() => setView('card')} onDeleted={backToGallery} flat />
   }
   return (
     <>

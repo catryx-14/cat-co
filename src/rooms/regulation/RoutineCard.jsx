@@ -60,7 +60,10 @@ function ScienceOverlay({ ingredient, onClose }) {
   )
 }
 
-export default function RoutineCard({ routineId, onBack, onEdit, backLabel = 'â€¹ all routines' }) {
+// `flat` â€” routines are single flat-valued anchors now (the three faces are
+// retired, id=145). In the tracker logging flow we pass flat so the green/yellow/
+// purple face PICKER is not surfaced; the card just reads as the one anchor.
+export default function RoutineCard({ routineId, onBack, onEdit, backLabel = 'â€¹ all routines', flat = false }) {
   const [routine, setRoutine] = useState(null)
   const [band, setBand] = useState(null)
   const [sci, setSci] = useState(null)
@@ -87,22 +90,24 @@ export default function RoutineCard({ routineId, onBack, onEdit, backLabel = 'â€
     <div style={bandVars}>
       <button className="reg-back" onClick={onBack}>{backLabel}</button>
 
-      <div className="bands">
-        {BANDS.map(b => {
-          const exists = !!routine.facesByBand[b]?.built
-          const on = b === band
-          return (
-            <button
-              key={b}
-              className={`bandpill ${on ? 'on' : ''} ${exists ? '' : 'absent'}`}
-              style={on ? { background: BAND_COLOR[b] } : undefined}
-              onClick={() => exists && setBand(b)}
-            >
-              {BAND_LABEL[b]}
-            </button>
-          )
-        })}
-      </div>
+      {!flat && (
+        <div className="bands">
+          {BANDS.map(b => {
+            const exists = !!routine.facesByBand[b]?.built
+            const on = b === band
+            return (
+              <button
+                key={b}
+                className={`bandpill ${on ? 'on' : ''} ${exists ? '' : 'absent'}`}
+                style={on ? { background: BAND_COLOR[b] } : undefined}
+                onClick={() => exists && setBand(b)}
+              >
+                {BAND_LABEL[b]}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {!face ? (
         <div className="card"><div className="cardbody">
@@ -111,7 +116,7 @@ export default function RoutineCard({ routineId, onBack, onEdit, backLabel = 'â€
       ) : (
         <div className="card">
           <div className="headband">
-            <div className="bl">{face.label || BAND_LABEL[band]}</div>
+            {!flat && <div className="bl">{face.label || BAND_LABEL[band]}</div>}
             <h1>{routine.name}</h1>
             {routine.subtitle && <div className="sub">{routine.subtitle}</div>}
           </div>
@@ -188,7 +193,9 @@ export default function RoutineCard({ routineId, onBack, onEdit, backLabel = 'â€
 
             {onEdit && (
               <div className="editrow">
-                <button className="editbtn" onClick={() => onEdit(band)}>edit this {BAND_LABEL[band]} face</button>
+                <button className="editbtn" onClick={() => onEdit(band)}>
+                  {flat ? 'edit this routine' : `edit this ${BAND_LABEL[band]} face`}
+                </button>
               </div>
             )}
           </div>

@@ -36,6 +36,7 @@ export default function ActionBrowser({
   mode = 'manage', reloadSignal = 0, focusActionId = null, onConsumedFocus,
   // pick mode:
   selectedIds, capped = false, onToggleUse, busyId = null, onEditInRoom,
+  featureRecovery = false,
   // manage mode:
   onEdit, onOpenShelf,
 }) {
@@ -77,6 +78,12 @@ export default function ActionBrowser({
     return [...inOrder, ...extras]
   }, [filtered])
 
+  // Purple-day "gathered for you" layer — the recovery-tagged actions surfaced at
+  // the top for easy reach. It SURFACES, it does not gate: every action still lives
+  // in its normal group below, nothing is hidden or blocked.
+  const recoveryRows = (featureRecovery && mode === 'pick')
+    ? filtered.filter(a => a.recovery) : []
+
   return (
     <div className="ab">
       <style>{BROWSE_STYLES}</style>
@@ -103,6 +110,29 @@ export default function ActionBrowser({
 
       {actions === null ? <div className="ab-loading">…</div> : (
         <>
+          {recoveryRows.length > 0 && (
+            <div className="ab-feature">
+              <div className="ab-feathd">
+                <span className="ab-featname">gathered for you</span>
+                <span className="ab-featsub">gentle recovery · uncapped</span>
+              </div>
+              <div className="ab-grows open-rows">
+                {recoveryRows.map(a => (
+                  <ActionRow
+                    key={`feat-${a.id}`} a={a} mode={mode}
+                    on={!!selectedIds?.has(a.id)} capped={capped} busy={busyId === a.id}
+                    exp={expanded.has(a.id)}
+                    onToggleUse={onToggleUse}
+                    onToggleRow={() => toggleRow(a.id)}
+                    onEdit={onEdit}
+                    onOpenShelf={onOpenShelf}
+                    onEditInRoom={onEditInRoom}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="ab-groups">
             {presentGroups.map(g => {
               const rows = filtered.filter(a => a.group === g)
@@ -239,6 +269,15 @@ const BROWSE_STYLES = `
   padding:5px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:.13s;}
 .ab .ab-fchip:hover{border-color:#52639c;}
 .ab .ab-fchip.on{border-color:var(--ab-gold);background:rgba(230,200,120,.13);color:var(--ab-gold-soft);}
+
+/* "gathered for you" — purple-day recovery palette, surfaced at the top */
+.ab .ab-feature{border:1px solid rgba(176,138,224,.34);background:rgba(54,40,90,.18);
+  border-radius:13px;padding:4px 12px 8px;margin-bottom:14px;}
+.ab .ab-feathd{display:flex;align-items:baseline;gap:9px;padding:11px 2px 4px;}
+.ab .ab-featname{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;color:#c9aef0;}
+.ab .ab-featsub{font-size:10.5px;color:var(--ab-faint);font-style:italic;letter-spacing:.03em;}
+.ab .ab-feature .ab-grows{display:block;padding-bottom:2px;}
+.ab .ab-feature .ab-row:first-child{border-top:0;}
 
 .ab .ab-groups{margin-top:4px;}
 .ab .ab-group{border-top:1px solid var(--ab-line);}

@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { loadRoutineOptions, sumRegLog } from '../../shared/lib/regulationLog.js'
+import { loadRoutineOptions, sumRegLog, loadRecoveryActionIds } from '../../shared/lib/regulationLog.js'
 import RoutineCard from '../regulation/RoutineCard.jsx'
 import ActionCard from '../regulation/ActionCard.jsx'
 import ActionBrowser from '../regulation/ActionBrowser.jsx'
@@ -27,13 +27,14 @@ import { REG_STYLES } from '../regulation/regStyles.js'
 
 const CAP = 20
 
-export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, onRemove, onEditAction, readOnly = false }) {
+export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, onRemove, onEditAction, isPurple = false, readOnly = false }) {
   const [routineOpts, setRoutineOpts] = useState([])
   const [pick, setPick] = useState(null)   // { slot, q } | null  (routine picker)
   const [busy, setBusy] = useState(false)
   const [viewRow, setViewRow] = useState(null)   // a logged row whose card is open
   const [pickerOpen, setPickerOpen] = useState(false)   // the action picker drawer
   const [togglingId, setTogglingId] = useState(null)    // action id mid-write in the drawer
+  const [recoveryIds, setRecoveryIds] = useState(() => new Set())   // action ids tagged 'recovery'
 
   const openCard = (row) => setViewRow(row)
   const closeCard = () => setViewRow(null)
@@ -46,12 +47,35 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
     return () => { alive = false }
   }, [])
 
+  // The recovery-tagged action ids drive both the purple-day recovery collection
+  // (care given) and the "gathered for you" palette in the picker.
+  useEffect(() => {
+    if (!isPurple) return
+    let alive = true
+    loadRecoveryActionIds()
+      .then(s => { if (alive) setRecoveryIds(s) })
+      .catch(err => console.error('failed to load recovery action ids', err))
+    return () => { alive = false }
+  }, [isPurple])
+
   const morning = rows.find(r => r.kind === 'routine' && r.slot === 'morning') || null
   const evening = rows.find(r => r.kind === 'routine' && r.slot === 'evening') || null
   const activities = rows.filter(r => r.kind === 'action').slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   const total = sumRegLog(rows)
-  const capped = total >= CAP
+  // Purple days are UNCAPPED — recovery has no ceiling, so nothing greys out at the
+  // floor; points simply route to recovery past the waterline. The 20-pt cap stays
+  // on normal days only.
+  const capped = !isPurple && total >= CAP
   const selectedIds = new Set(activities.map(a => a.action_id).filter(id => id != null))
+
+  // The recovery COLLECTION (purple only) — care given, not a score. Everything
+  // gentle reached for today: any row that overflowed past the line (points_recovery
+  // > 0) PLUS any recovery-tagged action logged today, whichever side it landed.
+  const recoveryItems = isPurple
+    ? rows.filter(r => (r.points_recovery ?? 0) > 0 ||
+                       (r.kind === 'action' && recoveryIds.has(r.action_id)))
+          .slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    : []
 
   // Pick / unpick an action from the drawer — writes the same day's log the list reads.
   async function toggleUse(action) {
@@ -167,6 +191,21 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
         )}
       </div>
 
+      {isPurple && recoveryItems.length > 0 && (
+        <div className="rg-recovery">
+          <div className="rg-rechead">what you reached for today</div>
+          <div className="rg-recsub">care given · the day’s whole job</div>
+          <ul className="rg-reclist">
+            {recoveryItems.map(r => (
+              <li className="rg-recitem" key={`rec-${r.id}`}>
+                <span className="rg-recmark">♥</span>
+                <span className="rg-recnm">{r.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {pick && (
         <>
           <div className="rg-scrim" onClick={closeSheet} />
@@ -213,6 +252,7 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
               capped={capped}
               busyId={togglingId}
               onToggleUse={toggleUse}
+              featureRecovery={isPurple}
               onEditInRoom={onEditAction ? (id) => { setPickerOpen(false); onEditAction(id) } : undefined}
             />
           </div>
@@ -226,7 +266,7 @@ export default function RegulationGrid({ rows = [], onAddRoutine, onAddAction, o
             <div className="reg-body">
               {viewRow.kind === 'routine'
                 ? (viewRow.routine_id
-                    ? <RoutineCard routineId={viewRow.routine_id} onBack={closeCard} backLabel="‹ close" />
+                    ? <RoutineCard routineId={viewRow.routine_id} onBack={closeCard} backLabel="‹ close" flat />
                     : <MissingCard onBack={closeCard} />)
                 : (viewRow.action_id
                     ? <ActionCard actionId={viewRow.action_id} onBack={closeCard} backLabel="‹ close" />
@@ -308,6 +348,17 @@ const GRID_STYLES = `
 .reg-grid .rg-emptynote{color:var(--rg-faint);font-style:italic;font-size:13px;border:1px dashed var(--rg-line2);
   border-radius:11px;padding:16px;text-align:center;line-height:1.5;}
 .reg-grid .rg-capmsg{margin-top:13px;font-size:12.5px;color:var(--rg-gold-soft);font-style:italic;line-height:1.5;text-align:center;}
+
+/* recovery collection — purple days only. care given, not a score: no count, no
+   target, no bar, no nudge. a quiet gathering of what was tended to. */
+.reg-grid .rg-recovery{margin-top:22px;border-top:1px solid rgba(176,138,224,.22);padding-top:16px;}
+.reg-grid .rg-rechead{font-family:var(--rg-serif);font-size:19px;color:var(--rg-amethyst);}
+.reg-grid .rg-recsub{font-size:11px;color:var(--rg-faint2);font-style:italic;letter-spacing:.03em;margin:1px 0 11px;}
+.reg-grid .rg-reclist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.reg-grid .rg-recitem{display:flex;align-items:center;gap:10px;background:rgba(54,40,90,.28);
+  border:1px solid rgba(176,138,224,.22);border-radius:11px;padding:10px 13px;}
+.reg-grid .rg-recmark{color:var(--rg-amethyst);font-size:13px;flex:none;}
+.reg-grid .rg-recnm{font-family:var(--rg-serif);font-size:17px;color:var(--rg-ink);}
 
 /* + add an action — opens the picker drawer */
 .reg-grid .rg-addbtn{margin-top:13px;width:100%;border:1px dashed #33405f;background:rgba(20,29,54,.3);color:var(--rg-faint);

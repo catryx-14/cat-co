@@ -21,6 +21,7 @@ import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTI
 import RegulationGrid from './RegulationGrid.jsx'
 import {
   loadRegulationLog, addRoutineLog, addActionLog, deleteRegLogRow, sumRegLog,
+  splitDayRows, persistDaySplit,
 } from '../../shared/lib/regulationLog.js'
 
 // ── Constants (identical to TrackerRoom) ──────────────────────────────────────
@@ -348,7 +349,13 @@ function useRegLog(userId, dateStr, onAfterChange) {
     await onAfterChange?.(next)
   }
 
-  return { rows, loaded, total: sumRegLog(rows), hasRows: rows.length > 0, addRoutine, addAction, removeRow }
+  return {
+    rows, loaded, total: sumRegLog(rows), hasRows: rows.length > 0,
+    addRoutine, addAction, removeRow,
+    // Let the editor write back the recomputed waterline split so the ring + the
+    // recovery collection redraw without a reload.
+    applyRows: setRows,
+  }
 }
 
 // ─── OldPipReadout — read-only view of an older day's retired pip regulation ───
@@ -372,7 +379,7 @@ function OldPipReadout({ values }) {
 // ─── RegulationSection — recovery toggle + the grid (or old read-out) + good signs ───
 // The four pip channels retired; the daily grid takes their place. recovery-sleep
 // and the flow / crisis good-signs stay exactly as they were.
-function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, onEditAction, readOnly = false }) {
+function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, onEditAction, isPurple = false, readOnly = false }) {
   return (
     <section className="reg-section">
       <div className="ledger-head">
@@ -390,6 +397,7 @@ function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, ol
             onAddAction={regLog.addAction}
             onRemove={regLog.removeRow}
             onEditAction={onEditAction}
+            isPurple={isPurple}
             readOnly={readOnly}
           />}
       <div className="good-signs-row">
@@ -957,6 +965,21 @@ function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = 
   )
 }
 
+// The day's peak (opening + events + tax) — the waterline's starting level.
+// Regulation never moves peak, so the pips are passed as zero here.
+function dayPeakDebit({ dateStr, openingBalance, evts, gs, settings }) {
+  const { peakDebit } = computeDisplayValues({
+    date: dateStr, openingBalance, flowActivity: gs.flow, regulationLogTotal: null,
+    regulation: { sensoryComfort: 0, audioVisual: 0, environment: 0, bodyRest: 0 },
+    events: evts.map(e => ({
+      emotional: e.E || 0, sensory: e.S || 0, predictability: e.P || 0,
+      masking: e.M || 0, ef: e.X || 0,
+      flow: e.flow || false, siFlow: e.siFlow ?? null, cancelled: e.cancelled || false,
+    })),
+  }, settings)
+  return peakDebit
+}
+
 // ─── TrackerDayEditor (V2) ───
 // Same as TrackerRoom's TrackerDayEditor but uses V2 data functions.
 // fillGapsBefore is omitted — V2 tables already have all historical data.
@@ -980,10 +1003,11 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
   const [allEntries,     setAllEntries]     = useState([])
   const [purpleOverride, setPurpleOverride] = useState(null)
 
-  // The day's regulation grid. After each add/remove, re-save so the closing
-  // balance (now driven by the log total) carries forward correctly.
+  // The day's regulation grid. After each add/remove, re-save so the waterline
+  // split + closing balance (driven by the capacity total) recompute and carry
+  // forward correctly.
   const regLog = useRegLog(session.user.id, dateStr, (next) =>
-    autoSave({ regLogTotal: next.length ? sumRegLog(next) : null }))
+    autoSave({ regLogRows: next }))
   const regLogTotal = regLog.hasRows ? regLog.total : null
 
   useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
@@ -1046,22 +1070,38 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
     const gs    = patch.goodSigns     ?? goodSigns
     const melt  = patch.meltdown      ?? meltdown
     const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
-    const rlt   = patch.regLogTotal   !== undefined ? patch.regLogTotal : regLogTotal
+    const rowsNow = patch.regLogRows ?? regLog.rows
     setSaveStatus('saving…')
     try {
+      // THE WATERLINE — recompute the whole day's capacity/recovery split from the
+      // current peak + floor. ANY change (a routine, an action, OR a mid-day event
+      // that raises peak) re-runs it for this one day, so points that had overflowed
+      // to recovery can correctly become capacity again. Stored, not derived-on-read.
+      const ps   = getPurpleState(dateStr, allEntries, settings.purpleFloors, pOver)
+      const floor = ps.isPurple ? ps.floor : null
+      const peak = dayPeakDebit({ dateStr, openingBalance, evts, gs, settings: { ...settings, taxValue: stampedTax } })
+      const split = splitDayRows(rowsNow, peak, floor)
+      if (rowsNow.length) {
+        await persistDaySplit(split, rowsNow)
+        regLog.applyRows(split)
+      }
+      // Capacity (the `points` side, down to the floor) feeds the existing lived-
+      // experience math unchanged; the recovery overflow is its own channel.
+      const capacityTotal = rowsNow.length ? sumRegLog(split) : null
+
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents: evts, regulation: reg,
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
-        purpleOverride: pOver, regLogTotal: rlt,
+        purpleOverride: pOver, regLogTotal: capacityTotal,
       })
-      if (isToday) {
-        const ps = getPurpleState(dateStr, allEntries, settings.purpleFloors, pOver)
-        if (ps.isPurple && ps.floor != null) {
-          entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
-          entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
-        }
+      // Floor = the lowest the day can READ and CARRY forward. The waterline already
+      // keeps lived experience ≥ floor whenever peak ≥ floor; this also covers the
+      // quiet case where peak itself sits below the floor (little or no regulation).
+      if (ps.isPurple && ps.floor != null) {
+        entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
+        entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
       }
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       if (!isToday) await recalculateFromDateV2(session.user.id, dateStr, settings)
@@ -1159,6 +1199,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
               onGood={onGood}
               regLog={regLog}
               onEditAction={onEditAction}
+              isPurple={purpleState.isPurple}
             />
           )}
         </div>
@@ -1282,10 +1323,11 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
   const [purpleOverride, setPurpleOverride] = useState(null)
   const todayStr = todayDateStr()
 
-  // Day's regulation grid. Re-save on every change so the closing balance carries
-  // forward (history edits cascade to every following day).
+  // Day's regulation grid. Re-save on every change so the waterline split + the
+  // closing balance recompute for THIS day and the cascade carries forward (the
+  // cascade never re-floors or re-splits the OTHER days it touches).
   const regLog = useRegLog(session.user.id, dateStr, (next) =>
-    autoSave({ regLogTotal: next.length ? sumRegLog(next) : null }))
+    autoSave({ regLogRows: next }))
   const regLogTotal = regLog.hasRows ? regLog.total : null
   // Older days logged with the retired pip channels stay read-only (no grid rows,
   // but a saved pip number). New or empty days get the editable grid.
@@ -1361,16 +1403,32 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
     const gs    = patch.goodSigns     ?? goodSigns
     const melt  = patch.meltdown      ?? meltdown
     const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
-    const rlt   = patch.regLogTotal   !== undefined ? patch.regLogTotal : regLogTotal
+    const rowsNow = patch.regLogRows ?? regLog.rows
     setSaveStatus('saving…')
     try {
+      // THE WATERLINE — editing an earlier day recomputes THAT day's split (only the
+      // day being edited; the cascade below never re-derives other days' splits).
+      const ps    = getPurpleState(dateStr, allEntries ?? [], settings.purpleFloors, pOver)
+      const floor = ps.isPurple ? ps.floor : null
+      const peak  = dayPeakDebit({ dateStr, openingBalance, evts, gs, settings: { ...settings, taxValue: stampedTax } })
+      const split = splitDayRows(rowsNow, peak, floor)
+      if (rowsNow.length) {
+        await persistDaySplit(split, rowsNow)
+        regLog.applyRows(split)
+      }
+      const capacityTotal = rowsNow.length ? sumRegLog(split) : null
+
       const { entryData, peakDebit } = internalToDb({
         dateStr, openingBalance, userEvents: evts, regulation: reg,
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
         yesterdayClosing, meltdown: melt,
-        purpleOverride: pOver, regLogTotal: rlt,
+        purpleOverride: pOver, regLogTotal: capacityTotal,
       })
+      if (ps.isPurple && ps.floor != null) {
+        entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
+        entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
+      }
       await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
       await recalculateFromDateV2(session.user.id, dateStr, settings)
       loadAllEntriesV2(session.user.id).then(rows => setAllEntries(rows)).catch(() => {})
@@ -1478,6 +1536,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
               regLog={regLog}
               oldPip={showOldPip ? regulation : null}
               onEditAction={onEditAction}
+              isPurple={purpleState.isPurple}
             />
             <WarningSigns flags={warning} onToggle={onWarning} />
             <MeltdownSection active={meltdown} onToggle={onMeltdown} />

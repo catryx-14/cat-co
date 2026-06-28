@@ -11,6 +11,7 @@
  */
 
 import { supabase } from './supabase.js'
+import { waterlineSplit } from './math.js'
 
 const nowIso = () => new Date().toISOString()
 
@@ -157,4 +158,58 @@ export async function deleteRegLogRow(id) {
 /** Sum the points of a set of log rows. */
 export function sumRegLog(rows) {
   return (rows || []).reduce((t, r) => t + (r.points || 0), 0)
+}
+
+// ── The WATERLINE: capacity / recovery split on a purple day ───────────────────
+// `points` stores the CAPACITY part of a row, `points_recovery` the overflow. A
+// row's FULL weight is always the two added back together, so the split can be
+// recomputed from scratch each time without ever losing the original weight.
+export const fullWeight = (r) => (r.points ?? 0) + (r.points_recovery ?? 0)
+
+/**
+ * Recompute the whole day's split in log order. `floor` is null on a non-purple
+ * day (→ full weight to `points`, `points_recovery` null). Returns NEW row
+ * objects (sorted by sort_order = log order) with points / points_recovery set;
+ * does not write — call persistDaySplit to save the rows that changed.
+ */
+export function splitDayRows(rows, peak, floor) {
+  const ordered = [...(rows || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  const parts = waterlineSplit(ordered.map(fullWeight), peak, floor)
+  return ordered.map((r, i) => ({ ...r, points: parts[i].capacity, points_recovery: parts[i].recovery }))
+}
+
+/**
+ * Persist only the rows whose split actually changed (keeps writes minimal). Pass
+ * the freshly-split rows and the rows they came from. Returns the split rows.
+ */
+export async function persistDaySplit(splitRows, prevRows) {
+  const prevById = new Map((prevRows || []).map(r => [r.id, r]))
+  const changed = splitRows.filter(r => {
+    const p = prevById.get(r.id)
+    return !p || (p.points ?? 0) !== (r.points ?? 0) ||
+           (p.points_recovery ?? null) !== (r.points_recovery ?? null)
+  })
+  await Promise.all(changed.map(r =>
+    supabase.from('regulation_log')
+      .update({ points: r.points, points_recovery: r.points_recovery })
+      .eq('id', r.id)
+  ))
+  return splitRows
+}
+
+/**
+ * The set of action ids whose backing shelf card carries the 'recovery' tag —
+ * used to surface the recovery collection (care given) on a purple day. An action
+ * counts as recovery whether or not its points overflowed past the line.
+ */
+export async function loadRecoveryActionIds() {
+  const { data, error } = await supabase
+    .from('actions')
+    .select('id, regulation_tools(tags)')
+  if (error) throw error
+  return new Set(
+    (data || [])
+      .filter(a => (a.regulation_tools?.tags || []).includes('recovery'))
+      .map(a => a.id)
+  )
 }

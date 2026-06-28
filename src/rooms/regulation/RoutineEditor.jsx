@@ -16,7 +16,11 @@ const SECTIONS = [
 ]
 const MARKERS = ['do', 'dont', 'tool', 'coreg']
 
-export default function RoutineEditor({ routineId, initialBand, onDone, onDeleted }) {
+// `flat` — routines are single flat-valued anchors now (the three faces are
+// retired, id=145). In flat mode the band tabs and per-face language are not
+// surfaced; the editor edits the one anchor. The routine_faces / routine_doses
+// tables are kept intact — we simply stop surfacing the faces.
+export default function RoutineEditor({ routineId, initialBand, onDone, onDeleted, flat = false }) {
   const [routine, setRoutine] = useState(null)
   const [tools, setTools] = useState([])
   const [band, setBand] = useState(initialBand || 'green')
@@ -207,51 +211,55 @@ export default function RoutineEditor({ routineId, initialBand, onDone, onDelete
       </div>
       <div className="ed-tag">tap any field to edit · nothing here is required · it saves as you go</div>
 
-      <div className="facetabs">
-        {BANDS.map(b => {
-          const f = routine.facesByBand[b]
-          const persisted = !!f?.id
-          const drafting = !!f && !f.id
-          const on = b === band
-          const status = persisted ? 'built' : drafting ? 'building…' : 'not built yet'
-          return (
-            <div
-              key={b}
-              className={`ftab ${on ? 'on' : ''} ${(persisted || drafting) ? '' : 'seed'}`}
-              style={on ? { background: BAND_COLOR[b] } : undefined}
-              onClick={() => setBand(b)}
-            >
-              {BAND_LABEL[b]}
-              <span className="st">{status}</span>
-            </div>
-          )
-        })}
-      </div>
+      {!flat && (
+        <div className="facetabs">
+          {BANDS.map(b => {
+            const f = routine.facesByBand[b]
+            const persisted = !!f?.id
+            const drafting = !!f && !f.id
+            const on = b === band
+            const status = persisted ? 'built' : drafting ? 'building…' : 'not built yet'
+            return (
+              <div
+                key={b}
+                className={`ftab ${on ? 'on' : ''} ${(persisted || drafting) ? '' : 'seed'}`}
+                style={on ? { background: BAND_COLOR[b] } : undefined}
+                onClick={() => setBand(b)}
+              >
+                {BAND_LABEL[b]}
+                <span className="st">{status}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {!face ? (
         <div className="panel seedpanel">
           <div className="icn">🌱</div>
-          <h3>the {BAND_LABEL[band]} version isn’t built yet</h3>
-          <p>Empty faces aren’t blank — they’re seeds. Start building it now, or leave it for when you’re standing in that band. Nothing saves until you actually write something.</p>
-          <button className="startbtn" onClick={startDraft}>build the {BAND_LABEL[band]} version</button>
+          <h3>{flat ? 'this routine isn’t built yet' : `the ${BAND_LABEL[band]} version isn’t built yet`}</h3>
+          <p>Empty routines aren’t blank — they’re seeds. Start building it now, or leave it for later. Nothing saves until you actually write something.</p>
+          <button className="startbtn" onClick={startDraft}>{flat ? 'build this routine' : `build the ${BAND_LABEL[band]} version`}</button>
         </div>
       ) : (
         <div className="panel">
           <div className="bandhdr">
-            <div className="bl">{BAND_LABEL[band]} face{isDraft ? ' · not saved yet' : ''}</div>
+            <div className="bl">{flat ? `this routine${isDraft ? ' · not saved yet' : ''}` : `${BAND_LABEL[band]} face${isDraft ? ' · not saved yet' : ''}`}</div>
             <div className="nm">the words future-you will read</div>
           </div>
 
-          <div className="eseg">
-            <div className="l">band label <span className="hint">how this face is titled</span></div>
-            <input
-              className="line"
-              value={face.label || ''}
-              placeholder={BAND_LABEL[band]}
-              onChange={e => patchFaceLocal(band, { label: e.target.value })}
-              onBlur={e => saveFace('label', e.target.value)}
-            />
-          </div>
+          {!flat && (
+            <div className="eseg">
+              <div className="l">band label <span className="hint">how this face is titled</span></div>
+              <input
+                className="line"
+                value={face.label || ''}
+                placeholder={BAND_LABEL[band]}
+                onChange={e => patchFaceLocal(band, { label: e.target.value })}
+                onBlur={e => saveFace('label', e.target.value)}
+              />
+            </div>
+          )}
 
           {SECTIONS.map(([label, key, hint]) => (
             <div className="eseg" key={key}>
@@ -375,8 +383,8 @@ export default function RoutineEditor({ routineId, initialBand, onDone, onDelete
           </div>
 
           {isDraft ? (
-            <button className="delface" onClick={removeFace}>discard this unsaved face</button>
-          ) : builtBands.length > 1 ? (
+            <button className="delface" onClick={removeFace}>{flat ? 'discard this unsaved routine' : 'discard this unsaved face'}</button>
+          ) : (!flat && builtBands.length > 1) ? (
             <button className="delface" onClick={removeFace}>delete this {BAND_LABEL[band]} face</button>
           ) : null}
         </div>

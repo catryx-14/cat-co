@@ -206,6 +206,40 @@ export function bandGlowClass(leVal, thresholds, isPurple = false) {
   return 'arc-glow--green'
 }
 
+/**
+ * THE WATERLINE — split a purple day's regulation into capacity vs recovery.
+ *
+ * On a purple day the floor is a waterline in the capacity bucket. Regulation
+ * points pour in and push the level DOWN toward the line: points earned while
+ * still ABOVE the line are CAPACITY (they move the real number down to the
+ * floor); once the line is reached the bucket can't go lower, so every further
+ * point OVERFLOWS into RECOVERY. The split lives in the DAY (the floor is the
+ * line), never inside a single point — so there are never fractional points.
+ *
+ *   weights — each row's full point weight, in log order (routines then actions)
+ *   peak    — the day's peak (opening + events + tax); the bucket's starting level
+ *   floor   — the purple floor for the day, or null/undefined on a non-purple day
+ *
+ * gap = max(0, peak − floor) is the total capacity-reducing room today. Walking
+ * the rows in order, each takes capacity up to the remaining gap, the rest
+ * overflows. Whole points only — a whole weight lands wholly on one side, except
+ * a bigger unit (a routine) straddling the line: the gap fills with capacity, the
+ * remainder overflows, still whole numbers (id=143 "the WATERLINE").
+ *
+ * Returns [{ capacity, recovery }] aligned to the input weights. On a non-purple
+ * day (floor == null) the full weight is capacity and recovery is null.
+ */
+export function waterlineSplit(weights, peak, floor) {
+  if (floor == null) return weights.map(w => ({ capacity: w, recovery: null }))
+  const gap = Math.max(0, Math.round(peak) - floor)
+  let used = 0
+  return weights.map(w => {
+    const capacity = Math.min(w, Math.max(0, gap - used))
+    used += capacity
+    return { capacity, recovery: w - capacity }
+  })
+}
+
 // Returns { isPurple, floor } for the given day.
 // override: null | 'cancel' | 'extend'  (energy_daily.purple_override)
 // allEntries: array of { date, entry_data: { meltdown } }

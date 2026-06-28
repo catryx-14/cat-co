@@ -254,6 +254,9 @@ export async function loadActions() {
         : [],
       // "first aid" is a curation tag on the backing card — a separate badge.
       firstAid: !!(backing?.tags || []).includes('first aid'),
+      // "recovery" is another curation tag — features the action in the gentle
+      // purple-day palette (surfaces, never gates).
+      recovery: !!(backing?.tags || []).includes('recovery'),
       group: CHANNEL_GROUP[backing?.channel_primary] || GROUP_FALLBACK,
     }
   })
