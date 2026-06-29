@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 // db.js (old table) import removed — history always uses loadAllEntriesV2 via prop
-import { computeDisplayValues } from '../../shared/lib/math.js'
+import { computeDisplayValues, bandColor, resolveOpeningBalance } from '../../shared/lib/math.js'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -31,26 +31,15 @@ function weekMonday(date) {
 
 // ── Colour / display helpers ──────────────────────────────────────────────────
 
-function peakColor(peak, thr) {
-  if (peak >= (thr.critical ?? 30)) return '#D8283A'  // vivid ruby-red
-  if (peak >= (thr.orange   ?? 25)) return '#FF8419'  // vivid bright orange
-  if (peak >= (thr.yellow   ?? 15)) return '#D6A520'  // deep gold
-  return '#2FBE86'                                    // jade
-}
+// Dot colour comes from the SHARED bandColor (math.js) — the same source the
+// big lived-experience ring uses for its band. One source of truth: ring and
+// calendar dot can never drift apart.
 
 function peakGlowClass(peak, thr) {
   if (peak >= (thr.critical ?? 30)) return 'arc-glow--red'
   if (peak >= (thr.orange   ?? 25)) return 'arc-glow--orange'
   if (peak >= (thr.yellow   ?? 15)) return 'arc-glow--amber'
   return 'arc-glow--green'
-}
-
-// Blend a hex colour toward white by `factor` (0–1)
-function lighten(hex, factor) {
-  const r = parseInt(hex.slice(1,3), 16)
-  const g = parseInt(hex.slice(3,5), 16)
-  const b = parseInt(hex.slice(5,7), 16)
-  return `rgb(${Math.round(r+(255-r)*factor)},${Math.round(g+(255-g)*factor)},${Math.round(b+(255-b)*factor)})`
 }
 
 // ── Arc star geometry ─────────────────────────────────────────────────────────
@@ -126,23 +115,23 @@ function ArcPoint({ x, y, size, color, opacity, shape = 'dot' }) {
   return <circle cx={x} cy={y} r={r} fill={color} opacity={opacity} />
 }
 
-function ArcStars({ stars, color, live = false }) {
+// Dots render as FLAT fills in the band colour — no centre-lighten, no specular
+// highlight. The old "jewel" treatment bleached small dots toward a pale wash,
+// blurring orange against yellow and red; flat saturated fills keep the bands
+// clearly distinct at dot size.
+function ArcStars({ stars, color }) {
   return stars.map((s, i) => {
     const [x, y] = ptAt(s.t)
     if (s.type === 'dot' || !s.type) {
       return <circle key={i} cx={x} cy={y} r={s.r ?? 1.2} fill={color} opacity={s.op} />
     }
-    // Centre stars lighten toward warm cream; ends stay base colour
-    const centreFactor = live ? Math.pow(Math.sin(Math.PI * s.t), 2) * 0.45 : 0
-    const fill = live ? lighten(color, centreFactor) : color
-    const nudge = live ? 0.78 + ((i * 13) % 7) * 0.032 : 1
     return (
       <ArcPoint
         key={i}
         x={x} y={y}
         size={s.type}
-        color={fill}
-        opacity={+(s.op * nudge).toFixed(3)}
+        color={color}
+        opacity={s.op}
         shape="dot"
       />
     )
@@ -192,12 +181,15 @@ function CalIcon({ shape = 'pip', src, alt, color = 'rgba(255,255,255,0.6)' }) {
 const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 const FULL_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-function DayTooltip({ entry, date, col, settings }) {
+function DayTooltip({ entry, date, col, settings, resolvedOpening }) {
   const d = entry.entry_data
   // computeDisplayValues is the single source of truth — same function used everywhere.
   // Passing settings applies the autistic tax exactly as the editor does.
+  // Opening balance is re-derived from the chain (resolvedOpening), NEVER trusted
+  // from the day's own stored value — so today (and any day whose stored opening
+  // went stale after a prior-day edit) agrees with the live today view.
   const { peakDebit: peak, activeRegulation: reg, livedExperience: le } =
-    computeDisplayValues(d, settings)
+    computeDisplayValues({ ...d, openingBalance: resolvedOpening }, settings)
   const events  = d.events   ?? []
   const hasMelt = d.meltdown  ?? false
   const hasSI   = d.siFlowActive ?? false
@@ -234,7 +226,7 @@ function DayTooltip({ entry, date, col, settings }) {
 
 // ── Day cell ──────────────────────────────────────────────────────────────────
 
-function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday, isFuture, isOutOfMonth, col }) {
+function DayCell({ date, entry, entryMap, entriesArr, thresholds, settings, onClick, isToday, isFuture, isOutOfMonth, col }) {
   const [showTip, setShowTip] = useState(false)
   const tipTimer = useRef(null)
 
@@ -249,8 +241,13 @@ function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday
   useEffect(() => () => clearTimeout(tipTimer.current), [])
 
   const d = entry?.entry_data
+  // Opening balance re-derived from the chain — never the stored value — so the
+  // calendar's dot colour and tooltip match the live today view exactly.
+  const resolvedOpening = entry
+    ? resolveOpeningBalance(toDateStr(date), entriesArr ?? [], { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate })
+    : 0
   // Use the same formula as the editor so arc colour and tooltip always agree
-  const leVal = d ? computeDisplayValues(d, settings).livedExperience : 0
+  const leVal = d ? computeDisplayValues({ ...d, openingBalance: resolvedOpening }, settings).livedExperience : 0
   const isPastEmpty = !isFuture && !entry
 
   // Purple detection — check meltdown on the two prior days
@@ -276,13 +273,13 @@ function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday
     const isCritical = leVal >= (thresholds.critical ?? 30)
     if (isCritical) {
       // Red (crisis) takes priority over purple — purple is a recovery state, not a crisis state
-      starColor = peakColor(leVal, thresholds)
+      starColor = bandColor(leVal, thresholds)
       glowClass = peakGlowClass(leVal, thresholds)
     } else if (isPurple) {
       starColor = '#A673E4'
       glowClass = 'arc-glow--purple'
     } else {
-      starColor = peakColor(leVal, thresholds)
+      starColor = bandColor(leVal, thresholds)
       glowClass = peakGlowClass(leVal, thresholds)
     }
   } else if (isFuture) {
@@ -324,9 +321,11 @@ function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday
             </feMerge>
           </filter>
         </defs>
-        <ellipse cx="44" cy="46" rx="46" ry="50" fill="url(#arc-well)" />
+        {/* Dark disc only behind days that HAVE data — empty days stay flat sky,
+            no shadow, just the date number. */}
+        {entry && <ellipse cx="44" cy="46" rx="46" ry="50" fill="url(#arc-well)" />}
         <g filter="url(#arc-star-glow)">
-          <ArcStars stars={stars} color={starColor} live={!!entry} />
+          <ArcStars stars={stars} color={starColor} />
         </g>
       </svg>
 
@@ -350,14 +349,14 @@ function DayCell({ date, entry, entryMap, thresholds, settings, onClick, isToday
         )}
       </div>
 
-      {showTip && entry && <DayTooltip entry={entry} date={date} col={col} settings={settings} />}
+      {showTip && entry && <DayTooltip entry={entry} date={date} col={col} settings={settings} resolvedOpening={resolvedOpening} />}
     </div>
   )
 }
 
 // ── Week row ──────────────────────────────────────────────────────────────────
 
-function WeekRow({ week, entryMap, thresholds, settings, todayStr, onEdit, viewMonth }) {
+function WeekRow({ week, entryMap, entriesArr, thresholds, settings, todayStr, onEdit, viewMonth }) {
   return (
     <div className="cal-week">
       <div className="cal-week-days">
@@ -370,6 +369,7 @@ function WeekRow({ week, entryMap, thresholds, settings, todayStr, onEdit, viewM
               date={day}
               entry={outOfMonth ? null : (entryMap[ds] || null)}
               entryMap={outOfMonth ? undefined : entryMap}
+              entriesArr={entriesArr}
               thresholds={thresholds}
               settings={settings}
               onClick={outOfMonth ? undefined : onEdit}
@@ -435,6 +435,7 @@ export default function TrackerHistory({ settings, session, onEditDate, viewYear
             <WeekRow
               week={week}
               entryMap={entryMap}
+              entriesArr={entries}
               thresholds={thresholds}
               settings={settings}
               todayStr={todayStr}

@@ -1628,15 +1628,6 @@ body {
   color: var(--soft-purple);
   text-shadow: 0 0 10px rgba(168,144,212,0.7);
 }
-.good-signs-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 4px 6px 8px;
-  margin-top: 8px;
-  border-top: 1px dashed rgba(232,201,140,0.10);
-  padding-top: 16px;
-}
 .signal.good-signal.lit {
   border-color: var(--sage);
   color: var(--sage);

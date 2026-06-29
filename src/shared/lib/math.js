@@ -193,7 +193,7 @@ export function bandColor(leVal, thresholds, isPurple = false) {
   const band = bandOf(leVal, thresholds)
   if (band === 'red')    return '#D8283A'  // vivid ruby-red
   if (band === 'orange') return '#FF8419'  // vivid bright orange
-  if (band === 'yellow') return '#D6A520'  // deep gold
+  if (band === 'yellow') return '#F6C73A'  // bright clear gold (pulled out of mustard, away from orange)
   return '#2FBE86'                         // jade
 }
 

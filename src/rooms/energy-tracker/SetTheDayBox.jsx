@@ -20,7 +20,7 @@ import { loadSetTheDay } from '../../shared/lib/setTheDay.js'
 // (red never reaches here — the opening band maps the red range to orange.)
 const BAND_ACCENT = {
   green:  '#2FBE86',
-  yellow: '#D6A520',
+  yellow: '#F6C73A',
   orange: '#FF8419',
   purple: '#A673E4',
 }
@@ -60,9 +60,14 @@ export default function SetTheDayBox({ userId, band, window, dateStr }) {
       {data.suggestions?.length > 0 && (
         <div className="std-suggests">
           <div className="std-suglabel">today might want</div>
-          <div className="std-chips">
+          {/* Display-only free text — a gentle phrase, not tappable chips. Middots
+              carry the band accent; the words sit in soft secondary ink. */}
+          <div className="std-sugline">
             {data.suggestions.map((s, i) => (
-              <span className="std-chip" key={i}>{s}</span>
+              <span className="std-sugitem" key={i}>
+                {i > 0 && <span className="std-sugsep"> · </span>}
+                {s}
+              </span>
             ))}
           </div>
         </div>
@@ -97,11 +102,11 @@ const STD_STYLES = `
 .std-box .std-suggests{margin-top:17px;}
 .std-box .std-suglabel{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--std-faint); margin-bottom:9px;}
-.std-box .std-chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center;}
-.std-box .std-chip{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  font-size:12.5px; color:var(--std-dim); padding:6px 13px; border-radius:999px;
-  border:1px solid color-mix(in srgb, var(--std-accent) 26%, rgba(120,134,170,.22));
-  background:color-mix(in srgb, var(--std-accent) 7%, transparent);}
+/* a single soft line — band-accent middots between display-only suggestions,
+   the words in secondary ink. Reads as a gentle phrase, never a row of buttons. */
+.std-box .std-sugline{font-style:italic; font-size:15.5px; line-height:1.6;
+  color:var(--std-dim); max-width:460px; margin-left:auto; margin-right:auto;}
+.std-box .std-sugsep{font-style:normal; color:var(--std-accent);}
 @media(max-width:560px){
   .std-box{margin-left:12px; margin-right:12px; padding:17px 18px 19px;}
   .std-box .std-greeting{font-size:22px;}

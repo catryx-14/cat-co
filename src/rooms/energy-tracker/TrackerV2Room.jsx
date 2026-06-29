@@ -50,11 +50,6 @@ const WARNING_SIGNS = [
   { k: 'other',   name: 'other',             glyph: '×' },
 ]
 
-const GOOD_SIGNS = [
-  { k: 'flow',   name: 'flow activity',   glyph: '~' },
-  { k: 'crisis', name: 'crisis recovery', glyph: '△' },
-]
-
 const BUCKETS = ['late night', 'morning', 'midday', 'afternoon', 'evening', 'night']
 
 function nowBucket() {
@@ -381,7 +376,7 @@ function OldPipReadout({ values }) {
 // ─── RegulationSection — recovery toggle + the grid (or old read-out) + good signs ───
 // The four pip channels retired; the daily grid takes their place. recovery-sleep
 // and the flow / crisis good-signs stay exactly as they were.
-function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, oldPip, onEditAction, isPurple = false, readOnly = false }) {
+function RegulationSection({ recovery, onRecovery, regLog, oldPip, onEditAction, isPurple = false, readOnly = false }) {
   return (
     <section className="reg-section">
       <div className="ledger-head">
@@ -402,17 +397,6 @@ function RegulationSection({ recovery, onRecovery, goodSigns, onGood, regLog, ol
             isPurple={isPurple}
             readOnly={readOnly}
           />}
-      <div className="good-signs-row">
-        {GOOD_SIGNS.map(s => (
-          <button key={s.k}
-                  className={`signal good-signal ${goodSigns[s.k] ? 'lit' : ''}`}
-                  onClick={() => onGood(s.k)}
-                  title={s.name}>
-            <span className="signal-glyph">{s.glyph}</span>
-            <span className="signal-name">{s.name}</span>
-          </button>
-        ))}
-      </div>
     </section>
   )
 }
@@ -441,7 +425,10 @@ function WarningSigns({ flags, onToggle }) {
 }
 
 // ─── MeltdownSection ───
-function MeltdownSection({ active, onToggle }) {
+// The crisis yes/no toggle, with the "crisis recovery" marker alongside it —
+// recovery is a crisis-related state, so it lives here rather than under
+// regulation. (Day-level "flow activity" was removed; flow is set per event.)
+function MeltdownSection({ active, onToggle, goodSigns, onGood }) {
   return (
     <section className="signals-section">
       <div className="ledger-head">
@@ -451,6 +438,12 @@ function MeltdownSection({ active, onToggle }) {
         <button className={`signal ${active ? 'lit' : ''}`} onClick={onToggle}>
           <span className="signal-glyph">▽</span>
           <span className="signal-name">{active ? 'yes' : 'no'}</span>
+        </button>
+        <button className={`signal good-signal ${goodSigns?.crisis ? 'lit' : ''}`}
+                onClick={() => onGood('crisis')}
+                title="crisis recovery">
+          <span className="signal-glyph">△</span>
+          <span className="signal-name">crisis recovery</span>
         </button>
       </div>
     </section>
@@ -552,11 +545,11 @@ const BAND_RING_STOPS = {
     { o: '100%', c: '#051a10' },
   ],
   yellow: [
-    { o: '0%',   c: '#161002' }, { o: '14%',  c: '#4e3a06' },
-    { o: '30%',  c: '#7e5e0e' }, { o: '48%',  c: '#ab8418' },
-    { o: '60%',  c: '#D6A520' }, { o: '67%',  c: '#ecca6a' },
-    { o: '76%',  c: '#ab8418' }, { o: '89%',  c: '#5e4a0c' },
-    { o: '100%', c: '#161002' },
+    { o: '0%',   c: '#1c1503' }, { o: '14%',  c: '#6a5008' },
+    { o: '30%',  c: '#a87f12' }, { o: '48%',  c: '#d8a824' },
+    { o: '60%',  c: '#F6C73A' }, { o: '67%',  c: '#fce39a' },
+    { o: '76%',  c: '#d8a824' }, { o: '89%',  c: '#6a5008' },
+    { o: '100%', c: '#1c1503' },
   ],
   orange: [
     { o: '0%',   c: '#1f0c02' }, { o: '14%',  c: '#6a2e06' },
@@ -582,7 +575,7 @@ const BAND_RING_STOPS = {
 }
 const BAND_GLOW_COLOR = {
   green:  '#aaf0d0',
-  yellow: '#f0d480',
+  yellow: '#f8df8a',
   orange: '#ffb066',
   red:    '#f08890',
   purple: '#d8b8f8',
@@ -1075,13 +1068,25 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
     const rowsNow = patch.regLogRows ?? regLog.rows
     setSaveStatus('saving…')
     try {
+      // SAFEGUARD — re-derive the opening balance from the freshest chain at save
+      // time, so a save can NEVER persist a stale opening (which would otherwise
+      // start a wrong number cascading into later days). This mirrors the read-side
+      // rule: opening is always derived from the chain, never trusted from a day's
+      // own stored value. The in-memory state can go stale if a prior day was edited
+      // after this view mounted; reloading here closes that gap.
+      const freshEntries = await loadAllEntriesV2(session.user.id)
+      const opening = resolveOpeningBalance(dateStr, freshEntries,
+        { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate })
+      if (opening !== openingBalance) { setOpeningBalance(opening); setYesterdayClosing(opening) }
+      setAllEntries(freshEntries)
+
       // THE WATERLINE — recompute the whole day's capacity/recovery split from the
       // current peak + floor. ANY change (a routine, an action, OR a mid-day event
       // that raises peak) re-runs it for this one day, so points that had overflowed
       // to recovery can correctly become capacity again. Stored, not derived-on-read.
-      const ps   = getPurpleState(dateStr, allEntries, settings.purpleFloors, pOver)
+      const ps   = getPurpleState(dateStr, freshEntries, settings.purpleFloors, pOver)
       const floor = ps.isPurple ? ps.floor : null
-      const peak = dayPeakDebit({ dateStr, openingBalance, evts, gs, settings: { ...settings, taxValue: stampedTax } })
+      const peak = dayPeakDebit({ dateStr, openingBalance: opening, evts, gs, settings: { ...settings, taxValue: stampedTax } })
       const split = splitDayRows(rowsNow, peak, floor)
       if (rowsNow.length) {
         await persistDaySplit(split, rowsNow)
@@ -1092,10 +1097,10 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
       const capacityTotal = rowsNow.length ? sumRegLog(split) : null
 
       const { entryData, peakDebit } = internalToDb({
-        dateStr, openingBalance, userEvents: evts, regulation: reg,
+        dateStr, openingBalance: opening, userEvents: evts, regulation: reg,
         recovery: rec, warning: warn, goodSigns: gs,
         settings: { ...settings, taxValue: stampedTax },
-        yesterdayClosing, meltdown: melt,
+        yesterdayClosing: opening, meltdown: melt,
         purpleOverride: pOver, regLogTotal: capacityTotal,
       })
       // Floor = the lowest the day can READ and CARRY forward. The waterline already
@@ -1201,7 +1206,7 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
                 <Composer onAdd={onAdd} />
               </section>
               <WarningSigns flags={warning} onToggle={onWarning} />
-              <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+              <MeltdownSection active={meltdown} onToggle={onMeltdown} goodSigns={goodSigns} onGood={onGood} />
               <PurpleOverrideSection
                 isPurple={purpleState.isPurple}
                 override={purpleOverride}
@@ -1213,8 +1218,6 @@ function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetK
             <RegulationSection
               recovery={recovery}
               onRecovery={onRecovery}
-              goodSigns={goodSigns}
-              onGood={onGood}
               regLog={regLog}
               onEditAction={onEditAction}
               isPurple={purpleState.isPurple}
@@ -1244,7 +1247,7 @@ function hedWeekMonday(date) {
 function hedPeakColor(peak, thr) {
   if (peak >= (thr.critical ?? 30)) return '#e84040'
   if (peak >= (thr.orange   ?? 25)) return '#e8822a'
-  if (peak >= (thr.yellow   ?? 15)) return '#f0b825'
+  if (peak >= (thr.yellow   ?? 15)) return '#F6C73A'
   return '#2ed468'
 }
 function calcSkyNums(userEvents, regulation, openingBalance, settings, goodSigns, dateStr, regLogTotal = null) {
@@ -1515,7 +1518,9 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
         </div>
         <div className="hed-sky-sep">·</div>
         <div className="hed-sky-num">
-          <span className="hed-sky-val" style={{ color: SKY_COLORS.le.number }}>
+          {/* lived experience takes the day's band colour — same logic the today
+              sky view uses for its LE figure (gold/orange/red/purple). */}
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), settings.livedExperienceThresholds, purpleState.isPurple) }}>
             {loading ? '·' : skyNums.le}
           </span>
           <span className="hed-sky-lbl">lived exp</span>
@@ -1549,15 +1554,13 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
             <RegulationSection
               recovery={recovery}
               onRecovery={onRecovery}
-              goodSigns={goodSigns}
-              onGood={onGood}
               regLog={regLog}
               oldPip={showOldPip ? regulation : null}
               onEditAction={onEditAction}
               isPurple={purpleState.isPurple}
             />
             <WarningSigns flags={warning} onToggle={onWarning} />
-            <MeltdownSection active={meltdown} onToggle={onMeltdown} />
+            <MeltdownSection active={meltdown} onToggle={onMeltdown} goodSigns={goodSigns} onGood={onGood} />
             <PurpleOverrideSection
               isPurple={purpleState.isPurple}
               override={purpleOverride}
