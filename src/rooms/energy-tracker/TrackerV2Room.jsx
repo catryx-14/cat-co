@@ -2,7 +2,7 @@
  * TrackerV2Room — Cat's capacity tracker, backed by energy_events + energy_daily.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
@@ -19,8 +19,7 @@ import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
 import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState } from '../../shared/lib/math.js'
 import RegulationGrid from './RegulationGrid.jsx'
-import SetTheDayBox from './SetTheDayBox.jsx'
-import { openingBand, greetingWindowFor } from '../../shared/lib/setTheDay.js'
+import { openingBand, greetingWindowFor, loadSetTheDay } from '../../shared/lib/setTheDay.js'
 import {
   loadRegulationLog, addRoutineLog, addActionLog, deleteRegLogRow, sumRegLog,
   splitDayRows, persistDaySplit,
@@ -60,12 +59,6 @@ function nowBucket() {
   if (h < 18) return 'afternoon'
   if (h < 21) return 'evening'
   return 'night'
-}
-
-function formatDateStr(dateStr) {
-  const [y, mo, day] = dateStr.split('-').map(Number)
-  const m = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][mo - 1]
-  return `${y} · ${m} · ${String(day).padStart(2, '0')}`
 }
 
 // ─── AxisLabel ───
@@ -488,12 +481,7 @@ function PurpleOverrideSection({ isPurple, override, onChange }) {
   )
 }
 
-// ─── Sky helpers ───────────────────────────────────────────────────────────────
-
-function polarXY(cx, cy, angleDeg, r) {
-  const rad = (angleDeg - 90) * Math.PI / 180
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
-}
+// ─── Shared sparkle + number-row helpers (kept from the retired sky page) ──────
 
 function sparklePath(cx, cy, outer, inner) {
   const pts = []
@@ -535,431 +523,6 @@ const SKY_COLORS = {
   },
 }
 
-// Jewel-tone ring stops for the LE orb, keyed by band name
-const BAND_RING_STOPS = {
-  green: [
-    { o: '0%',   c: '#051a10' }, { o: '14%',  c: '#0e5430' },
-    { o: '30%',  c: '#178a55' }, { o: '48%',  c: '#22aa6e' },
-    { o: '60%',  c: '#2FBE86' }, { o: '67%',  c: '#82e6bf' },
-    { o: '76%',  c: '#1fa068' }, { o: '89%',  c: '#0e5a38' },
-    { o: '100%', c: '#051a10' },
-  ],
-  yellow: [
-    { o: '0%',   c: '#1c1503' }, { o: '14%',  c: '#6a5008' },
-    { o: '30%',  c: '#a87f12' }, { o: '48%',  c: '#d8a824' },
-    { o: '60%',  c: '#F6C73A' }, { o: '67%',  c: '#fce39a' },
-    { o: '76%',  c: '#d8a824' }, { o: '89%',  c: '#6a5008' },
-    { o: '100%', c: '#1c1503' },
-  ],
-  orange: [
-    { o: '0%',   c: '#1f0c02' }, { o: '14%',  c: '#6a2e06' },
-    { o: '30%',  c: '#a84e0e' }, { o: '48%',  c: '#e06c14' },
-    { o: '60%',  c: '#FF8419' }, { o: '67%',  c: '#ffb066' },
-    { o: '76%',  c: '#e06c14' }, { o: '89%',  c: '#7a3608' },
-    { o: '100%', c: '#1f0c02' },
-  ],
-  red: [
-    { o: '0%',   c: '#1c0408' }, { o: '14%',  c: '#5e0e16' },
-    { o: '30%',  c: '#9e1824' }, { o: '48%',  c: '#c42030' },
-    { o: '60%',  c: '#D8283A' }, { o: '67%',  c: '#f0707c' },
-    { o: '76%',  c: '#c42030' }, { o: '89%',  c: '#6e1018' },
-    { o: '100%', c: '#1c0408' },
-  ],
-  purple: [
-    { o: '0%',   c: '#110d1e' }, { o: '14%',  c: '#38286a' },
-    { o: '30%',  c: '#5c40a8' }, { o: '48%',  c: '#8060cc' },
-    { o: '60%',  c: '#A673E4' }, { o: '67%',  c: '#d4b8f4' },
-    { o: '76%',  c: '#8860cc' }, { o: '89%',  c: '#482880' },
-    { o: '100%', c: '#110d1e' },
-  ],
-}
-const BAND_GLOW_COLOR = {
-  green:  '#aaf0d0',
-  yellow: '#f8df8a',
-  orange: '#ffb066',
-  red:    '#f08890',
-  purple: '#d8b8f8',
-}
-
-const PEAK_STARS = [
-  { a: 18,  r: 106, sz: 7,   t: 's' }, { a: 52,  r: 98,  sz: 5,   t: 's' },
-  { a: 138, r: 104, sz: 6.5, t: 's' }, { a: 195, r: 109, sz: 5.5, t: 's' },
-  { a: 262, r: 96,  sz: 7.5, t: 's' }, { a: 305, r: 104, sz: 4.5, t: 's' },
-  { a: 344, r: 108, sz: 6,   t: 's' },
-  { a: 5,   r: 95,  sz: 2,   t: 'd' }, { a: 35,  r: 113, sz: 1.5, t: 'd' },
-  { a: 72,  r: 103, sz: 2,   t: 'd' }, { a: 112, r: 99,  sz: 1.5, t: 'd' },
-  { a: 163, r: 115, sz: 2,   t: 'd' }, { a: 228, r: 106, sz: 1.5, t: 'd' },
-  { a: 282, r: 113, sz: 2,   t: 'd' }, { a: 332, r: 98,  sz: 1.5, t: 'd' },
-]
-const LE_STARS = [
-  { a: 12,  r: 137, sz: 8.5, t: 's' }, { a: 45,  r: 126, sz: 6,   t: 's' },
-  { a: 82,  r: 140, sz: 7.5, t: 's' }, { a: 118, r: 130, sz: 5.5, t: 's' },
-  { a: 158, r: 141, sz: 7,   t: 's' }, { a: 205, r: 132, sz: 5,   t: 's' },
-  { a: 248, r: 136, sz: 8,   t: 's' }, { a: 292, r: 129, sz: 6,   t: 's' },
-  { a: 328, r: 134, sz: 6.5, t: 's' },
-  { a: 3,   r: 124, sz: 2,   t: 'd' }, { a: 28,  r: 142, sz: 1.5, t: 'd' },
-  { a: 63,  r: 132, sz: 2,   t: 'd' }, { a: 100, r: 146, sz: 1.5, t: 'd' },
-  { a: 138, r: 126, sz: 2,   t: 'd' }, { a: 180, r: 136, sz: 1.5, t: 'd' },
-  { a: 222, r: 144, sz: 2,   t: 'd' }, { a: 268, r: 124, sz: 1.5, t: 'd' },
-  { a: 310, r: 139, sz: 2,   t: 'd' }, { a: 350, r: 131, sz: 1.5, t: 'd' },
-]
-const REG_STARS = [
-  { a: 32,  r: 105, sz: 6.5, t: 's' }, { a: 78,  r: 99,  sz: 5,   t: 's' },
-  { a: 122, r: 109, sz: 7.5, t: 's' }, { a: 172, r: 103, sz: 5.5, t: 's' },
-  { a: 218, r: 111, sz: 7,   t: 's' }, { a: 268, r: 95,  sz: 4.5, t: 's' },
-  { a: 315, r: 106, sz: 6,   t: 's' },
-  { a: 15,  r: 99,  sz: 2,   t: 'd' }, { a: 55,  r: 115, sz: 1.5, t: 'd' },
-  { a: 100, r: 104, sz: 2,   t: 'd' }, { a: 148, r: 96,  sz: 1.5, t: 'd' },
-  { a: 195, r: 114, sz: 2,   t: 'd' }, { a: 245, r: 105, sz: 1.5, t: 'd' },
-  { a: 292, r: 111, sz: 2,   t: 'd' }, { a: 340, r: 101, sz: 1.5, t: 'd' },
-]
-
-const PEAK_MOB_STARS = [
-  { x: 9,  y: 6,  sz: 5,   t: 's', op: 0.72 }, { x: 26, y: 11, sz: 3,   t: 's', op: 0.58 },
-  { x: 18, y: 15, sz: 1.8, t: 'd', op: 0.40 }, { x: 31, y: 29, sz: 4.5, t: 's', op: 0.65 },
-  { x: 12, y: 38, sz: 1.5, t: 'd', op: 0.32 }, { x: 7,  y: 47, sz: 6,   t: 's', op: 0.75 },
-  { x: 28, y: 53, sz: 2,   t: 'd', op: 0.50 }, { x: 20, y: 61, sz: 3.5, t: 's', op: 0.60 },
-  { x: 9,  y: 72, sz: 1.5, t: 'd', op: 0.38 }, { x: 25, y: 80, sz: 4,   t: 's', op: 0.68 },
-  { x: 15, y: 87, sz: 1.5, t: 'd', op: 0.42 },
-]
-const LE_MOB_STARS = [
-  { x: 22, y: 4,  sz: 4,   t: 's', op: 0.60 }, { x: 9,  y: 13, sz: 1.5, t: 'd', op: 0.38 },
-  { x: 29, y: 20, sz: 5.5, t: 's', op: 0.70 }, { x: 14, y: 25, sz: 3,   t: 's', op: 0.52 },
-  { x: 31, y: 35, sz: 1.8, t: 'd', op: 0.44 }, { x: 8,  y: 49, sz: 5,   t: 's', op: 0.78 },
-  { x: 24, y: 58, sz: 2,   t: 'd', op: 0.36 }, { x: 17, y: 65, sz: 4.5, t: 's', op: 0.63 },
-  { x: 7,  y: 74, sz: 1.5, t: 'd', op: 0.45 }, { x: 27, y: 80, sz: 3.5, t: 's', op: 0.55 },
-  { x: 13, y: 88, sz: 2,   t: 'd', op: 0.40 },
-]
-const REG_MOB_STARS = [
-  { x: 17, y: 3,  sz: 3.5, t: 's', op: 0.65 }, { x: 28, y: 12, sz: 5,   t: 's', op: 0.72 },
-  { x: 8,  y: 18, sz: 1.8, t: 'd', op: 0.40 }, { x: 23, y: 23, sz: 4,   t: 's', op: 0.55 },
-  { x: 11, y: 37, sz: 1.5, t: 'd', op: 0.35 }, { x: 30, y: 44, sz: 5.5, t: 's', op: 0.75 },
-  { x: 16, y: 54, sz: 2,   t: 'd', op: 0.48 }, { x: 7,  y: 62, sz: 3,   t: 's', op: 0.58 },
-  { x: 26, y: 69, sz: 1.5, t: 'd', op: 0.38 }, { x: 19, y: 77, sz: 4.5, t: 's', op: 0.68 },
-  { x: 29, y: 86, sz: 1.8, t: 'd', op: 0.42 },
-]
-
-// ─── SkyOrb ───
-function SkyOrb({ size, colors, numStr, label, stars, detailNode, onClick, animClass, bandBadge }) {
-  const [hov, setHov] = useState(false)
-  const [vis, setVis] = useState(false)
-
-  useEffect(() => {
-    let t
-    if (hov) { t = setTimeout(() => setVis(true), 600) }
-    else { setVis(false) }
-    return () => clearTimeout(t)
-  }, [hov])
-
-  const pad = 30
-  const svgSize = size + pad * 2
-  const cx = svgSize / 2, cy = svgSize / 2
-  const outerR = size * 0.455, innerR = size * 0.395
-
-  return (
-    <div className={`sky-orb-wrap${animClass ? ' ' + animClass : ''}`}
-         style={{ height: size, cursor: onClick ? 'pointer' : undefined }}
-         onClick={onClick}
-         onMouseEnter={() => setHov(true)}
-         onMouseLeave={() => setHov(false)}>
-      <div className="sky-orb" style={{ width: size, height: size }}>
-        <svg width={svgSize} height={svgSize}
-          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}>
-          <defs>
-            <linearGradient id={`${colors.id}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
-              {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
-            </linearGradient>
-            <radialGradient id={`${colors.id}-well`} cx="50%" cy="50%" r="50%">
-              <stop offset="30%" stopColor="#0D0E15" stopOpacity="0.88" />
-              <stop offset="100%" stopColor="#0D0E15" stopOpacity="0" />
-            </radialGradient>
-            <filter id={`${colors.id}-glow`} x="-60%" y="-60%" width="220%" height="220%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id={`${colors.id}-travel`} x="-120%" y="-120%" width="340%" height="340%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="wide" />
-              <feGaussianBlur in="SourceGraphic" stdDeviation="4"  result="tight" />
-              <feMerge><feMergeNode in="wide" /><feMergeNode in="tight" /></feMerge>
-            </filter>
-          </defs>
-          <circle cx={cx} cy={cy} r={outerR * 1.35} fill={`url(#${colors.id}-well)`} />
-          <circle cx={cx} cy={cy} r={outerR} fill="none"
-            stroke={`url(#${colors.id}-grad)`} strokeWidth="2"
-            filter={`url(#${colors.id}-glow)`} />
-          <circle cx={cx} cy={cy} r={innerR} fill="none"
-            stroke={`url(#${colors.id}-grad)`} strokeWidth="1" opacity="0.5" />
-          <circle cx={cx} cy={cy} r={outerR} fill="none"
-            stroke={colors.glowColor} strokeWidth="6"
-            strokeDasharray={`3 ${(2 * Math.PI * outerR - 3).toFixed(1)}`}
-            strokeLinecap="round"
-            filter={`url(#${colors.id}-travel)`}
-            opacity="0.58" className="sky-ring-glow"
-            style={{ animationDuration: `${colors.glowDuration}s` }} />
-          {stars.map((s, i) => {
-            const { x, y } = polarXY(cx, cy, s.a, s.r)
-            const delay = `-${((i * 1.13 + s.a * 0.041) % 5.7).toFixed(2)}s`
-            const dur   = `${(1.6 + ((i * 0.67 + s.sz * 0.55) % 3.2)).toFixed(2)}s`
-            return s.t === 'd'
-              ? <circle key={i} className="sky-star" cx={x} cy={y} r={s.sz}
-                  fill={colors.star} style={{ animationDelay: delay, animationDuration: dur }} />
-              : <path key={i} className="sky-star" d={sparklePath(x, y, s.sz, s.sz * 0.18)}
-                  fill={colors.star} style={{ animationDelay: delay, animationDuration: dur }} />
-          })}
-        </svg>
-        <div className="sky-orb-inner">
-          <div className="sky-orb-num" style={{ fontSize: size > 230 ? '68px' : '50px', color: colors.number }}>
-            {numStr}
-          </div>
-          <div className="sky-orb-lbl">{label}</div>
-          {bandBadge && (
-            <div className="sky-band-badge" style={{ color: bandBadge.color }}>{bandBadge.label}</div>
-          )}
-        </div>
-      </div>
-      <div className={`sky-orb-detail${vis ? ' sky-orb-detail--show' : ''}`}>{detailNode}</div>
-    </div>
-  )
-}
-
-// ─── SkyNavOrb ───
-function SkyNavOrb({ colors, numStr, active, onClick }) {
-  const size = 48, pad = 10
-  const svgSize = size + pad * 2
-  const cx = svgSize / 2, cy = svgSize / 2
-  const outerR = size * 0.455
-  return (
-    <button className={`sky-nav-orb${active ? ' sky-nav-orb--active' : ''}`} onClick={onClick}>
-      <div style={{ position: 'relative', width: size, height: size }}>
-        <svg width={svgSize} height={svgSize}
-          style={{ position: 'absolute', top: -pad, left: -pad, pointerEvents: 'none', overflow: 'visible' }}>
-          <defs>
-            <linearGradient id={`${colors.id}-nav-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
-              {colors.ringStops.map((s, i) => <stop key={i} offset={s.o} stopColor={s.c} />)}
-            </linearGradient>
-            <filter id={`${colors.id}-nav-glow`} x="-60%" y="-60%" width="220%" height="220%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          <circle cx={cx} cy={cy} r={outerR} fill="none"
-            stroke={`url(#${colors.id}-nav-grad)`} strokeWidth="1.5"
-            filter={`url(#${colors.id}-nav-glow)`} />
-        </svg>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: '"Cagliostro", serif', fontSize: '15px', lineHeight: 1, color: colors.number }}>
-            {numStr}
-          </span>
-        </div>
-      </div>
-    </button>
-  )
-}
-
-// ─── SkyMobileRow ───
-function SkyMobileRow({ colors, numStr, label, detailNode, mobileStars, onClick, bandBadge }) {
-  const BAR_H = 92, SVG_W = 34
-  return (
-    <div className="sky-mob-row" onClick={onClick} style={{ cursor: onClick ? 'pointer' : undefined }}>
-      <div className="sky-mob-bar-col">
-        <svg width={SVG_W} height={BAR_H} style={{ overflow: 'visible' }}>
-          <defs>
-            <linearGradient id={`${colors.id}-vbar`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={colors.barMid} stopOpacity="0" />
-              <stop offset="22%"  stopColor={colors.barMid} stopOpacity="1" />
-              <stop offset="78%"  stopColor={colors.barMid} stopOpacity="1" />
-              <stop offset="100%" stopColor={colors.barMid} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <rect x="0" y="0" width="5" height={BAR_H} fill={`url(#${colors.id}-vbar)`} rx="2" />
-          {mobileStars.map((s, i) =>
-            s.t === 'd'
-              ? <circle key={i} cx={s.x} cy={s.y} r={s.sz} fill={colors.star} opacity={s.op} />
-              : <path key={i} d={sparklePath(s.x, s.y, s.sz, s.sz * 0.18)} fill={colors.star} opacity={s.op} />
-          )}
-        </svg>
-      </div>
-      <div className="sky-mob-content">
-        <div className="sky-mob-num-wrap">
-          <div className="sky-orb-lbl sky-mob-lbl" style={{ color: colors.number, opacity: 0.75 }}>{label}</div>
-          <div className="sky-mob-num" style={{ color: colors.number }}>{numStr}</div>
-          {bandBadge && (
-            <div className="sky-band-badge" style={{ color: bandBadge.color }}>{bandBadge.label}</div>
-          )}
-        </div>
-        <div className="sky-mob-detail">{detailNode}</div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Sky ───
-function Sky({ userEvents, regulation, openingBalance, settings, flowOverride = false, dateStr, drillThrough, onOrb, onClose, saveStatus, isPurple = false, regLogTotal = null, regLogRows = [] }) {
-  const [expanding, setExpanding] = useState(null)
-
-  function handleOrbClick(key) {
-    if (!onOrb) return
-    setExpanding(key)
-    setTimeout(() => { setExpanding(null); onOrb(key) }, 380)
-  }
-
-  // Per-axis sums are kept inline — needed for the breakdown detail panels
-  const axisSums = { E: 0, S: 0, P: 0, M: 0, X: 0 }
-  for (const e of userEvents) {
-    if (e.cancelled) continue
-    axisSums.E += e.E || 0; axisSums.S += e.S || 0; axisSums.P += e.P || 0
-    axisSums.M += e.M || 0; axisSums.X += e.X || 0
-  }
-  const highestAxis = Object.entries(axisSums).reduce((a, b) => b[1] > a[1] ? b : a, ['E', 0])
-
-  // Orb numbers — delegate to computeDisplayValues so today, history, and tooltip
-  // all run through the same formula. Edit math.js and all three update.
-  const { peakDebit: peak, activeRegulation: activeReg, siFlowBonus, livedExperience } =
-    computeDisplayValues({
-      date:          dateStr || todayDateStr(),
-      openingBalance,
-      flowActivity:  flowOverride,
-      regulationLogTotal: regLogTotal,
-      regulation: {
-        sensoryComfort: regulation.sensory || 0,
-        audioVisual:    regulation.av      || 0,
-        environment:    regulation.env     || 0,
-        bodyRest:       regulation.body    || 0,
-      },
-      events: userEvents.map(e => ({
-        emotional:      e.E        || 0,
-        sensory:        e.S        || 0,
-        predictability: e.P        || 0,
-        masking:        e.M        || 0,
-        ef:             e.X        || 0,
-        flow:           e.flow     || false,
-        siFlow:         e.siFlow   ?? null,
-        cancelled:      e.cancelled || false,
-      })),
-    }, settings)
-  const siFlowActive = userEvents.some(e => !e.cancelled && e.siFlow != null)
-
-  const PEAK_BREAKDOWN = [
-    { k: 'E', name: 'emotional' }, { k: 'S', name: 'sensory' },
-    { k: 'P', name: 'predictability' }, { k: 'M', name: 'masking' }, { k: 'X', name: 'EF' },
-  ]
-
-  const peakDetail = (
-    <div className="sky-detail sky-detail--grid">
-      {PEAK_BREAKDOWN.map(({ k, name }) => (
-        <div key={k} className={`sky-det-cell${highestAxis[0] === k && highestAxis[1] > 0 ? ' sky-det-amber' : ''}`}>
-          <span>{name}</span><span>{Math.round(axisSums[k])}</span>
-        </div>
-      ))}
-    </div>
-  )
-  const leDetail = (
-    <div className="sky-detail sky-detail--le">
-      <span>{Math.round(peak)} peak</span>
-      <span className="sky-det-sep">·</span>
-      <span>{Math.round(activeReg)} reg</span>
-      {siFlowActive && <>
-        <span className="sky-det-sep">·</span>
-        <span style={{ color: '#5abf7a' }}>−{siFlowBonus} SI</span>
-      </>}
-    </div>
-  )
-  const regDetail = regLogTotal != null
-    ? (
-      <div className="sky-detail sky-detail--grid">
-        {regLogRows.map(r => (
-          <div key={r.id} className="sky-det-cell">
-            <span>{r.label}</span><span>+{r.points}</span>
-          </div>
-        ))}
-      </div>
-    )
-    : (
-      <div className="sky-detail sky-detail--grid">
-        {REG_CHANNELS.map(c => {
-          const cur = regulation[c.k] || 0
-          const under = (c.cap - cur) > 2
-          return (
-            <div key={c.k} className={`sky-det-cell${under ? ' sky-det-teal' : ''}`}>
-              <span>{c.name}</span><span>{Math.round(cur)}/{c.cap}</span>
-            </div>
-          )
-        })}
-      </div>
-    )
-
-  const peakStr = String(Math.round(peak))
-  const leStr   = String(Math.round(livedExperience))
-  const regStr  = String(Math.round(activeReg))
-
-  // Band-responsive colouring for the LE orb — ring, glow, number and star all jewel-toned
-  const leThr       = settings?.livedExperienceThresholds ?? { yellow: 15, orange: 25, critical: 30 }
-  const leBand      = isPurple ? 'purple' : bandOf(Math.round(livedExperience), leThr)
-  const leNumColor  = bandColor(Math.round(livedExperience), leThr, isPurple)
-  const leBandLabel = leBand
-  const LE_COLORS   = {
-    ...SKY_COLORS.le,
-    ringStops: BAND_RING_STOPS[leBand] ?? SKY_COLORS.le.ringStops,
-    glowColor: BAND_GLOW_COLOR[leBand] ?? SKY_COLORS.le.glowColor,
-    number: leNumColor,
-    star:   leNumColor,
-  }
-  const leBadge     = leBandLabel !== 'green' ? { label: leBandLabel, color: leNumColor } : null
-
-  if (drillThrough) {
-    return (
-      <div className="sky sky--drill">
-        <div className="sky-nav">
-          <SkyNavOrb colors={SKY_COLORS.peak} numStr={peakStr}
-            active={drillThrough === 'peak'}
-            onClick={() => drillThrough === 'peak' ? onClose?.() : onOrb?.('peak')} />
-          <SkyNavOrb colors={LE_COLORS} numStr={leStr}
-            active={drillThrough === 'le'}
-            onClick={() => drillThrough === 'le' ? onClose?.() : onOrb?.('le')} />
-          <SkyNavOrb colors={SKY_COLORS.reg} numStr={regStr}
-            active={drillThrough === 'reg'}
-            onClick={() => drillThrough === 'reg' ? onClose?.() : onOrb?.('reg')} />
-          {saveStatus && <span className="sky-nav-status">{saveStatus}</span>}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="sky">
-      <div className="sky-desk">
-        <SkyOrb size={200} colors={SKY_COLORS.peak} numStr={peakStr}
-          label="today's peak" stars={PEAK_STARS} detailNode={peakDetail}
-          onClick={() => handleOrbClick('peak')}
-          animClass={expanding === 'peak' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
-        <SkyOrb size={260} colors={LE_COLORS} numStr={leStr}
-          label="lived experience" stars={LE_STARS} detailNode={leDetail}
-          bandBadge={leBadge}
-          onClick={() => handleOrbClick('le')}
-          animClass={expanding === 'le' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
-        <SkyOrb size={200} colors={SKY_COLORS.reg} numStr={regStr}
-          label="regulation" stars={REG_STARS} detailNode={regDetail}
-          onClick={() => handleOrbClick('reg')}
-          animClass={expanding === 'reg' ? 'sky-orb-wrap--expanding' : expanding ? 'sky-orb-wrap--fading' : ''} />
-      </div>
-      <div className="sky-mob">
-        <SkyMobileRow colors={SKY_COLORS.peak} numStr={peakStr}
-          label="today's peak" detailNode={peakDetail} mobileStars={PEAK_MOB_STARS}
-          onClick={() => onOrb?.('peak')} />
-        <div className="sky-mob-div" />
-        <SkyMobileRow colors={LE_COLORS} numStr={leStr}
-          label="lived experience" detailNode={leDetail} mobileStars={LE_MOB_STARS}
-          bandBadge={leBadge}
-          onClick={() => onOrb?.('le')} />
-        <div className="sky-mob-div" />
-        <SkyMobileRow colors={SKY_COLORS.reg} numStr={regStr}
-          label="regulation" detailNode={regDetail} mobileStars={REG_MOB_STARS}
-          onClick={() => onOrb?.('reg')} />
-      </div>
-    </div>
-  )
-}
-
 // The day's peak (opening + events + tax) — the waterline's starting level.
 // Regulation never moves peak, so the pips are passed as zero here.
 function dayPeakDebit({ dateStr, openingBalance, evts, gs, settings }) {
@@ -973,260 +536,6 @@ function dayPeakDebit({ dateStr, openingBalance, evts, gs, settings }) {
     })),
   }, settings)
   return peakDebit
-}
-
-// ─── TrackerDayEditor (V2) ───
-// Same as TrackerRoom's TrackerDayEditor but uses V2 data functions.
-// fillGapsBefore is omitted — V2 tables already have all historical data.
-function TrackerDayEditor({ session, settings, dateStr: dateProp, onBack, resetKey, drillThrough, onDrillThrough, onEditAction }) {
-  const dateStr = dateProp || todayDateStr()
-  const isToday = dateStr === todayDateStr()
-  const [loading,        setLoading]        = useState(true)
-  const [userEvents,     setUserEvents]     = useState([])
-  const [regulation,     setRegulation]     = useState({ sensory: 0, av: 0, env: 0, body: 0 })
-  const [recovery,       setRecovery]       = useState(false)
-  const [warning,        setWarning]        = useState({ skin: false, vision: false, thought: false, other: false })
-  const [goodSigns,      setGoodSigns]      = useState({ flow: false, crisis: false })
-  const [meltdown,       setMeltdown]       = useState(false)
-  const [openingBalance, setOpeningBalance] = useState(0)
-  const [yesterdayClosing, setYesterdayClosing] = useState(0)
-  const [saveStatus,     setSaveStatus]     = useState('')
-  const [stampedTax,     setStampedTax]     = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
-  const [autoFilledDays, setAutoFilledDays] = useState([])
-  const [bannerDismissed,setBannerDismissed]= useState(false)
-  const [seededIds,      setSeededIds]      = useState(new Set())
-  const [allEntries,     setAllEntries]     = useState([])
-  const [purpleOverride, setPurpleOverride] = useState(null)
-
-  // The day's regulation grid. After each add/remove, re-save so the waterline
-  // split + closing balance (driven by the capacity total) recompute and carry
-  // forward correctly.
-  const regLog = useRegLog(session.user.id, dateStr, (next) =>
-    autoSave({ regLogRows: next }))
-  const regLogTotal = regLog.hasRows ? regLog.total : null
-
-  useEffect(() => { onDrillThrough?.(null) }, [resetKey, onDrillThrough])
-
-  useEffect(() => {
-    async function init() {
-      try {
-        // On the today view, fill any trailing gap of missed days with quiet
-        // placeholder entries (sleep + tax) so the chain stays unbroken. They're
-        // flagged auto_filled so the banner below can flag them for review.
-        if (isToday) {
-          await backfillMissedDays(session.user.id, settings, dateStr)
-        }
-        const entries = await loadAllEntriesV2(session.user.id)
-        setAllEntries(entries)
-        setAutoFilledDays(entries.filter(e => e.entry_data?.autoFilled).map(e => e.date).sort())
-        // Opening balance is ALWAYS derived from the chain — never trusted from the
-        // day's own stored value — so a late-entered day or a gap of missed days
-        // still carries forward correctly (sleep −5 and tax per missed day).
-        const opening = resolveOpeningBalance(
-          dateStr, entries,
-          { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate },
-        )
-        setOpeningBalance(opening)
-        setYesterdayClosing(opening)
-
-        const existing = entries.find(e => e.date === dateStr)
-        if (existing) {
-          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
-          setPurpleOverride(existing.entry_data.purpleOverride ?? null)
-          const state = dbToInternal(existing)
-          setUserEvents(state.userEvents)
-          setRegulation(state.regulation)
-          setRecovery(state.recovery)
-          setWarning(state.warning)
-          setGoodSigns(state.goodSigns)
-          setMeltdown(state.meltdown)
-        }
-        loadSeededEventIds(session.user.id).then(ids => setSeededIds(ids)).catch(() => {})
-      } catch (err) {
-        console.error('failed to load entry (v2)', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    init()
-  }, [dateStr, session.user.id])
-
-  const taxCancelled = !taxActive(dateStr, settings.taxStartDate, userEvents) || goodSigns.flow
-
-  if (loading) return <div className="history-loading">opening the almanac…</div>
-
-  const purpleState = getPurpleState(dateStr, allEntries, settings.purpleFloors, purpleOverride)
-
-  async function autoSave(patch = {}) {
-    const evts  = patch.userEvents    ?? userEvents
-    const reg   = patch.regulation    ?? regulation
-    const rec   = patch.recovery      ?? recovery
-    const warn  = patch.warning       ?? warning
-    const gs    = patch.goodSigns     ?? goodSigns
-    const melt  = patch.meltdown      ?? meltdown
-    const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
-    const rowsNow = patch.regLogRows ?? regLog.rows
-    setSaveStatus('saving…')
-    try {
-      // SAFEGUARD — re-derive the opening balance from the freshest chain at save
-      // time, so a save can NEVER persist a stale opening (which would otherwise
-      // start a wrong number cascading into later days). This mirrors the read-side
-      // rule: opening is always derived from the chain, never trusted from a day's
-      // own stored value. The in-memory state can go stale if a prior day was edited
-      // after this view mounted; reloading here closes that gap.
-      const freshEntries = await loadAllEntriesV2(session.user.id)
-      const opening = resolveOpeningBalance(dateStr, freshEntries,
-        { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate })
-      if (opening !== openingBalance) { setOpeningBalance(opening); setYesterdayClosing(opening) }
-      setAllEntries(freshEntries)
-
-      // THE WATERLINE — recompute the whole day's capacity/recovery split from the
-      // current peak + floor. ANY change (a routine, an action, OR a mid-day event
-      // that raises peak) re-runs it for this one day, so points that had overflowed
-      // to recovery can correctly become capacity again. Stored, not derived-on-read.
-      const ps   = getPurpleState(dateStr, freshEntries, settings.purpleFloors, pOver)
-      const floor = ps.isPurple ? ps.floor : null
-      const peak = dayPeakDebit({ dateStr, openingBalance: opening, evts, gs, settings: { ...settings, taxValue: stampedTax } })
-      const split = splitDayRows(rowsNow, peak, floor)
-      if (rowsNow.length) {
-        await persistDaySplit(split, rowsNow)
-        regLog.applyRows(split)
-      }
-      // Capacity (the `points` side, down to the floor) feeds the existing lived-
-      // experience math unchanged; the recovery overflow is its own channel.
-      const capacityTotal = rowsNow.length ? sumRegLog(split) : null
-
-      const { entryData, peakDebit } = internalToDb({
-        dateStr, openingBalance: opening, userEvents: evts, regulation: reg,
-        recovery: rec, warning: warn, goodSigns: gs,
-        settings: { ...settings, taxValue: stampedTax },
-        yesterdayClosing: opening, meltdown: melt,
-        purpleOverride: pOver, regLogTotal: capacityTotal,
-      })
-      // Floor = the lowest the day can READ and CARRY forward. The waterline already
-      // keeps lived experience ≥ floor whenever peak ≥ floor; this also covers the
-      // quiet case where peak itself sits below the floor (little or no regulation).
-      if (ps.isPurple && ps.floor != null) {
-        entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
-        entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
-      }
-      await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
-      if (!isToday) await recalculateFromDateV2(session.user.id, dateStr, settings)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus(''), 2000)
-    } catch (err) {
-      console.error('auto-save failed (v2)', err)
-      setSaveStatus('auto-save failed')
-      setTimeout(() => setSaveStatus(''), 4000)
-    }
-  }
-
-  const onAdd    = (ev) => { const n=[...userEvents,ev];              setUserEvents(n); autoSave({ userEvents: n }) }
-  const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
-  const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
-  const onWarning   = (k)   => { const n={...warning,[k]:!warning[k]};  setWarning(n);   autoSave({ warning: n }) }
-  const onGood      = (k)   => { const n={...goodSigns,[k]:!goodSigns[k]}; setGoodSigns(n); autoSave({ goodSigns: n }) }
-  const onRecovery  = (v)   => { setRecovery(v); autoSave({ recovery: v }) }
-  const onMeltdown  = ()    => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
-  const onPurpleOverride = (val) => { setPurpleOverride(val); autoSave({ purpleOverride: val }) }
-
-  async function handleSeed(eventId, eventText) {
-    try {
-      await seedEntry({ userId: session.user.id, expression: eventText, sourceEventId: eventId, entryDate: dateStr })
-      setSeededIds(prev => new Set([...prev, eventId]))
-    } catch (err) {
-      console.error('seed to L+F failed', err)
-    }
-  }
-
-  return (
-    <>
-      {onBack && (
-        <>
-          <button className="back-link" onClick={onBack}>← back to history</button>
-          <div className="history-edit-date">{formatDateStr(dateStr)}</div>
-        </>
-      )}
-      {!onBack && autoFilledDays.length > 0 && !bannerDismissed && (
-        <div className="autofill-banner">
-          <span className="autofill-banner-text">
-            {autoFilledDays.length === 1 ? 'A day was' : `${autoFilledDays.length} days were`} auto-filled because nothing
-            was logged — sleep and the autistic tax only. Edit anytime in History to add what really happened.
-            <span className="autofill-banner-dates"> ({autoFilledDays.map(formatDateStr).join(', ')})</span>
-          </span>
-          <button className="autofill-banner-close" onClick={() => setBannerDismissed(true)} aria-label="dismiss">×</button>
-        </div>
-      )}
-      <Sky
-        userEvents={userEvents}
-        regulation={regulation}
-        openingBalance={openingBalance}
-        settings={{ ...settings, taxValue: stampedTax }}
-        flowOverride={goodSigns.flow}
-        dateStr={dateStr}
-        drillThrough={drillThrough}
-        onOrb={onDrillThrough}
-        onClose={() => onDrillThrough?.(null)}
-        saveStatus={saveStatus}
-        isPurple={purpleState.isPurple}
-        regLogTotal={regLogTotal}
-        regLogRows={regLog.rows}
-      />
-      {!drillThrough && isToday && (
-        <SetTheDayBox
-          userId={session.user.id}
-          band={openingBand(
-            // The box reads the day's STARTING LOAD: the opening balance plus the
-            // unavoidable daily autistic tax. Flow does NOT lighten it — flow / SI
-            // flow is regulation that happens LATER, not where the day started — so
-            // the tax is always counted (only gated by the tax start date). Events
-            // are excluded too, so the band stays the day's stable opening frame.
-            openingBalance + (dateStr >= (settings.taxStartDate ?? '2000-01-01') ? stampedTax : 0),
-            settings.livedExperienceThresholds, purpleState.isPurple
-          )}
-          window={greetingWindowFor()}
-          dateStr={dateStr}
-        />
-      )}
-      {drillThrough && (
-        <div className="sky-drill" key={drillThrough}>
-          {(drillThrough === 'peak' || drillThrough === 'le') && (
-            <>
-              <section className="events-section">
-                <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
-                <div className="ledger-head">
-                  <div className="ledger-title">events · today</div>
-                  <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
-                </div>
-                <div className="events">
-                  {userEvents.map(e => (
-                    <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} seededIds={seededIds} onSeed={handleSeed} />
-                  ))}
-                </div>
-                <Composer onAdd={onAdd} />
-              </section>
-              <WarningSigns flags={warning} onToggle={onWarning} />
-              <MeltdownSection active={meltdown} onToggle={onMeltdown} goodSigns={goodSigns} onGood={onGood} />
-              <PurpleOverrideSection
-                isPurple={purpleState.isPurple}
-                override={purpleOverride}
-                onChange={onPurpleOverride}
-              />
-            </>
-          )}
-          {(drillThrough === 'reg' || drillThrough === 'le') && (
-            <RegulationSection
-              recovery={recovery}
-              onRecovery={onRecovery}
-              regLog={regLog}
-              onEditAction={onEditAction}
-              isPurple={purpleState.isPurple}
-            />
-          )}
-        </div>
-      )}
-    </>
-  )
 }
 
 // ─── HistoryDateEditor helpers ───
@@ -1728,13 +1037,446 @@ function PurpleSettings({ settings, onPurpleChange }) {
 const HIST_MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
 const HIST_DOW    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+// ─── Today's sky — band-statement colour (mirrors today's band). The std_* content
+// tables never carry red (red → orange fallback), but the STATEMENT can still colour
+// red on a genuine crisis-adjacent opening — brightened off the ring's ruby so it
+// stays readable on the dark ground. ────────────────────────────────────────────
+const SKY_BAND_TEXT = {
+  green:  '#2FBE86',
+  yellow: '#F6C73A',
+  orange: '#FF8419',
+  red:    '#FF5A6A',
+  purple: '#A673E4',
+}
+
+// ─── StarMark — the one small 4-point star on the today circle, and the gold
+// separators between the "today might want" suggestions. Same sparkle geometry as
+// the retired orbs, shrunk to garnish size. ────────────────────────────────────
+function StarMark({ size = 7, color = 'var(--candle)', className, style }) {
+  const box = size * 2 + 2
+  const c = box / 2
+  return (
+    <svg className={className} width={box} height={box} viewBox={`0 0 ${box} ${box}`}
+         style={{ overflow: 'visible', flex: 'none', ...style }} aria-hidden="true">
+      <path d={sparklePath(c, c, size, size * 0.4)} fill={color} />
+    </svg>
+  )
+}
+
+// ─── FadingDivider — the slim fading line the history tab already uses between week
+// rows (same element, same style), reused here to frame the woven-in voice. ──────
+function FadingDivider() {
+  return (
+    <div className="week-sep tsky-div" aria-hidden="true">
+      <div className="week-sep-line week-sep-line--l" />
+      <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+      <div className="week-sep-line week-sep-line--r" />
+    </div>
+  )
+}
+
+// ─── RollingStrip — evolves the history WeekStrip into a rolling 7-day window:
+// today always at the RIGHT edge, the six previous days trailing left (NOT a Mon–Sun
+// calendar week — so Monday no longer hides the weekend behind the back arrow).
+// Arrows page a week further back; the forward arrow is inert once the window ends
+// at today.
+//   solid ring  = an entered day, coloured by its lived-experience band
+//   dashed ring = a placeholder day (sleep/tax carry-forward only — the app's guess)
+//   dim         = future, not tappable
+//   glow        = the day currently being edited
+// One small 4-point star sits just off the today circle — the only day that gets one.
+function RollingStrip({ anchorEnd, selectedDate, entryMap, thresholds, todayStr, allEntries, purpleFloors, onSelect, onPrev, onNext, canForward }) {
+  const end  = hedParseDate(anchorEnd)
+  const days = Array.from({ length: 7 }, (_, i) => hedAddDays(end, i - 6))
+  return (
+    <div className="tsky-strip">
+      <button className="tsky-strip-arrow" onClick={onPrev} aria-label="earlier days">‹</button>
+      <div className="tsky-strip-days">
+        {days.map(day => {
+          const ds         = hedToDateStr(day)
+          const entry      = entryMap[ds]
+          const isFuture   = ds > todayStr
+          const isToday    = ds === todayStr
+          const isSelected = ds === selectedDate
+          // Entered = a real save (backfilled placeholders carry auto_filled; a user
+          // edit clears it). Everything else reads as the app's guess → dashed.
+          const entered    = !!entry && !entry.entry_data?.autoFilled
+          let color
+          if (entered) {
+            const leVal = entry.entry_data?.livedExperience ?? entry.entry_data?.closingBalance ?? 0
+            const ps    = getPurpleState(ds, allEntries, purpleFloors, entry.entry_data?.purpleOverride ?? null)
+            color = bandColor(Math.round(leVal), thresholds, ps.isPurple)
+          }
+          const cls = [
+            'tsky-day',
+            entered    ? 'tsky-day--entered'     : 'tsky-day--placeholder',
+            isFuture   ? 'tsky-day--future'      : '',
+            isSelected ? 'tsky-day--editing'     : '',
+            isToday    ? 'tsky-day--today'       : '',
+          ].filter(Boolean).join(' ')
+          return (
+            <button key={ds} className={cls}
+              onClick={!isFuture ? () => onSelect(ds) : undefined}
+              disabled={isFuture}
+              style={color ? { '--tsky-day-color': color } : undefined}>
+              <span className="tsky-dow">{HED_DOW[(day.getDay() + 6) % 7]}</span>
+              <span className="tsky-ring">
+                <span className="tsky-day-num">{day.getDate()}</span>
+                {isToday && <StarMark size={5} className="tsky-today-star" />}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <button
+        className={`tsky-strip-arrow${canForward ? '' : ' tsky-strip-arrow--off'}`}
+        onClick={canForward ? onNext : undefined}
+        disabled={!canForward}
+        aria-label="later days">›</button>
+    </div>
+  )
+}
+
+// ─── useTodaysSky — the woven-in voice. ALWAYS about TODAY, never the selected day:
+// greeting off the clock, band line + quote + suggestions off today's opening-frame
+// band. Re-loads whenever today's band shifts (e.g. editing a past day cascades a
+// new opening balance onto today). Content + tables unchanged (id=154). ──────────
+function useTodaysSky({ userId, band, timeWindow, todayStr }) {
+  const [voice, setVoice] = useState({ greeting: null, bandLine: null, quote: null, suggestions: [] })
+  useEffect(() => {
+    if (!userId || !band || !timeWindow || !todayStr) return
+    let alive = true
+    loadSetTheDay({ userId, band, window: timeWindow, dateStr: todayStr })
+      .then(d => { if (alive) setVoice(d) })
+      .catch(err => console.error("failed to load today's sky", err))
+    return () => { alive = false }
+  }, [userId, band, timeWindow, todayStr])
+  return voice
+}
+
+// ─── TodayLanding — the tracker's new front door (engine room id=166). The combined
+// day editor IS the landing: it opens on today, the rolling strip steps back through
+// the week, and the "Today's sky" voice is woven in above as typography (no box).
+// The editor body below is the same one History uses, unchanged.
+function TodayLanding({ session, settings, resetKey, onEditAction }) {
+  const todayStr = todayDateStr()
+  const [dateStr,   setDateStr]   = useState(todayStr)
+  const [anchorEnd, setAnchorEnd] = useState(todayStr)   // rightmost day of the rolling window
+  const [allEntries, setAllEntries] = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [userEvents, setUserEvents] = useState([])
+  const [regulation, setRegulation] = useState({ sensory: 0, av: 0, env: 0, body: 0 })
+  const [recovery, setRecovery]   = useState(false)
+  const [warning, setWarning]     = useState({ skin: false, vision: false, thought: false, other: false })
+  const [goodSigns, setGoodSigns] = useState({ flow: false, crisis: false })
+  const [meltdown, setMeltdown]   = useState(false)
+  const [openingBalance, setOpeningBalance]     = useState(0)
+  const [yesterdayClosing, setYesterdayClosing] = useState(0)
+  const [saveStatus, setSaveStatus] = useState('')
+  const [stampedTax, setStampedTax] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [seededIds, setSeededIds]   = useState(new Set())
+  const [purpleOverride, setPurpleOverride] = useState(null)
+  const backfilledRef = useRef(false)
+
+  const regLog = useRegLog(session.user.id, dateStr, (next) => autoSave({ regLogRows: next }))
+  const regLogTotal = regLog.hasRows ? regLog.total : null
+  const pipSum = (regulation.sensory || 0) + (regulation.av || 0) + (regulation.env || 0) + (regulation.body || 0)
+  const showOldPip = regLog.loaded && !regLog.hasRows && pipSum > 0
+
+  // Tapping the "today" tab (resetKey bumps) always returns the landing to today.
+  useEffect(() => { setDateStr(todayStr); setAnchorEnd(todayStr) }, [resetKey])
+
+  useEffect(() => {
+    setLoading(true); setSaveStatus('')
+    let alive = true
+    async function init() {
+      try {
+        // Today's responsibility: fill any trailing gap of missed days with quiet
+        // placeholder rows so the chain stays unbroken. Once per mount only.
+        if (!backfilledRef.current) {
+          backfilledRef.current = true
+          await backfillMissedDays(session.user.id, settings, todayStr)
+        }
+        const entries = await loadAllEntriesV2(session.user.id)
+        if (!alive) return
+        setAllEntries(entries)
+        const opening = resolveOpeningBalance(
+          dateStr, entries,
+          { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate },
+        )
+        setOpeningBalance(opening); setYesterdayClosing(opening)
+
+        const existing = entries.find(e => e.date === dateStr)
+        if (existing) {
+          setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setPurpleOverride(existing.entry_data.purpleOverride ?? null)
+          const state = dbToInternal(existing)
+          setUserEvents(state.userEvents)
+          setRegulation(state.regulation)
+          setRecovery(state.recovery)
+          setWarning(state.warning)
+          setGoodSigns(state.goodSigns)
+          setMeltdown(state.meltdown)
+        } else {
+          setStampedTax(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setPurpleOverride(null)
+          setUserEvents([])
+          setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
+          setRecovery(false)
+          setWarning({ skin: false, vision: false, thought: false, other: false })
+          setGoodSigns({ flow: false, crisis: false })
+          setMeltdown(false)
+        }
+        loadSeededEventIds(session.user.id).then(ids => { if (alive) setSeededIds(ids) }).catch(() => {})
+      } catch (err) {
+        console.error('failed to load entry (v2)', err)
+      } finally {
+        if (alive) setLoading(false)
+      }
+    }
+    init()
+    return () => { alive = false }
+  }, [dateStr, session.user.id])
+
+  const entryMap = useMemo(() => {
+    const m = {}
+    for (const e of allEntries) m[e.date] = e
+    return m
+  }, [allEntries])
+
+  const taxCancelled = !taxActive(dateStr, settings.taxStartDate, userEvents) || goodSigns.flow
+  const purpleState  = getPurpleState(dateStr, allEntries, settings.purpleFloors, purpleOverride)
+
+  // ── The voice — always TODAY, never the selected day. Reads the opening frame
+  // (opening balance + the day's autistic tax), the same rule the box shipped with.
+  const todayEntry    = entryMap[todayStr]
+  const todayOverride = todayEntry?.entry_data?.purpleOverride ?? null
+  const todayPurple   = getPurpleState(todayStr, allEntries, settings.purpleFloors, todayOverride)
+  const todayOpening  = useMemo(
+    () => resolveOpeningBalance(todayStr, allEntries, { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate }),
+    [allEntries, todayStr, settings.taxValue, settings.taxStartDate],
+  )
+  const todayTax = todayStr >= (settings.taxStartDate ?? '2000-01-01')
+    ? (todayEntry?.entry_data?.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+    : 0
+  const todayFrame = Math.round(todayOpening + todayTax)
+  // Colour allows red (a genuine crisis-adjacent opening); content falls red→orange
+  // via openingBand, because the std_* tables only carry green/yellow/orange/purple.
+  const todayBandRaw       = todayPurple.isPurple ? 'purple' : bandOf(todayFrame, settings.livedExperienceThresholds)
+  const todayBandContent   = openingBand(todayOpening + todayTax, settings.livedExperienceThresholds, todayPurple.isPurple)
+  const bandStatementColor = SKY_BAND_TEXT[todayBandRaw] || SKY_BAND_TEXT.green
+  const voice = useTodaysSky({ userId: session.user.id, band: todayBandContent, timeWindow: greetingWindowFor(), todayStr })
+
+  async function autoSave(patch = {}) {
+    const evts  = patch.userEvents    ?? userEvents
+    const reg   = patch.regulation    ?? regulation
+    const rec   = patch.recovery      ?? recovery
+    const warn  = patch.warning       ?? warning
+    const gs    = patch.goodSigns     ?? goodSigns
+    const melt  = patch.meltdown      ?? meltdown
+    const pOver = patch.purpleOverride !== undefined ? patch.purpleOverride : purpleOverride
+    const rowsNow = patch.regLogRows ?? regLog.rows
+    setSaveStatus('saving…')
+    try {
+      // Re-derive opening from the freshest chain at save time (safeguard against a
+      // stale opening if a prior day was edited after this view mounted).
+      const freshEntries = await loadAllEntriesV2(session.user.id)
+      const opening = resolveOpeningBalance(dateStr, freshEntries,
+        { taxValue: settings.taxValue, taxStartDate: settings.taxStartDate })
+      if (opening !== openingBalance) { setOpeningBalance(opening); setYesterdayClosing(opening) }
+
+      const ps    = getPurpleState(dateStr, freshEntries, settings.purpleFloors, pOver)
+      const floor = ps.isPurple ? ps.floor : null
+      const peak  = dayPeakDebit({ dateStr, openingBalance: opening, evts, gs, settings: { ...settings, taxValue: stampedTax } })
+      const split = splitDayRows(rowsNow, peak, floor)
+      if (rowsNow.length) {
+        await persistDaySplit(split, rowsNow)
+        regLog.applyRows(split)
+      }
+      const capacityTotal = rowsNow.length ? sumRegLog(split) : null
+
+      const { entryData, peakDebit } = internalToDb({
+        dateStr, openingBalance: opening, userEvents: evts, regulation: reg,
+        recovery: rec, warning: warn, goodSigns: gs,
+        settings: { ...settings, taxValue: stampedTax },
+        yesterdayClosing: opening, meltdown: melt,
+        purpleOverride: pOver, regLogTotal: capacityTotal,
+      })
+      if (ps.isPurple && ps.floor != null) {
+        entryData.livedExperience = Math.max(entryData.livedExperience, ps.floor)
+        entryData.closingBalance  = Math.max(entryData.closingBalance,  ps.floor)
+      }
+      await saveEntryV2({ dateStr, entryData, peakDebit, userId: session.user.id })
+      // A past-day edit cascades forward; today has nothing after it, so skip.
+      if (dateStr !== todayStr) await recalculateFromDateV2(session.user.id, dateStr, settings)
+
+      const reloaded = await loadAllEntriesV2(session.user.id)
+      setAllEntries(reloaded)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus(''), 2000)
+    } catch (err) {
+      console.error('auto-save failed (v2)', err)
+      setSaveStatus('auto-save failed')
+      setTimeout(() => setSaveStatus(''), 4000)
+    }
+  }
+
+  const onAdd    = (ev) => { const n=[...userEvents,ev];                   setUserEvents(n); autoSave({ userEvents: n }) }
+  const onUpdate = (ev) => { const n=userEvents.map(x=>x.id===ev.id?ev:x); setUserEvents(n); autoSave({ userEvents: n }) }
+  const onDelete = (id) => { const n=userEvents.filter(x=>x.id!==id);      setUserEvents(n); autoSave({ userEvents: n }) }
+  const onWarning   = (k) => { const n={...warning,[k]:!warning[k]};       setWarning(n);   autoSave({ warning: n }) }
+  const onGood      = (k) => { const n={...goodSigns,[k]:!goodSigns[k]};   setGoodSigns(n); autoSave({ goodSigns: n }) }
+  const onRecovery  = (v) => { setRecovery(v); autoSave({ recovery: v }) }
+  const onMeltdown  = ()  => { const n=!meltdown; setMeltdown(n); autoSave({ meltdown: n }) }
+  const onPurpleOverride = (val) => { setPurpleOverride(val); autoSave({ purpleOverride: val }) }
+
+  async function handleSeed(eventId, eventText) {
+    try {
+      await seedEntry({ userId: session.user.id, expression: eventText, sourceEventId: eventId, entryDate: dateStr })
+      setSeededIds(prev => new Set([...prev, eventId]))
+    } catch (err) {
+      console.error('seed to L+F failed', err)
+    }
+  }
+
+  function pageBack() { setAnchorEnd(prev => hedToDateStr(hedAddDays(hedParseDate(prev), -7))) }
+  function pageForward() {
+    setAnchorEnd(prev => {
+      const next = hedToDateStr(hedAddDays(hedParseDate(prev), 7))
+      return next > todayStr ? todayStr : next
+    })
+  }
+  const canForward = anchorEnd < todayStr
+
+  const skyNums = calcSkyNums(userEvents, regulation, openingBalance, { ...settings, taxValue: stampedTax }, goodSigns, dateStr, regLogTotal)
+  const yesterdayStr = hedToDateStr(hedAddDays(hedParseDate(todayStr), -1))
+  const [ , emo, eda] = dateStr.split('-').map(Number)
+  const editingLabel = dateStr === todayStr ? 'today'
+    : dateStr === yesterdayStr ? 'yesterday'
+    : `${HED_MON[emo - 1]} ${eda}`
+
+  return (
+    <div className="tsky">
+      {/* 1 — day greeting: normal weight is bold, non-italic, the loudest voice */}
+      {voice.greeting && <div className="tsky-greeting">{voice.greeting}</div>}
+
+      {/* 2 — band statement: italic, colour mirrors today's band (incl. red) */}
+      {voice.bandLine && (
+        <div className="tsky-bandline" style={{ color: bandStatementColor }}>{voice.bandLine}</div>
+      )}
+
+      {/* 3 — the rolling 7-day strip */}
+      <RollingStrip
+        anchorEnd={anchorEnd}
+        selectedDate={dateStr}
+        entryMap={entryMap}
+        thresholds={settings.livedExperienceThresholds}
+        todayStr={todayStr}
+        allEntries={allEntries}
+        purpleFloors={settings.purpleFloors}
+        onSelect={setDateStr}
+        onPrev={pageBack}
+        onNext={pageForward}
+        canForward={canForward}
+      />
+      <div className="tsky-editing">
+        editing {editingLabel}
+        {saveStatus && <span className="tsky-editing-status"> · {saveStatus}</span>}
+      </div>
+
+      {/* 4 — fading divider */}
+      <FadingDivider />
+
+      {/* 5 — quote: italic, design gold */}
+      {voice.quote && <div className="tsky-quote">{voice.quote}</div>}
+
+      {/* 6 — "today might want": quiet ink, small gold 4-point stars as separators */}
+      {voice.suggestions?.length > 0 && (
+        <div className="tsky-suggests">
+          <div className="tsky-suglabel">today might want</div>
+          <div className="tsky-sugline">
+            {voice.suggestions.map((s, i) => (
+              <span className="tsky-sugitem" key={i}>
+                {i > 0 && <StarMark size={4} className="tsky-sugsep" />}
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 7 — fading divider */}
+      <FadingDivider />
+
+      {/* 8 — the day summary numbers, then the editor exactly as it exists today */}
+      <div className="hed-sky-nums">
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.peak.number }}>
+            {loading ? '·' : skyNums.peak}
+          </span>
+          <span className="hed-sky-lbl">peak</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), settings.livedExperienceThresholds, purpleState.isPurple) }}>
+            {loading ? '·' : skyNums.le}
+          </span>
+          <span className="hed-sky-lbl">lived exp</span>
+        </div>
+        <div className="hed-sky-sep">·</div>
+        <div className="hed-sky-num">
+          <span className="hed-sky-val" style={{ color: SKY_COLORS.reg.number }}>
+            {loading ? '·' : skyNums.reg}
+          </span>
+          <span className="hed-sky-lbl">regulation</span>
+        </div>
+      </div>
+
+      {loading
+        ? <div className="history-loading">opening the almanac…</div>
+        : (
+          <>
+            <section className="events-section">
+              <AutisticTaxLine rate={stampedTax} cancelled={taxCancelled} />
+              <div className="ledger-head">
+                <div className="ledger-title">events</div>
+                <div className="ledger-count">{userEvents.filter(e => !e.cancelled).length} active</div>
+              </div>
+              <div className="events">
+                {userEvents.map(e => (
+                  <EventRow key={e.id} e={e} onUpdate={onUpdate} onDelete={onDelete} seededIds={seededIds} onSeed={handleSeed} />
+                ))}
+              </div>
+              <Composer onAdd={onAdd} />
+            </section>
+            <RegulationSection
+              recovery={recovery}
+              onRecovery={onRecovery}
+              regLog={regLog}
+              oldPip={showOldPip ? regulation : null}
+              onEditAction={onEditAction}
+              isPurple={purpleState.isPurple}
+            />
+            <WarningSigns flags={warning} onToggle={onWarning} />
+            <MeltdownSection active={meltdown} onToggle={onMeltdown} goodSigns={goodSigns} onGood={onGood} />
+            <PurpleOverrideSection
+              isPurple={purpleState.isPurple}
+              override={purpleOverride}
+              onChange={onPurpleOverride}
+            />
+          </>
+        )
+      }
+    </div>
+  )
+}
+
 // ─── TrackerV2Room shell ───
 export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, settings: settingsProp, onThresholdsChange, initialTab }) {
   const [settings, setSettings] = useState(settingsProp ?? null)
   const [tab,      setTab]      = useState(initialTab ?? 'today')
   const [editDate, setEditDate] = useState(null)
   const [todayResetKey,  setTodayResetKey]  = useState(0)
-  const [drillThrough,   setDrillThrough]   = useState(null)
   const [viewYear,  setViewYear]  = useState(() => new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
 
@@ -1768,25 +1510,10 @@ export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, s
   }
 
   function handleTabChange(t) {
-    if (t === 'today') { setTodayResetKey(k => k + 1); setDrillThrough(null) }
+    if (t === 'today') { setTodayResetKey(k => k + 1) }
     setTab(t)
     if (t !== 'history') setEditDate(null)
   }
-
-  useEffect(() => {
-    const vf = document.querySelector('.view-fade')
-    if (!vf) return
-    if (tab === 'today' && !drillThrough) {
-      vf.style.overflowY = 'hidden'
-      const hdr  = vf.querySelector('.room-header-wrap')
-      const hdrH = hdr ? hdr.getBoundingClientRect().height : 80
-      vf.style.setProperty('--today-h', `${window.innerHeight - hdrH - 20}px`)
-    } else {
-      vf.style.overflowY = ''
-      vf.style.removeProperty('--today-h')
-    }
-    return () => { vf.style.overflowY = ''; vf.style.removeProperty('--today-h') }
-  }, [tab, drillThrough])
 
   const showHistoryNav = tab === 'history' && !editDate
 
@@ -1834,13 +1561,8 @@ export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, s
       </div>
 
       {/* Today stays mounted so unsaved state survives tab switches */}
-      <div style={{
-        display: tab === 'today' ? 'flex' : 'none',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        minHeight: 'var(--today-h, calc(100svh - 100px))',
-      }}>
-        <TrackerDayEditor session={session} settings={settings} resetKey={todayResetKey} drillThrough={drillThrough} onDrillThrough={setDrillThrough} onEditAction={onEditAction} />
+      <div style={{ display: tab === 'today' ? 'block' : 'none' }}>
+        <TodayLanding session={session} settings={settings} resetKey={todayResetKey} onEditAction={onEditAction} />
       </div>
 
       {tab === 'history' && !editDate && (

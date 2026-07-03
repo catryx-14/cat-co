@@ -2621,6 +2621,159 @@ body {
   user-select: none;
 }
 
+/* ── Today's sky — the woven-in landing voice (engine room id=166) ───────────── */
+/* The whole landing sits in one centred column that spreads on wider screens
+   (the room content area itself has no width cap). */
+.tsky { padding-top: 4px; max-width: 1160px; margin: 0 auto; }
+
+/* 1 — day greeting: bold, non-italic, slightly larger than body, the loudest voice */
+.tsky-greeting {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 27px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ink);
+  letter-spacing: .005em;
+  margin: 6px auto 0;
+  max-width: 900px;
+}
+/* 2 — band statement: italic, slightly smaller; colour set inline to today's band */
+.tsky-bandline {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.45;
+  text-align: center;
+  margin: 11px auto 0;
+  max-width: 860px;
+}
+
+/* 3 — the rolling 7-day strip */
+.tsky-strip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 22px auto 0;
+  max-width: 680px;
+}
+.tsky-strip-arrow {
+  background: none; border: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 22px; line-height: 1;
+  cursor: pointer; padding: 0 6px; flex: none;
+  transition: color 0.15s ease;
+}
+.tsky-strip-arrow:hover { color: rgba(255,255,255,0.72); }
+.tsky-strip-arrow--off { opacity: 0.22; cursor: default; pointer-events: none; }
+.tsky-strip-days {
+  display: flex; justify-content: space-between;
+  gap: 2px; flex: 1; min-width: 0;
+}
+.tsky-day {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 2px 0 3px;
+  background: none; border: none; cursor: pointer;
+}
+.tsky-day:disabled { cursor: default; }
+.tsky-dow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 7px; letter-spacing: .06em; text-transform: uppercase;
+  color: rgba(255,255,255,0.30);
+}
+.tsky-ring {
+  position: relative;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid transparent;
+  transition: box-shadow 0.18s ease, border-color 0.15s ease;
+}
+.tsky-day-num {
+  font-family: "Cagliostro", serif;
+  font-size: 15px; line-height: 1;
+  color: rgba(255,255,255,0.5);
+}
+/* entered → solid ring in the day's lived-experience band colour */
+.tsky-day--entered .tsky-ring { border-style: solid; border-color: var(--tsky-day-color, rgba(255,255,255,0.6)); }
+.tsky-day--entered .tsky-day-num { color: var(--tsky-day-color, rgba(255,255,255,0.85)); }
+/* placeholder → dashed ring: the math's carry-forward exists, but nothing entered */
+.tsky-day--placeholder .tsky-ring { border-style: dashed; border-color: rgba(255,255,255,0.24); }
+/* future → dim, not tappable */
+.tsky-day--future .tsky-ring { border-style: dashed; border-color: rgba(255,255,255,0.07); }
+.tsky-day--future .tsky-day-num,
+.tsky-day--future .tsky-dow { color: rgba(255,255,255,0.12); }
+/* glow → the day currently being edited */
+.tsky-day--editing .tsky-ring {
+  box-shadow: 0 0 0 1px var(--tsky-day-color, rgba(255,255,255,0.5)),
+              0 0 12px 1px color-mix(in srgb, var(--tsky-day-color, #ffffff) 55%, transparent);
+}
+.tsky-day--editing.tsky-day--placeholder .tsky-ring {
+  border-color: rgba(255,255,255,0.4);
+  box-shadow: 0 0 11px 1px rgba(255,255,255,0.30);
+}
+.tsky-today-star { position: absolute; top: -3px; right: -3px; }
+
+.tsky-editing {
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px; letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  margin-top: 9px;
+}
+.tsky-editing-status { color: rgba(255,255,255,0.24); }
+
+/* 4 & 7 — reuse the history fading divider, just give it room to breathe */
+.tsky-div { margin: 16px auto; max-width: 1080px; }
+
+/* 5 — quote: italic, design gold */
+.tsky-quote {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 18px; line-height: 1.5;
+  text-align: center;
+  color: var(--candle);
+  margin: 2px auto 0; max-width: 900px;
+}
+
+/* 6 — "today might want": quiet ink, gold 4-point-star separators (display only) */
+.tsky-suggests { text-align: center; margin-top: 15px; }
+.tsky-suglabel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 9px;
+}
+.tsky-sugline {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 16.5px; line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 820px; margin: 0 auto;
+}
+.tsky-sugitem { display: inline-flex; align-items: center; }
+.tsky-sugsep { margin: 0 9px; }
+
+/* Desktop-only: let the sky text, strip, and dividers breathe (mobile keeps the
+   tighter base spacing above, untouched). */
+@media (min-width: 561px) {
+  .tsky-greeting { margin-top: 12px; }
+  .tsky-bandline { margin-top: 15px; }
+  .tsky-strip    { margin-top: 36px; }
+  .tsky-editing  { margin-top: 14px; }
+  .tsky-div      { margin-top: 30px; margin-bottom: 30px; }
+  .tsky-quote    { margin-top: 8px; }
+  .tsky-suggests { margin-top: 22px; }
+}
+
+@media (max-width: 560px) {
+  .tsky-greeting { font-size: 23px; }
+  .tsky-bandline { font-size: 16.5px; }
+  .tsky-quote    { font-size: 16.5px; }
+  .tsky-sugline  { font-size: 15.5px; }
+  .tsky-strip    { max-width: none; }
+}
+
 /* Recalculate status line */
 .settings-recalc-status {
   font-family: "Crimson Pro", serif;
