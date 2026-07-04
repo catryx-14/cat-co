@@ -99,7 +99,7 @@ select, input, textarea, label {
 }
 html, body {
   margin: 0; padding: 0;
-  background: #0b1020;
+  background: #05122c;
   color: var(--ink);
   font-family: "Crimson Pro", Georgia, serif;
   font-size: 18px;
@@ -107,8 +107,10 @@ html, body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+/* Page sky — sampled from the cat image's night sky (deep navy, corners
+   ~#04112d–#071c40) so the banner dissolves into the page at the fade zone. */
 body {
-  background: linear-gradient(180deg, #08102a 0%, #0f1a3a 20%, #16204a 45%, #14233f 70%, #0a1530 100%) fixed;
+  background: linear-gradient(180deg, #0a1a40 0%, #08183a 24%, #061631 46%, #05122c 68%, #040f27 100%) fixed;
 }
 
 .stars, .bokeh, .haze {
@@ -390,6 +392,136 @@ body {
 .view-fade.is-hub {
   padding: 0;
   overflow: hidden;
+}
+
+/* ── Threshold: Cat family banner (engine room brief id=168) ─────────────────
+   Wide screens: capped at ~58vh tall, centred, page sky shows at the sides.
+   Two single-axis masks (sides on the wrapper, top on the image) fade the
+   scene into the night-sky background with no hard seam — no mask-compositing
+   needed, so it works the same in every browser. */
+.threshold-family {
+  /* Height budget: up to 58vh on tall screens, but always leave room at the
+     top for the title + panels so no UI ever lands on an animal. The cats' ears
+     reach ~19% down the scene (Deacon, under the left tagline panel), so short/
+     wide laptops must back the scene well below the brief's 58vh cap. */
+  --fam-h: min(56vh, max(26vh, calc(100vh - 553px)));
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, calc(2.521 * var(--fam-h)));
+  aspect-ratio: 1991 / 790;
+  z-index: 2;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 13%, #000 90%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0%, #000 13%, #000 90%, transparent 100%);
+}
+.threshold-family img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 100%);
+}
+/* Narrow / tall screens: a light overscan keeps the animals readable while the
+   full lineup (Deacon → Josie) stays visible. Height reserves room for the
+   stacked content so nothing lands on an animal, and shrinks on shorter phones. */
+@media (max-width: 767px) {
+  .threshold-family {
+    --fam-h: clamp(120px, calc(100vh - 629px), 188px);
+    width: min(118vw, calc(var(--fam-h) * 2.521));
+  }
+}
+
+/* Quiet zone: fade the generated stars out over the bottom-centre where the cat
+   image sits, so they don't double up with the stars painted inside the picture.
+   Full density stays in the upper sky and at the far left/right edges. */
+.threshold-starfield {
+  -webkit-mask-image: radial-gradient(ellipse 66% 50% at 50% 103%, transparent 42%, rgba(0,0,0,0.5) 66%, #000 85%);
+          mask-image: radial-gradient(ellipse 66% 50% at 50% 103%, transparent 42%, rgba(0,0,0,0.5) 66%, #000 85%);
+}
+@media (max-width: 767px) {
+  /* On phones the image spans full width but is short — clear a shallow, wide band. */
+  .threshold-starfield {
+    -webkit-mask-image: radial-gradient(ellipse 135% 32% at 50% 100%, transparent 34%, rgba(0,0,0,0.5) 62%, #000 86%);
+            mask-image: radial-gradient(ellipse 135% 32% at 50% 100%, transparent 34%, rgba(0,0,0,0.5) 62%, #000 86%);
+  }
+}
+
+/* Soft glowing moon behind the "Cat & Co." logo — pale warm white, soft edge,
+   centred on the cat mark. The animals below are looking up at it. */
+.threshold-moon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -38%);
+  width: clamp(178px, 21vw, 282px);
+  height: clamp(178px, 21vw, 282px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 44%,
+      #dad6cd 0%, #e0d7c2 32%, #e9dbbd 50%,
+      rgba(240,226,194,0.42) 65%,
+      rgba(236,221,188,0.15) 78%,
+      rgba(236,221,188,0) 89%);
+  box-shadow: 0 0 70px 22px rgba(247,236,210,0.20), 0 0 150px 60px rgba(236,221,188,0.10);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Metallic gold on the title letters (light gold → deep gold), with a tight
+   dark edge so they stay readable where they cross the bright moon. */
+.threshold-title { filter: drop-shadow(0 1px 1px rgba(8,6,2,0.9)) drop-shadow(0 0 2px rgba(8,6,2,0.6)) drop-shadow(0 0 24px rgba(242,205,140,0.24)); }
+.threshold-title-word {
+  background: linear-gradient(180deg, #f4dc90 0%, #e6c470 17%, #d0a047 37%, #ab7827 55%, #74491b 72%, #bd8c37 87%, #e3c26f 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+}
+
+/* Very subtle cloud wisps low in the sky, easing the meeting of page + image. */
+.threshold-clouds {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 62vh;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 42% at 22% 88%, rgba(120,140,190,0.06) 0%, rgba(120,140,190,0) 60%),
+    radial-gradient(70% 40% at 78% 94%, rgba(110,128,180,0.055) 0%, rgba(110,128,180,0) 62%),
+    radial-gradient(52% 34% at 52% 82%, rgba(130,150,200,0.045) 0%, rgba(130,150,200,0) 60%);
+}
+
+/* Bottom treeline shadow — a full-width band, deepest at the page's bottom edge
+   (colour of the image's shadowed foliage, near-black blue-green), fading up into
+   the sky over the fence line. Sits behind the banner so the image's own dark
+   foliage melts into it and the page bottom reads as one continuous treeline. */
+.threshold-groundband {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 30vh;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to top,
+    #03080f 0%,
+    #03080f 5%,
+    rgba(3, 9, 16, 0.90) 24%,
+    rgba(4, 11, 19, 0.58) 48%,
+    rgba(5, 12, 22, 0.26) 70%,
+    rgba(5, 12, 22, 0) 100%);
+}
+
+/* Soft dark rounded panel behind the tagline + room buttons.
+   The subtly darker edge is intentional — keep it. */
+.threshold-panel {
+  background: rgba(9, 13, 28, 0.52);
+  border: 1px solid rgba(0, 0, 0, 0.38);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(3px);
+          backdrop-filter: blur(3px);
 }
 
 .gloaming {

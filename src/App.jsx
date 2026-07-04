@@ -48,44 +48,36 @@ function useViewport() {
   return vp
 }
 
-// ── Threshold nav grid — 2×2 + More Rooms (replaces lantern arc for MVP) ──────
-// Row 1: Capacity Tracker | First Aid
-// Row 2: Sparks           | Executive Suite
-// Row 3: More Rooms (full width)
+// ── Threshold nav grid — pin-driven 2-column tiles + "More this way" ──────────
+// Follows the user's threshold_pins (in sort order); "More this way" is always
+// the final tile. With the usual 5 pins this reads as the locked 2×3 (brief
+// id=168), on a soft dark panel with one uniform thin border on every tile.
 function ThresholdNavLinks({ links, onPick, isMobile }) {
   const btnStyle = {
-    background: 'transparent',
+    background: 'rgba(255,255,255,0.02)',
     border: '1px solid var(--color-border)',
-    borderRadius: 4,
+    borderRadius: 6,
     color: 'var(--color-text-secondary)',
     fontFamily: 'var(--font-primary)',
     fontSize: isMobile ? 14 : 16,
     letterSpacing: '0.06em',
-    padding: isMobile ? '10px 12px' : '11px 20px',
+    padding: isMobile ? '10px 12px' : '11px 18px',
     cursor: 'pointer',
-    transition: 'color 200ms, border-color 200ms',
+    transition: 'color 200ms, border-color 200ms, background 200ms',
     whiteSpace: 'nowrap',
     textAlign: 'center',
   }
   const onEnter = e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }
   const onLeave = e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }
-  const visibleLinks = links ?? []
+  const cells = [...(links ?? []), { key: 'more-lights', name: 'More this way' }]
   return (
-    <nav style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 12, width: '100%' }}>
-      {visibleLinks.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12 }}>
-          {visibleLinks.map(l => (
-            <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
-              onMouseEnter={onEnter} onMouseLeave={onLeave}>
-              {l.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <button onClick={() => onPick('more-lights')} style={btnStyle}
-        onMouseEnter={onEnter} onMouseLeave={onLeave}>
-        More this way
-      </button>
+    <nav style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12, width: '100%' }}>
+      {cells.map(l => (
+        <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
+          onMouseEnter={onEnter} onMouseLeave={onLeave}>
+          {l.name}
+        </button>
+      ))}
     </nav>
   )
 }
@@ -97,46 +89,63 @@ function ThresholdStarField() {
     let s = 1337
     const rn = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
     const arr = []
-    for (let i = 0; i < 180; i++) {
+    // Dust: many tiny, faint, mostly cream/blue — depth
+    for (let i = 0; i < 150; i++) {
       arr.push({
-        x: rn() * 100, y: rn() * 55,
-        r: 0.3 + rn() * 1.1,
-        o: 0.3 + rn() * 0.6,
-        dur: 2.5 + rn() * 5,
-        delay: rn() * 5,
-        hue: rn() < 0.25 ? 'warm' : rn() < 0.35 ? 'blue' : 'cream',
+        x: rn() * 100, y: rn() * 58,
+        r: 0.15 + rn() * 0.55,
+        o: 0.2 + rn() * 0.45,
+        dur: 2.5 + rn() * 6,
+        delay: rn() * 6,
+        hue: rn() < 0.14 ? 'warm' : rn() < 0.30 ? 'blue' : 'cream',
       })
     }
-    for (let i = 0; i < 12; i++) {
+    // Mid stars: varied size + brightness, a fair few warm
+    for (let i = 0; i < 46; i++) {
       arr.push({
-        x: rn() * 96 + 2, y: rn() * 50 + 2,
-        r: 1.6 + rn() * 1.2,
-        o: 0.85 + rn() * 0.15,
-        dur: 4 + rn() * 3,
-        delay: rn() * 3,
-        hue: 'warm', big: true,
+        x: rn() * 100, y: rn() * 54,
+        r: 0.55 + rn() * 0.75,
+        o: 0.45 + rn() * 0.45,
+        dur: 3 + rn() * 5,
+        delay: rn() * 5,
+        hue: rn() < 0.34 ? 'warm' : rn() < 0.46 ? 'blue' : 'cream',
+        glow: rn() < 0.4,
+      })
+    }
+    // Beacons: bright warm-gold points like the image's amber bokeh
+    for (let i = 0; i < 15; i++) {
+      const gold = rn() < 0.7
+      arr.push({
+        x: rn() * 94 + 3, y: rn() * 46 + 2,
+        r: 1.2 + rn() * 1.3,
+        o: 0.82 + rn() * 0.18,
+        dur: 4 + rn() * 4,
+        delay: rn() * 4,
+        hue: gold ? 'gold' : 'cream', big: true,
       })
     }
     return arr
   }, [])
-  const color = (h) => h === 'warm' ? '#ffd58a' : h === 'blue' ? '#bfd3f0' : '#f2f0e6'
+  const color = (h) => h === 'gold' ? '#ffc866' : h === 'warm' ? '#ffd58a' : h === 'blue' ? '#bfd3f0' : '#f4f1e8'
   return (
-    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"
+    <svg className="threshold-starfield" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice"
       style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
       {stars.map((s, i) => (
-        <circle key={i}
-          cx={s.x} cy={s.y} r={s.r * 0.16}
-          fill={color(s.hue)}
-          className="threshold-star"
-          style={{
-            '--dur': `${s.dur}s`,
-            '--op-max': s.o,
-            '--op-min': s.o * 0.25,
-            '--delay': `-${s.delay}s`,
-            filter: s.big
-              ? `drop-shadow(0 0 ${s.r * 0.3}px ${color(s.hue)}) drop-shadow(0 0 ${s.r * 0.8}px ${color(s.hue)})`
-              : undefined,
-          }} />
+          <circle key={i}
+            cx={s.x} cy={s.y} r={s.r * 0.16}
+            fill={color(s.hue)}
+            className="threshold-star"
+            style={{
+              '--dur': `${s.dur}s`,
+              '--op-max': s.o,
+              '--op-min': s.o * 0.25,
+              '--delay': `-${s.delay}s`,
+              filter: s.big
+                ? `drop-shadow(0 0 ${s.r * 0.35}px ${color(s.hue)}) drop-shadow(0 0 ${s.r}px ${color(s.hue)})`
+                : s.glow
+                  ? `drop-shadow(0 0 ${s.r * 0.3}px ${color(s.hue)})`
+                  : undefined,
+            }} />
       ))}
     </svg>
   )
@@ -174,9 +183,9 @@ function ThresholdDateBar() {
         fontStyle: 'italic',
         fontSize: 'clamp(13px, 1.5vw, 16px)',
         letterSpacing: 3,
-        color: '#e9d8b9',
+        color: '#2b3654',
         textTransform: 'lowercase',
-        textShadow: '0 0 12px rgba(232,184,124,0.4)',
+        textShadow: 'none',
         whiteSpace: 'nowrap',
       }}>
         {tod} · {dayAbbrev} · {hh}:{mm}
@@ -233,8 +242,11 @@ function HubView({ onPick, pins }) {
     }}>
 
       {/* Starfield background */}
-      {/* NIGHT GARDEN THEME: add ThresholdMoon, ThresholdForestFrame, ThresholdAmbientBokeh, ThresholdFireflies here */}
       <ThresholdStarField />
+      {/* Faint low cloud wisps easing page → image sky */}
+      <div className="threshold-clouds" aria-hidden="true" />
+      {/* Bottom treeline shadow — image foliage melts into this full-width band */}
+      <div className="threshold-groundband" aria-hidden="true" />
 
       {/* ── Top: subtitle + logo ── */}
       <div style={{
@@ -254,38 +266,47 @@ function HubView({ onPick, pins }) {
           letterSpacing: 8,
           textTransform: 'lowercase',
           color: 'var(--color-text-dim)',
-          marginBottom: isMobile ? 10 : 14,
+          marginBottom: isMobile ? 44 : 70,
+          textShadow: '0 1px 6px rgba(6,10,26,0.9), 0 0 2px rgba(6,10,26,0.8)',
           pointerEvents: 'none',
         }}>
           · the threshold ·
         </div>
 
-        {/* Cat [logo] Co. — cat ampersand SVG is permanent structure */}
-        {/* NIGHT GARDEN THEME VALUE: title was Italiana, serif with gold gradient:
-            linear-gradient(180deg, #fff4c9 0%, #f3d98f 18%, #e8b87c 38%, #b8832e 56%, #8a5d28 72%, #d9a655 88%, #f3d98f 100%)
-            filter: drop-shadow(0 1px 0 rgba(90,58,24,0.55)) drop-shadow(0 0 36px rgba(242,205,140,0.34)) */}
+        {/* Cat [logo] Co. — art-deco Italiana title in metallic gold, on a soft moon.
+            The moon disc sits behind the mark (the animals below are looking up at it). */}
         <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(48px, 7vw, 100px)',
-          letterSpacing: 2,
-          lineHeight: 1,
-          color: 'var(--color-accent-primary)',
-          display: 'inline-flex',
-          alignItems: 'center',
+          position: 'relative',
+          display: 'flex',
           justifyContent: 'center',
-          gap: '0.18em',
-          width: '100%',
-          pointerEvents: 'none',
+          alignItems: 'center',
         }}>
-          <span>Cat</span>
-          <img src="/assets/logo.png" alt="and" draggable={false} style={{
-            height: '1.15em', width: 'auto',
-            display: 'inline-block', verticalAlign: 'middle',
-            transform: 'translateY(0.08em)',
-            filter: 'drop-shadow(0 0 18px rgba(242,205,140,0.45))',
-            userSelect: 'none',
-          }} />
-          <span>Co.</span>
+          {/* Soft glowing moon behind the logo */}
+          <div className="threshold-moon" aria-hidden="true" />
+
+          <div className="threshold-title" style={{
+            fontFamily: '"Italiana", "Cormorant Garamond", serif',
+            fontSize: 'clamp(48px, 7vw, 100px)',
+            letterSpacing: '0.04em',
+            lineHeight: 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.16em',
+            position: 'relative',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}>
+            <span className="threshold-title-word">Cat</span>
+            <img src="/assets/logo.png" alt="and" draggable={false} style={{
+              height: '1.15em', width: 'auto',
+              display: 'inline-block', verticalAlign: 'middle',
+              transform: 'translateY(0.08em)',
+              filter: 'drop-shadow(0 1px 1px rgba(12,9,3,0.5)) drop-shadow(0 0 18px rgba(242,205,140,0.45))',
+              userSelect: 'none',
+            }} />
+            <span className="threshold-title-word">Co.</span>
+          </div>
         </div>
 
       </div>
@@ -293,64 +314,74 @@ function HubView({ onPick, pins }) {
       {/* ── Full-width date/time divider ── */}
       <ThresholdDateBar />
 
-      {/* ── Two-column content area: hero text (left) + room grid (right) ── */}
-      {/* NIGHT GARDEN THEME — LANTERNS: restore ThresholdHangingLantern arc in place of this section */}
+      {/* ── Two-column content area: tagline panel (left) + room grid panel (right) ── */}
       <div style={{
         flex: 1,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
-        alignItems: 'center',
-        padding: isMobile ? '32px 28px 28px' : '40px 60px',
-        gap: isMobile ? 36 : 60,
+        alignItems: 'flex-start',
+        justifyContent: isMobile ? 'flex-start' : 'space-between',
+        padding: isMobile ? '16px 22px 20px' : '28px 60px 0',
+        gap: isMobile ? 14 : 48,
         position: 'relative',
         zIndex: 6,
         minHeight: 0,
       }}>
 
-        {/* Left: hero text */}
-        {/* NIGHT GARDEN THEME VALUE: hero text was "This is a liminal space. / a soft place to set your day down, / and small lights for the way ahead." */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div>
-            <div style={{
-              fontFamily: 'var(--font-hero)',
-              fontStyle: 'normal',
-              fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
-              color: '#f2f0e6',
-              lineHeight: 1.15,
-              letterSpacing: '-0.01em',
-            }}>
-              A place to think
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-hero)',
-              fontStyle: 'italic',
-              fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(32px, 3.8vw, 52px)',
-              color: '#c4b5d4',
-              lineHeight: 1.15,
-              letterSpacing: '-0.01em',
-              marginBottom: isMobile ? 14 : 20,
-            }}>
-              out loud.
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-hero)',
-              fontStyle: 'normal',
-              fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
-              color: 'var(--color-text-dim)',
-              lineHeight: 1.65,
-            }}>
-              A personal hub for exploring what it means to be autistic — the mechanisms, the patterns, the daily navigation. Built to catch the thoughts before they disappear.
-            </div>
+        {/* Left: tagline block on a soft dark panel (keep the subtle darker edge) */}
+        <div className="threshold-panel" style={{
+          flex: isMobile ? '0 0 auto' : '0 1 460px',
+          maxWidth: isMobile ? '100%' : 460,
+          width: isMobile ? '100%' : undefined,
+          padding: isMobile ? '16px 20px' : '26px 30px',
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-hero)',
+            fontStyle: 'normal',
+            fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(30px, 3.4vw, 48px)',
+            color: '#f2f0e6',
+            lineHeight: 1.15,
+            letterSpacing: '-0.01em',
+          }}>
+            A place to think
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-hero)',
+            fontStyle: 'italic',
+            fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(30px, 3.4vw, 48px)',
+            color: '#c4b5d4',
+            lineHeight: 1.15,
+            letterSpacing: '-0.01em',
+            marginBottom: isMobile ? 12 : 16,
+          }}>
+            out loud.
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-hero)',
+            fontStyle: 'normal',
+            fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
+            color: 'var(--color-text-dim)',
+            lineHeight: 1.65,
+          }}>
+            A personal hub for exploring what it means to be autistic — the mechanisms, the patterns, the daily navigation. Built to catch the thoughts before they disappear.
           </div>
         </div>
 
-        {/* Right: 2×3 room grid */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: isMobile ? 'stretch' : 'center' }}>
-          <div style={{ width: isMobile ? '100%' : 'clamp(280px, 38vw, 460px)' }}>
-            <ThresholdNavLinks links={links} onPick={onPick} isMobile={isMobile} />
-          </div>
+        {/* Right: 2×3 room grid on a matching soft dark panel */}
+        <div className="threshold-panel" style={{
+          flex: isMobile ? '0 0 auto' : '0 1 460px',
+          maxWidth: isMobile ? '100%' : 460,
+          width: isMobile ? '100%' : undefined,
+          padding: isMobile ? '18px 18px' : '24px 26px',
+        }}>
+          <ThresholdNavLinks links={links} onPick={onPick} isMobile={isMobile} />
         </div>
 
+      </div>
+
+      {/* ── Cat family banner — anchored to the page bottom, fades into the night sky ── */}
+      <div className="threshold-family" aria-hidden="true">
+        <img src="/assets/threshold-family.png" alt="" draggable={false} />
       </div>
 
     </div>
