@@ -128,16 +128,16 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
             style={{
               width: '100%', background: 'rgba(240,227,194,0.05)',
               border: '1px solid rgba(240,227,194,0.2)', borderRadius: 4,
-              color: 'var(--ink)', fontFamily: '"Cagliostro", serif', fontSize: 22,
+              color: 'var(--ink)', fontFamily: '"Montserrat", serif', fontSize: 22,
               padding: '8px 12px', marginBottom: 16, boxSizing: 'border-box',
             }}
           />
         ) : (
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: '"Cagliostro", serif', fontSize: 22, color: 'var(--ink)' }}>
+            <span style={{ fontFamily: '"Montserrat", serif', fontSize: 22, color: 'var(--ink)' }}>
               {selected.title}
             </span>
-            <span style={{ fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 13, color: catColor(selected) }}>
+            <span style={{ fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 13, color: catColor(selected) }}>
               {selected.category}
             </span>
           </div>
@@ -184,13 +184,13 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
             style={{
               width: '100%', background: 'rgba(240,227,194,0.05)',
               border: '1px solid rgba(240,227,194,0.2)', borderRadius: 4,
-              color: 'var(--ink-soft)', fontFamily: '"Crimson Pro", serif', fontSize: 15,
+              color: 'var(--ink-soft)', fontFamily: '"Montserrat", serif', fontSize: 15,
               lineHeight: 1.6, padding: '12px', boxSizing: 'border-box', resize: 'vertical',
             }}
           />
         ) : (
           <div style={{
-            fontFamily: '"Crimson Pro", serif', fontSize: 15, lineHeight: 1.6,
+            fontFamily: '"Montserrat", serif', fontSize: 15, lineHeight: 1.6,
             color: 'var(--ink-soft)', maxWidth: 720, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
           }}>
             {selected.content || <span style={{ fontStyle: 'italic', opacity: 0.4 }}>no content</span>}
@@ -198,7 +198,7 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
         )}
 
         {saveError && (
-          <div style={{ marginTop: 16, fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(255,160,180,0.7)' }}>
+          <div style={{ marginTop: 16, fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(255,160,180,0.7)' }}>
             {saveError}
           </div>
         )}
@@ -261,7 +261,7 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
         {backBtn('all categories', () => setSelectedCategory(null))}
 
         <div style={{
-          fontFamily: '"Cagliostro", serif', fontSize: 22,
+          fontFamily: '"Montserrat", serif', fontSize: 22,
           color, marginBottom: 24,
         }}>
           {selectedCategory}
@@ -281,7 +281,7 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,227,194,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span style={{ fontFamily: '"Crimson Pro", serif', fontSize: 16, color: 'var(--ink-soft)' }}>
+              <span style={{ fontFamily: '"Montserrat", serif', fontSize: 16, color: 'var(--ink-soft)' }}>
                 {doc.title}
               </span>
               {doc.status && doc.status.toLowerCase() !== 'active' && (
@@ -325,13 +325,13 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
       </div>
 
       {loading && (
-        <div style={{ padding: '40px 0', fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)' }}>
+        <div style={{ padding: '40px 0', fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)' }}>
           loading…
         </div>
       )}
 
       {error && (
-        <div style={{ padding: '20px 0', fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(255,160,180,0.7)' }}>
+        <div style={{ padding: '20px 0', fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(255,160,180,0.7)' }}>
           could not load engine room: {error}
         </div>
       )}
@@ -353,7 +353,7 @@ export default function EngineRoom({ onSettings, roomName = 'Engine Room' }) {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,227,194,0.04)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
-                <span style={{ fontFamily: '"Cagliostro", serif', fontSize: 20, color }}>
+                <span style={{ fontFamily: '"Montserrat", serif', fontSize: 20, color }}>
                   {cat}
                 </span>
                 <span style={{

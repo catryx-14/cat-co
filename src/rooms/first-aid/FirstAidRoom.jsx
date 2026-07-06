@@ -65,7 +65,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
     checkSession();
   }, [supporterMode]);
 
-  // Outfit is loaded globally via index.html — no dynamic injection needed.
+  // Montserrat is loaded globally via index.html — no dynamic injection needed.
 
   useEffect(() => {
     if (autoPlayed || faView !== "picker") return;
@@ -154,7 +154,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
       minHeight: "100%",
       display: "flex",
       flexDirection: "column",
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       overflow: "hidden",
     }}>
       {onSettings && (
@@ -171,7 +171,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
         borderBottom: showCards ? "1px solid #1e2040" : "none",
       }}>
         <div className="fa-title" style={{
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           fontWeight: 400,
           fontSize: "38px",
           color: "#f5edd6",
@@ -183,7 +183,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
           breathe.
         </div>
         <div className="fa-subtitle" style={{
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           fontWeight: 300,
           fontSize: "14px",
           color: "rgba(245,237,214,0.6)",
@@ -212,7 +212,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
       >
         {!showHeader && (
           <span className="fa-breathe-word" style={{
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
             fontWeight: 400,
             display: "block",
             textAlign: "center",
@@ -277,7 +277,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
                     textAlign:     "center",
                     cursor:        "pointer",
                     width:         "100%",
-                    fontFamily:    "'Outfit', sans-serif",
+                    fontFamily:    "'Montserrat', sans-serif",
                     fontSize:      "0.95rem",
                     fontWeight:    400,
                     color:         "#f5edd6",
@@ -303,7 +303,7 @@ export default function FirstAidRoom({ onSettings, supporterMode = false, catUse
                   border:        "1.5px solid rgba(180,160,220,0.95)",
                   borderRadius:  "10px",
                   color:         "rgba(255,255,255,0.95)",
-                  fontFamily:    "'Outfit', sans-serif",
+                  fontFamily:    "'Montserrat', sans-serif",
                   fontSize:      "15px",
                   fontWeight:    400,
                   letterSpacing: "0.06em",

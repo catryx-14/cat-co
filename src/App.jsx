@@ -53,28 +53,19 @@ function useViewport() {
 // the final tile. With the usual 5 pins this reads as the locked 2×3 (brief
 // id=168), on a soft dark panel with one uniform thin border on every tile.
 function ThresholdNavLinks({ links, onPick, isMobile }) {
+  // JEWELRY & JOY: the raised gold-wire buttons (.jbtn). Responsive size stays
+  // inline; the raised look + hover/press come from the shared class.
   const btnStyle = {
-    background: 'rgba(255,255,255,0.02)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 6,
-    color: 'var(--color-text-secondary)',
-    fontFamily: 'var(--font-primary)',
-    fontSize: isMobile ? 14 : 16,
-    letterSpacing: '0.06em',
-    padding: isMobile ? '10px 12px' : '11px 18px',
-    cursor: 'pointer',
-    transition: 'color 200ms, border-color 200ms, background 200ms',
+    fontSize: 'clamp(14px, 0.5rem + 0.5vw, 20px)',
+    padding: 'clamp(11px, 0.4rem + 0.5vw, 20px) clamp(14px, 0.6rem + 0.8vw, 30px)',
     whiteSpace: 'nowrap',
     textAlign: 'center',
   }
-  const onEnter = e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-accent-primary)' }
-  const onLeave = e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }
   const cells = [...(links ?? []), { key: 'more-lights', name: 'More this way' }]
   return (
-    <nav style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 10 : 12, width: '100%' }}>
+    <nav style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(10px, 0.9vw, 20px)', width: '100%' }}>
       {cells.map(l => (
-        <button key={l.key} onClick={() => onPick(l.key)} style={btnStyle}
-          onMouseEnter={onEnter} onMouseLeave={onLeave}>
+        <button key={l.key} className="jbtn" onClick={() => onPick(l.key)} style={btnStyle}>
           {l.name}
         </button>
       ))}
@@ -183,9 +174,12 @@ function ThresholdDateBar() {
         fontStyle: 'italic',
         fontSize: 'clamp(13px, 1.5vw, 16px)',
         letterSpacing: 3,
-        color: '#2b3654',
+        /* JEWELRY & JOY: was darkened to sit on the bright moon disc; with the
+           moon gone, restore quiet legibility on the navy (matches the
+           "· the threshold ·" eyebrow), with a soft shadow for drifting bokeh. */
+        color: 'var(--color-text-dim)',
         textTransform: 'lowercase',
-        textShadow: 'none',
+        textShadow: '0 1px 6px rgba(6,10,26,0.9), 0 0 2px rgba(6,10,26,0.8)',
         whiteSpace: 'nowrap',
       }}>
         {tod} · {dayAbbrev} · {hh}:{mm}
@@ -243,10 +237,10 @@ function HubView({ onPick, pins }) {
 
       {/* Starfield background */}
       <ThresholdStarField />
-      {/* Faint low cloud wisps easing page → image sky */}
-      <div className="threshold-clouds" aria-hidden="true" />
-      {/* Bottom treeline shadow — image foliage melts into this full-width band */}
-      <div className="threshold-groundband" aria-hidden="true" />
+      {/* JEWELRY & JOY: cat-scene banner retired from the default Threshold
+          (Cat's call — preserved as an asset for a future "night" mood). Its
+          blend layers (cloud wisps + treeline groundband) went with it; the
+          logo now sits directly on the sky over the drifting bokeh. */}
 
       {/* ── Top: subtitle + logo ── */}
       <div style={{
@@ -257,17 +251,17 @@ function HubView({ onPick, pins }) {
         flexShrink: 0,
       }}>
 
-        {/* · the threshold · */}
-        {/* NIGHT GARDEN THEME VALUE: night garden copy — "· the threshold ·" */}
+        {/* · the threshold · — the tagline, in its Poiret One "presence"
+            treatment (larger, wide-tracked, faint amethyst glow). Poiret One
+            has NO true italic, so it is never faux-slanted. */}
         <div style={{
-          fontFamily: 'var(--font-primary)',
-          fontStyle: 'italic',
-          fontSize: 'clamp(11px, 1.1vw, 13px)',
-          letterSpacing: 8,
+          fontFamily: 'var(--font-tagline)',
+          fontSize: 'clamp(18px, 2.4vw, 24px)',
+          letterSpacing: '0.22em',
           textTransform: 'lowercase',
-          color: 'var(--color-text-dim)',
+          color: 'var(--color-text-secondary)',
           marginBottom: isMobile ? 44 : 70,
-          textShadow: '0 1px 6px rgba(6,10,26,0.9), 0 0 2px rgba(6,10,26,0.8)',
+          textShadow: '0 0 18px rgba(166,115,228,0.45), 0 1px 6px rgba(6,10,26,0.85)',
           pointerEvents: 'none',
         }}>
           · the threshold ·
@@ -281,30 +275,67 @@ function HubView({ onPick, pins }) {
           justifyContent: 'center',
           alignItems: 'center',
         }}>
-          {/* Soft glowing moon behind the logo */}
-          <div className="threshold-moon" aria-hidden="true" />
+          {/* JEWELRY & JOY: moon glow removed — it was composed as part of the
+              cat scene; without the scene the logo sits directly on the sky. */}
 
           <div className="threshold-title" style={{
             fontFamily: '"Italiana", "Cormorant Garamond", serif',
             fontSize: 'clamp(48px, 7vw, 100px)',
-            letterSpacing: '0.04em',
+            letterSpacing: '0.06em',   /* eased slightly to give the pendant breathing room */
             lineHeight: 1,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.16em',
+            gap: '0.5em',              /* pendant breathing room — clear air around the ring */
             position: 'relative',
             zIndex: 1,
             pointerEvents: 'none',
           }}>
             <span className="threshold-title-word">Cat</span>
-            <img src="/assets/logo.png" alt="and" draggable={false} style={{
-              height: '1.15em', width: 'auto',
-              display: 'inline-block', verticalAlign: 'middle',
+            {/* JEWELRY & JOY: pendant ring setting. The cat artwork is unchanged;
+                around it a faint gold glow + a fine metallic ring (kit paint,
+                userSpaceOnUse gradient) set it like a jewel. */}
+            <span aria-hidden="true" style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               transform: 'translateY(0.08em)',
-              filter: 'drop-shadow(0 1px 1px rgba(12,9,3,0.5)) drop-shadow(0 0 18px rgba(242,205,140,0.45))',
-              userSelect: 'none',
-            }} />
+              flex: '0 0 auto',
+            }}>
+              {/* very faint gold glow behind the cat */}
+              <span style={{
+                position: 'absolute', left: '50%', top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '1.5em', height: '1.5em', borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(166,115,228,0.15) 0%, rgba(166,115,228,0.06) 34%, transparent 56%)',
+                zIndex: 0, pointerEvents: 'none',
+              }} />
+              {/* fine metallic ring — deep gold → bright catch, userSpaceOnUse */}
+              <svg viewBox="0 0 100 100" style={{
+                position: 'absolute', left: '50%', top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '1.36em', height: '1.36em', overflow: 'visible',
+                zIndex: 1, pointerEvents: 'none',
+              }}>
+                <defs>
+                  <linearGradient id="pendantRing" gradientUnits="userSpaceOnUse" x1="18" y1="14" x2="82" y2="86">
+                    <stop offset="0" stopColor="#fff3c8" />
+                    <stop offset="0.32" stopColor="#e9c24c" />
+                    <stop offset="0.66" stopColor="#a9812f" />
+                    <stop offset="1" stopColor="#6e5323" />
+                  </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="47" fill="none" stroke="url(#pendantRing)"
+                  strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+              </svg>
+              <img src="/assets/logo.png" alt="and" draggable={false} style={{
+                position: 'relative', zIndex: 2,
+                height: '1.15em', width: 'auto', display: 'block',
+                filter: 'drop-shadow(0 1px 1px rgba(12,9,3,0.5)) drop-shadow(0 0 18px rgba(242,205,140,0.45))',
+                userSelect: 'none',
+              }} />
+            </span>
             <span className="threshold-title-word">Co.</span>
           </div>
         </div>
@@ -321,45 +352,57 @@ function HubView({ onPick, pins }) {
         flexDirection: isMobile ? 'column' : 'row',
         alignItems: 'flex-start',
         justifyContent: isMobile ? 'flex-start' : 'space-between',
-        padding: isMobile ? '16px 22px 20px' : '28px 60px 0',
-        gap: isMobile ? 14 : 48,
+        padding: isMobile ? '34px 22px 20px' : '60px clamp(40px, 4vw, 88px) 0',
+        gap: isMobile ? 14 : 'clamp(40px, 5vw, 120px)',
         position: 'relative',
         zIndex: 6,
         minHeight: 0,
+        /* JEWELRY & JOY: cap + center the content on ultra-wide so the two
+           columns stay balanced instead of flying to the screen edges;
+           roughly-doubled top gap (Round 3) keeps them off the divider. */
+        width: '100%',
+        maxWidth: isMobile ? undefined : 1520,
+        margin: isMobile ? undefined : '0 auto',
       }}>
+
 
         {/* Left: tagline block on a soft dark panel (keep the subtle darker edge) */}
         <div className="threshold-panel" style={{
-          flex: isMobile ? '0 0 auto' : '0 1 460px',
-          maxWidth: isMobile ? '100%' : 460,
+          flex: isMobile ? '0 0 auto' : '0 1 clamp(360px, 40vw, 600px)',
+          maxWidth: isMobile ? '100%' : 'clamp(360px, 40vw, 600px)',
           width: isMobile ? '100%' : undefined,
           padding: isMobile ? '16px 20px' : '26px 30px',
         }}>
+          {/* Two-voice hero: line 1 is clean Montserrat light (family with the
+              paragraph); the italic "out loud." is the Cormorant flourish and
+              reads a size larger — the star, not the afterthought. */}
           <div style={{
-            fontFamily: 'var(--font-hero)',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 300,
             fontStyle: 'normal',
-            fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(30px, 3.4vw, 48px)',
+            fontSize: 'clamp(28px, 1.3rem + 2.1vw, 56px)',
             color: '#f2f0e6',
             lineHeight: 1.15,
-            letterSpacing: '-0.01em',
+            letterSpacing: '0',
           }}>
             A place to think
           </div>
           <div style={{
             fontFamily: 'var(--font-hero)',
             fontStyle: 'italic',
-            fontSize: isMobile ? 'clamp(28px, 8vw, 38px)' : 'clamp(30px, 3.4vw, 48px)',
+            fontSize: 'clamp(34px, 1.5rem + 2.7vw, 72px)',
             color: '#c4b5d4',
-            lineHeight: 1.15,
+            lineHeight: 1.1,
             letterSpacing: '-0.01em',
-            marginBottom: isMobile ? 12 : 16,
+            marginBottom: 'clamp(12px, 1.4vw, 22px)',
           }}>
             out loud.
           </div>
           <div style={{
-            fontFamily: 'var(--font-hero)',
+            fontFamily: 'var(--font-body)',   /* Montserrat — body prose, not the hero serif */
+            fontWeight: 300,                   /* airy prose weight */
             fontStyle: 'normal',
-            fontSize: isMobile ? 14 : 'clamp(13px, 1.15vw, 16px)',
+            fontSize: 'clamp(14px, 0.7rem + 0.4vw, 20px)',
             color: 'var(--color-text-dim)',
             lineHeight: 1.65,
           }}>
@@ -369,19 +412,14 @@ function HubView({ onPick, pins }) {
 
         {/* Right: 2×3 room grid on a matching soft dark panel */}
         <div className="threshold-panel" style={{
-          flex: isMobile ? '0 0 auto' : '0 1 460px',
-          maxWidth: isMobile ? '100%' : 460,
+          flex: isMobile ? '0 0 auto' : '0 1 clamp(360px, 40vw, 600px)',
+          maxWidth: isMobile ? '100%' : 'clamp(360px, 40vw, 600px)',
           width: isMobile ? '100%' : undefined,
           padding: isMobile ? '18px 18px' : '24px 26px',
         }}>
           <ThresholdNavLinks links={links} onPick={onPick} isMobile={isMobile} />
         </div>
 
-      </div>
-
-      {/* ── Cat family banner — anchored to the page bottom, fades into the night sky ── */}
-      <div className="threshold-family" aria-hidden="true">
-        <img src="/assets/threshold-family.png" alt="" draggable={false} />
       </div>
 
     </div>
@@ -555,11 +593,11 @@ function HubApp({ session }) {
     }
   }, [view])
 
-  // NIGHT GARDEN THEME VALUE: bokeh was shown in all rooms (display block, opacity 0.55)
-  // and hidden only on hub. MVP removes bokeh from all pages — keep layer hidden always.
+  // JEWELRY & JOY: the drifting bokeh is now the default background on every
+  // page — keep the layer shown site-wide (it was force-hidden for the MVP).
   useEffect(() => {
     const bokeh = document.getElementById('bokeh-layer')
-    if (bokeh) bokeh.style.display = 'none'
+    if (bokeh) bokeh.style.display = 'block'
   }, [view])
 
   const [trackerInitTab, setTrackerInitTab] = useState(null)

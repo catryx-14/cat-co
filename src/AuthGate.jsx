@@ -84,12 +84,12 @@ export default function AuthGate({ children }) {
                 autoComplete="current-password"
               />
             </div>
-            <button className="auth-btn" type="submit" disabled={loading}>
+            <button className="auth-btn jbtn" type="submit" disabled={loading}>
               {loading ? 'entering…' : 'sign in'}
             </button>
           </form>
           <div className="auth-or"><span>or</span></div>
-          <button className="auth-btn auth-btn--ghost" onClick={signInWithGoogle} disabled={loading}>
+          <button className="auth-btn auth-btn--ghost jbtn secondary" onClick={signInWithGoogle} disabled={loading}>
             continue with Google
           </button>
         </div>

@@ -3,7 +3,7 @@ import { supabase } from '../../shared/lib/supabase.js'
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 function btnReset(extra = {}) {
-  return { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", ...extra }
+  return { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Montserrat', sans-serif", ...extra }
 }
 const overlayBackdrop = {
   position: 'fixed', inset: 0, background: 'rgba(5,8,20,0.87)',
@@ -14,17 +14,17 @@ const overlayBox = {
   borderRadius: '14px', padding: '28px 32px',
   maxWidth: '400px', width: '90%', position: 'relative',
   maxHeight: '82vh', display: 'flex', flexDirection: 'column',
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
 }
 const confirmBtn = {
   background: 'rgba(232,201,140,0.1)', border: '1px solid rgba(232,201,140,0.45)',
   borderRadius: '8px', color: '#f5edd6', padding: '10px 22px',
-  cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: '13px',
+  cursor: 'pointer', fontFamily: "'Montserrat', sans-serif", fontSize: '13px',
 }
 const cancelBtn = {
   background: 'transparent', border: '1px solid rgba(245,237,214,0.15)',
   borderRadius: '8px', color: 'rgba(245,237,214,0.55)', padding: '10px 22px',
-  cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: '13px',
+  cursor: 'pointer', fontFamily: "'Montserrat', sans-serif", fontSize: '13px',
 }
 
 // ── Mechanism fallback labels ─────────────────────────────────────────────────
@@ -309,7 +309,7 @@ function DoNotBlock({ title, items }) {
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
         marginBottom: '10px',
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
       }}>
         {title}
       </div>
@@ -319,7 +319,7 @@ function DoNotBlock({ title, items }) {
             color: 'rgba(245,237,214,0.5)',
             fontSize: '13px',
             lineHeight: 1.7,
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
           }}>
             {item}
           </li>
@@ -346,7 +346,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
           borderRadius: isOpen ? '10px 10px 0 0' : '10px',
           padding: '11px 16px',
           cursor: 'pointer',
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           color: '#f5edd6',
           fontSize: '13px',
           letterSpacing: '0.04em',
@@ -368,7 +368,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
           fontStyle: 'italic',
           color: 'rgba(245,237,214,0.22)',
           fontSize: '12px',
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
         }}>
           tap to expand when you're ready
         </div>
@@ -389,7 +389,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
               fontSize: '13px',
               lineHeight: 1.75,
               margin: '12px 16px 4px',
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
             }}>
               {round.intro}
             </p>
@@ -414,7 +414,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
                       padding: '11px 14px',
                       color: 'rgba(232,201,140,0.8)',
                       fontSize: '13px',
-                      fontFamily: "'Outfit', sans-serif",
+                      fontFamily: "'Montserrat', sans-serif",
                       cursor: 'pointer',
                       textAlign: 'center',
                       letterSpacing: '0.02em',
@@ -429,7 +429,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
                     lineHeight: 1.65,
                     margin: '10px 0 0',
                     textAlign: 'center',
-                    fontFamily: "'Outfit', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                   }}>
                     "Offer two options at a time — maximum. Wait for yes or no before offering more. The restraint IS the help."
                   </p>
@@ -483,7 +483,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'rgba(232,201,140,0.9)', fontSize: '11px', fontWeight: 600,
-                    fontFamily: "'Outfit', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                   }}
                 >
                   {ticked ? '✓' : ''}
@@ -493,7 +493,7 @@ function RoundBlock({ round, roundIndex, isOpen, onToggle, checkedItems, onCheck
                   fontSize: '14px',
                   color: 'rgba(245,237,214,0.8)',
                   lineHeight: 1.6,
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                 }}>
                   {renderSegments(item.segments, onLibrary, onExtras)}
                 </div>
@@ -695,7 +695,7 @@ function StatePickerOverlay({ onClose }) {
                   padding: '14px 16px',
                   color: '#f5edd6',
                   fontSize: '14px',
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   cursor: 'pointer',
                   textAlign: 'left',
                   lineHeight: 1.45,
@@ -804,7 +804,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
       fontSize: '13px',
       marginBottom: '24px',
       textAlign: 'center',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
     }}>
       Cat has selected: <strong>{stateLabel}</strong>
     </div>
@@ -819,7 +819,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       padding: '40px 24px',
     }}>
       <div style={{ width: '100%', maxWidth: '480px' }}>
@@ -858,7 +858,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
             padding: '18px 24px',
             color: '#f5edd6',
             fontSize: '16px',
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
             cursor: 'pointer',
             letterSpacing: '0.02em',
             marginBottom: '16px',
@@ -881,7 +881,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       padding: '0',
     }}>
       <div style={{ padding: '20px 24px', flexShrink: 0 }}>
@@ -919,7 +919,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
                 lineHeight: 1.4,
               }}
@@ -935,7 +935,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
                 lineHeight: 1.4,
               }}
@@ -953,7 +953,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
     }}>
       <div style={{ padding: '20px 24px', flexShrink: 0 }}>
         <button onClick={() => setScreen('q1')} style={btnReset({ color: 'rgba(245,237,214,0.5)', fontSize: '13px' })}>
@@ -999,7 +999,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
               }}
             >
@@ -1014,7 +1014,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
               }}
             >
@@ -1031,7 +1031,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
     }}>
       <div style={{ padding: '20px 24px', flexShrink: 0 }}>
         <button onClick={() => setScreen('q1')} style={btnReset({ color: 'rgba(245,237,214,0.5)', fontSize: '13px' })}>
@@ -1067,7 +1067,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
                 lineHeight: 1.4,
               }}
@@ -1083,7 +1083,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
                 padding: '18px 20px',
                 color: '#f5edd6',
                 fontSize: '15px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 cursor: 'pointer',
                 lineHeight: 1.4,
               }}
@@ -1099,7 +1099,7 @@ export default function SupporterTree({ profile, onBack, onLibrary, onSupporterF
   // ── Path screen ───────────────────────────────────────────────────────────
   if (currentPath) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Montserrat', sans-serif" }}>
         {/* Top bar */}
         <div style={{
           display: 'flex',

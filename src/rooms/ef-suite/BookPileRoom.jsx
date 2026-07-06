@@ -204,14 +204,14 @@ function BookRow({ book, isSelected, onClick, isEnriching }) {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 17, color: '#f2f0e6', lineHeight: 1.3 }}>
+          <div style={{ fontFamily: "'Montserrat', Georgia, serif", fontSize: 17, color: '#f2f0e6', lineHeight: 1.3 }}>
             {book.title}
           </div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
             {attr.author}
           </div>
           {series && (
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 2, fontStyle: 'italic' }}>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 2, fontStyle: 'italic' }}>
               {series}
             </div>
           )}
@@ -219,12 +219,12 @@ function BookRow({ book, isSelected, onClick, isEnriching }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0, paddingTop: 2 }}>
           <RatingDots rating={attr.my_rating || attr.goodreads_rating} />
           {isEnriching && (
-            <span style={{ fontSize: 11, color: 'rgba(110,192,191,0.5)', fontFamily: "'Outfit', sans-serif", fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, color: 'rgba(110,192,191,0.5)', fontFamily: "'Montserrat', sans-serif", fontStyle: 'italic', whiteSpace: 'nowrap' }}>
               scribbling...
             </span>
           )}
           {!isEnriching && book.needs_review && (
-            <span style={{ fontSize: 11, color: 'rgba(232,201,140,0.45)', fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, color: 'rgba(232,201,140,0.45)', fontFamily: "'Montserrat', sans-serif", whiteSpace: 'nowrap' }}>
               · needs sorting
             </span>
           )}
@@ -238,7 +238,7 @@ function BookRow({ book, isSelected, onClick, isEnriching }) {
 function FieldLabel({ children }) {
   return (
     <div style={{
-      fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 600,
+      fontFamily: "'Montserrat', sans-serif", fontSize: 11, fontWeight: 600,
       letterSpacing: '0.08em', color: 'rgba(255,255,255,0.4)',
       textTransform: 'uppercase', marginBottom: 6,
     }}>
@@ -251,7 +251,7 @@ function FieldLabel({ children }) {
 function AiFieldLabel({ children }) {
   return (
     <div style={{
-      fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 600, fontStyle: 'italic',
+      fontFamily: "'Montserrat', sans-serif", fontSize: 11, fontWeight: 600, fontStyle: 'italic',
       letterSpacing: '0.08em', color: 'rgba(255,255,255,0.4)',
       textTransform: 'uppercase', marginBottom: 6,
     }}>
@@ -266,7 +266,7 @@ const INPUT_STYLE = {
   border: '1px solid rgba(232,201,140,0.18)',
   borderRadius: 6,
   color: '#f2f0e6',
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
   fontSize: 14,
   padding: '8px 12px',
   cursor: 'pointer',
@@ -316,7 +316,7 @@ function TextareaField({ label, value, onChange, placeholder, rows = 3, ai = fal
         rows={rows}
         style={{
           ...INPUT_STYLE,
-          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontFamily: "'Montserrat', Georgia, serif",
           fontSize: 15,
           resize: 'none',
           lineHeight: 1.55,
@@ -335,7 +335,7 @@ function ReadOnlyField({ label, value }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <FieldLabel>{label}</FieldLabel>
-      <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+      <div style={{ fontFamily: "'Montserrat', Georgia, serif", fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
         {display}
       </div>
     </div>
@@ -352,7 +352,7 @@ function TropeChip({ trope, onRemove, small = false }) {
       ...chipStyle,
       padding: onRemove ? (small ? '2px 5px 2px 8px' : '3px 6px 3px 10px') : (small ? '2px 8px' : '3px 10px'),
       borderRadius: 999,
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       fontSize: small ? 11 : 12,
       lineHeight: 1.5,
       display: 'inline-flex',
@@ -418,7 +418,7 @@ function ApprovedTagInput({ label, options = [], value = [], onChange, placehold
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '3px 6px 3px 10px', borderRadius: 999,
       background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
-      color: 'rgba(255,255,255,0.65)', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+      color: 'rgba(255,255,255,0.65)', fontFamily: "'Montserrat', sans-serif", fontSize: 12,
     }}>
       {tag}
       <button
@@ -463,7 +463,7 @@ function ApprovedTagInput({ label, options = [], value = [], onChange, placehold
                 style={{
                   padding: '7px 12px', cursor: 'pointer',
                   color: getOptionColor ? (getOptionColor(opt) || 'rgba(255,255,255,0.6)') : 'rgba(255,255,255,0.6)',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 13, transition: 'background 0.1s',
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 13, transition: 'background 0.1s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -476,7 +476,7 @@ function ApprovedTagInput({ label, options = [], value = [], onChange, placehold
                 onMouseDown={e => { e.preventDefault(); handleAddToList() }}
                 style={{
                   padding: '7px 12px', cursor: 'pointer',
-                  color: '#e8c98c', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  color: '#e8c98c', fontFamily: "'Montserrat', sans-serif", fontSize: 12,
                   borderTop: available.length > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
                   transition: 'background 0.1s',
                 }}
@@ -493,7 +493,7 @@ function ApprovedTagInput({ label, options = [], value = [], onChange, placehold
             position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
             background: '#0d1530', border: '1px solid rgba(232,201,140,0.22)',
             borderRadius: 6, padding: '8px 12px', zIndex: 100,
-            color: 'rgba(255,255,255,0.3)', fontFamily: "'Outfit', sans-serif", fontSize: 12,
+            color: 'rgba(255,255,255,0.3)', fontFamily: "'Montserrat', sans-serif", fontSize: 12,
           }}>
             no matches
           </div>
@@ -544,7 +544,7 @@ function ThingsToKnow({ value = [], onChange }) {
               border: `1px solid ${active ? 'rgba(232,201,140,0.55)' : 'rgba(255,255,255,0.14)'}`,
               background: active ? 'rgba(232,201,140,0.1)' : 'transparent',
               color: active ? '#e8c98c' : 'rgba(255,255,255,0.4)',
-              fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer', transition: 'all 0.15s',
+              fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: 'pointer', transition: 'all 0.15s',
             }}>
               {flag}
             </button>
@@ -553,8 +553,8 @@ function ThingsToKnow({ value = [], onChange }) {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustom()} placeholder="add custom tag..."
-          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.18)', borderRadius: 6, color: '#f2f0e6', fontFamily: "'Outfit', sans-serif", fontSize: 13, padding: '6px 10px' }} />
-        <button onClick={addCustom} style={{ padding: '6px 14px', background: 'rgba(232,201,140,0.08)', border: '1px solid rgba(232,201,140,0.28)', borderRadius: 6, color: '#e8c98c', fontFamily: "'Outfit', sans-serif", fontSize: 13, cursor: 'pointer' }}>add</button>
+          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.18)', borderRadius: 6, color: '#f2f0e6', fontFamily: "'Montserrat', sans-serif", fontSize: 13, padding: '6px 10px' }} />
+        <button onClick={addCustom} style={{ padding: '6px 14px', background: 'rgba(232,201,140,0.08)', border: '1px solid rgba(232,201,140,0.28)', borderRadius: 6, color: '#e8c98c', fontFamily: "'Montserrat', sans-serif", fontSize: 13, cursor: 'pointer' }}>add</button>
       </div>
     </div>
   )
@@ -581,14 +581,14 @@ function ActiveFilterChips({ filters, onRemove, onClear }) {
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: '3px 6px 3px 10px', borderRadius: 999,
           background: 'rgba(232,201,140,0.08)', border: '1px solid rgba(232,201,140,0.25)',
-          color: '#e8c98c', fontFamily: "'Outfit', sans-serif", fontSize: 11,
+          color: '#e8c98c', fontFamily: "'Montserrat', sans-serif", fontSize: 11,
         }}>
           {chip.label}
           <button onClick={() => onRemove(chip.field, chip.val)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(232,201,140,0.5)', fontSize: 14, lineHeight: 1, padding: '0 1px', display: 'flex', alignItems: 'center' }}>×</button>
         </span>
       ))}
       {chips.length > 1 && (
-        <button onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', fontFamily: "'Outfit', sans-serif", fontSize: 11, padding: 0, transition: 'color 0.15s' }}
+        <button onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', fontFamily: "'Montserrat', sans-serif", fontSize: 11, padding: 0, transition: 'color 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
         >clear all</button>
@@ -603,7 +603,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
     setExpandedGroups(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
   }
   const sl = { // section label
-    fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 600,
+    fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 600,
     letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)',
     textTransform: 'uppercase', marginBottom: 5,
   }
@@ -666,7 +666,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
                   border: `1px solid ${active ? 'rgba(232,201,140,0.5)' : 'rgba(255,255,255,0.12)'}`,
                   background: active ? 'rgba(232,201,140,0.12)' : 'transparent',
                   color: active ? '#e8c98c' : 'rgba(255,255,255,0.38)',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 11, cursor: 'pointer', transition: 'all 0.12s',
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 11, cursor: 'pointer', transition: 'all 0.12s',
                 }}>{r}★</button>
               )
             })}
@@ -687,7 +687,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
                   border: `1px solid ${active ? 'rgba(168,144,212,0.5)' : 'rgba(255,255,255,0.12)'}`,
                   background: active ? 'rgba(168,144,212,0.12)' : 'transparent',
                   color: active ? '#a890d4' : 'rgba(255,255,255,0.38)',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 11, cursor: 'pointer', transition: 'all 0.12s',
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 11, cursor: 'pointer', transition: 'all 0.12s',
                 }}>
                   {tag}
                 </button>
@@ -709,7 +709,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
           }}>
             {filters.lowConfidenceOnly ? '✓' : ''}
           </div>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: filters.lowConfidenceOnly ? '#e8c98c' : 'rgba(255,255,255,0.38)' }}>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: filters.lowConfidenceOnly ? '#e8c98c' : 'rgba(255,255,255,0.38)' }}>
             show unvalidated only
           </span>
         </button>
@@ -721,13 +721,13 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
           <div style={sl}>Tropes</div>
           <button onClick={onTropeLogicToggle} style={{
             background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 4, color: 'rgba(255,255,255,0.45)', fontFamily: "'Outfit', sans-serif",
+            borderRadius: 4, color: 'rgba(255,255,255,0.45)', fontFamily: "'Montserrat', sans-serif",
             fontSize: 10, padding: '2px 7px', cursor: 'pointer', letterSpacing: '0.06em',
           }}>
             {tropeLogic}
           </button>
           {filters.tropes.length > 0 && (
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.22)' }}>
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.22)' }}>
               {filters.tropes.length} selected
             </span>
           )}
@@ -748,7 +748,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
             <div key={group.key} style={{ marginBottom: 2 }}>
               <button onClick={() => toggleGroup(group.key)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', width: '100%', textAlign: 'left' }}>
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', width: 8 }}>{isOpen ? '▾' : '▸'}</span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: hex2rgba(group.color, 0.75) }}>
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: hex2rgba(group.color, 0.75) }}>
                   {group.label}{selCount > 0 ? ` (${selCount})` : ''}
                 </span>
               </button>
@@ -762,7 +762,7 @@ function FilterPanel({ filters, onUpdate, onClear, distinctGenres, distinctVibeT
                         border: `1px solid ${active ? hex2rgba(group.color, 0.5) : hex2rgba(group.color, 0.2)}`,
                         background: active ? hex2rgba(group.color, 0.15) : 'transparent',
                         color: active ? group.color : hex2rgba(group.color, 0.5),
-                        fontFamily: "'Outfit', sans-serif", fontSize: 11, cursor: 'pointer',
+                        fontFamily: "'Montserrat', sans-serif", fontSize: 11, cursor: 'pointer',
                         transition: 'all 0.12s',
                         boxShadow: active ? `0 0 5px ${hex2rgba(group.color, 0.18)}` : 'none',
                       }}>
@@ -818,7 +818,7 @@ function AddBookModal({ onClose, onAdd }) {
         zIndex: 350,
         boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
       }}>
-        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 20 }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 20 }}>
           Add book
         </div>
 
@@ -873,7 +873,7 @@ function AddBookModal({ onClose, onAdd }) {
                   border: `1px solid ${status === opt.value ? 'rgba(232,201,140,0.45)' : 'rgba(255,255,255,0.1)'}`,
                   background: status === opt.value ? 'rgba(232,201,140,0.1)' : 'transparent',
                   color: status === opt.value ? '#e8c98c' : 'rgba(255,255,255,0.35)',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer',
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: 'pointer',
                   transition: 'all 0.12s', letterSpacing: '0.03em',
                 }}
               >
@@ -886,7 +886,7 @@ function AddBookModal({ onClose, onAdd }) {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             onClick={onClose}
-            style={{ padding: '9px 18px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.35)', fontFamily: "'Outfit', sans-serif", fontSize: 13, cursor: 'pointer' }}
+            style={{ padding: '9px 18px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.35)', fontFamily: "'Montserrat', sans-serif", fontSize: 13, cursor: 'pointer' }}
           >
             cancel
           </button>
@@ -898,7 +898,7 @@ function AddBookModal({ onClose, onAdd }) {
               border: `1px solid ${!title.trim() || !author.trim() ? 'rgba(232,201,140,0.15)' : 'rgba(232,201,140,0.45)'}`,
               background: !title.trim() || !author.trim() ? 'transparent' : 'rgba(232,201,140,0.1)',
               color: !title.trim() || !author.trim() ? 'rgba(232,201,140,0.3)' : '#e8c98c',
-              fontFamily: "'Outfit', sans-serif", fontSize: 13,
+              fontFamily: "'Montserrat', sans-serif", fontSize: 13,
               cursor: !title.trim() || !author.trim() ? 'not-allowed' : 'pointer',
               transition: 'all 0.12s',
             }}
@@ -1022,7 +1022,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
   }
 
   const btnBase = {
-    borderRadius: 4, fontFamily: "'Outfit', sans-serif", fontSize: 11,
+    borderRadius: 4, fontFamily: "'Montserrat', sans-serif", fontSize: 11,
     padding: '2px 8px', cursor: 'pointer',
   }
 
@@ -1048,7 +1048,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
               style={{
                 display: 'block', width: '100%', boxSizing: 'border-box',
                 background: 'none', border: 'none', borderBottom: '1px solid transparent',
-                fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 21,
+                fontFamily: "'Montserrat', Georgia, serif", fontSize: 21,
                 color: '#f2f0e6', lineHeight: 1.25, marginBottom: 4,
                 padding: '0 0 1px', outline: 'none', cursor: 'text',
                 transition: 'border-color 0.15s',
@@ -1063,7 +1063,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
               style={{
                 display: 'block', width: '100%', boxSizing: 'border-box',
                 background: 'none', border: 'none', borderBottom: '1px solid transparent',
-                fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                fontFamily: "'Montserrat', sans-serif", fontSize: 13,
                 color: 'rgba(255,255,255,0.5)', lineHeight: 1.4,
                 padding: '0 0 1px', outline: 'none', cursor: 'text',
                 transition: 'border-color 0.15s',
@@ -1080,7 +1080,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
                 style={{
                   flex: 1, minWidth: 0, background: 'none', border: 'none',
                   borderBottom: '1px solid transparent',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 12,
                   color: 'rgba(255,255,255,0.3)', fontStyle: 'italic',
                   padding: '0 0 1px', outline: 'none', cursor: 'text',
                   transition: 'border-color 0.15s',
@@ -1100,7 +1100,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
                 style={{
                   width: 36, background: 'none', border: 'none',
                   borderBottom: '1px solid transparent',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 12,
                   color: 'rgba(255,255,255,0.3)', fontStyle: 'italic',
                   padding: '0 0 1px', outline: 'none', cursor: 'text',
                   transition: 'border-color 0.15s', textAlign: 'right',
@@ -1116,7 +1116,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
             >×</button>
             {savedFlash && (
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'rgba(136,226,180,0.75)', letterSpacing: '0.05em' }}>saved ✓</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: 'rgba(136,226,180,0.75)', letterSpacing: '0.05em' }}>saved ✓</div>
             )}
           </div>
         </div>
@@ -1132,7 +1132,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
                 border: `1px solid ${bookStatus === opt.int ? 'rgba(232,201,140,0.45)' : 'rgba(255,255,255,0.1)'}`,
                 background: bookStatus === opt.int ? 'rgba(232,201,140,0.1)' : 'transparent',
                 color: bookStatus === opt.int ? '#e8c98c' : 'rgba(255,255,255,0.35)',
-                fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer',
+                fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: 'pointer',
                 transition: 'all 0.12s', letterSpacing: '0.02em',
               }}
             >
@@ -1145,7 +1145,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
 
         {/* AI section header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>
             Book info
           </div>
           {isLowConfidence && (
@@ -1257,7 +1257,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
         <div style={{ height: 1, background: 'rgba(232,201,140,0.12)', margin: '8px 0 18px' }} />
 
         {/* Personal notes */}
-        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: 16 }}>
           Your notes
         </div>
 
@@ -1283,7 +1283,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
             {MY_RATING_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background: '#131e44' }}>{o.label}</option>)}
           </select>
           {!myRating && attr.goodreads_rating && (
-            <div style={{ marginTop: 5, fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            <div style={{ marginTop: 5, fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
               Your Goodreads rating: {attr.goodreads_rating} / 5 — set a rating above to replace it
             </div>
           )}
@@ -1310,7 +1310,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
             }}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.25)', fontFamily: "'Outfit', sans-serif",
+              color: 'rgba(255,255,255,0.25)', fontFamily: "'Montserrat', sans-serif",
               fontSize: 12, letterSpacing: '0.03em', padding: '0 0 18px',
               display: 'block', transition: 'color 0.15s',
             }}
@@ -1344,7 +1344,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
                   border: `1px solid ${active ? 'rgba(232,201,140,0.5)' : 'rgba(255,255,255,0.14)'}`,
                   background: active ? 'rgba(232,201,140,0.1)' : 'transparent',
                   color: active ? '#e8c98c' : 'rgba(255,255,255,0.4)',
-                  fontFamily: "'Outfit', sans-serif", fontSize: 12, transition: 'all 0.15s',
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 12, transition: 'all 0.15s',
                 }}>
                   {opt.label}
                 </button>
@@ -1374,7 +1374,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
             }}>
               {needsReview ? '✓' : ''}
             </div>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: needsReview ? '#e8c98c' : 'rgba(255,255,255,0.38)' }}>
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: needsReview ? '#e8c98c' : 'rgba(255,255,255,0.38)' }}>
               needs sorting
             </span>
           </button>
@@ -1384,19 +1384,19 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
         <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {deleteConfirm ? (
             <>
-              <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 12, lineHeight: 1.55 }}>
+              <div style={{ fontFamily: "'Montserrat', Georgia, serif", fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 12, lineHeight: 1.55 }}>
                 Remove <em>{book.title}</em> from your library? This can't be undone.
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setDeleteConfirm(false)}
-                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: 'pointer' }}
                 >
                   cancel
                 </button>
                 <button
                   onClick={() => onDelete(book.id)}
-                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(220,80,80,0.35)', background: 'rgba(220,80,80,0.08)', color: 'rgba(220,120,120,0.8)', fontFamily: "'Outfit', sans-serif", fontSize: 12, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid rgba(220,80,80,0.35)', background: 'rgba(220,80,80,0.08)', color: 'rgba(220,120,120,0.8)', fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: 'pointer' }}
                 >
                   remove
                 </button>
@@ -1405,7 +1405,7 @@ function BookDrawer({ book, onClose, onSave, savedFlash, subGenreOptions, tropeO
           ) : (
             <button
               onClick={() => setDeleteConfirm(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontFamily: "'Outfit', sans-serif", fontSize: 11, letterSpacing: '0.04em', padding: 0, transition: 'color 0.15s' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.18)', fontFamily: "'Montserrat', sans-serif", fontSize: 11, letterSpacing: '0.04em', padding: 0, transition: 'color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.color = 'rgba(220,100,100,0.6)'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
             >
@@ -1613,13 +1613,13 @@ export default function BookPileRoom({ onBack }) {
         <input
           type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="search by title or author..."
-          style={{ flex: 1, maxWidth: 440, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.18)', borderRadius: 8, color: '#f2f0e6', fontFamily: "'Outfit', sans-serif", fontSize: 14, padding: '10px 16px', outline: 'none', boxSizing: 'border-box' }}
+          style={{ flex: 1, maxWidth: 440, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,201,140,0.18)', borderRadius: 8, color: '#f2f0e6', fontFamily: "'Montserrat', sans-serif", fontSize: 14, padding: '10px 16px', outline: 'none', boxSizing: 'border-box' }}
         />
         <button
           onClick={() => setFiltersOpen(o => !o)}
           style={{
             padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-            fontFamily: "'Outfit', sans-serif", fontSize: 13, letterSpacing: '0.03em',
+            fontFamily: "'Montserrat', sans-serif", fontSize: 13, letterSpacing: '0.03em',
             background: filterCount > 0 ? 'rgba(232,201,140,0.08)' : 'rgba(255,255,255,0.04)',
             border: `1px solid ${filterCount > 0 ? 'rgba(232,201,140,0.35)' : 'rgba(255,255,255,0.12)'}`,
             color: filterCount > 0 ? '#e8c98c' : 'rgba(255,255,255,0.38)',
@@ -1632,7 +1632,7 @@ export default function BookPileRoom({ onBack }) {
           onClick={() => setAddBookOpen(true)}
           style={{
             padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-            fontFamily: "'Outfit', sans-serif", fontSize: 13, letterSpacing: '0.03em',
+            fontFamily: "'Montserrat', sans-serif", fontSize: 13, letterSpacing: '0.03em',
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.12)',
             color: 'rgba(255,255,255,0.5)',
@@ -1668,7 +1668,7 @@ export default function BookPileRoom({ onBack }) {
             background: 'none', border: 'none',
             borderBottom: tab === t.key ? '2px solid #e8c98c' : '2px solid transparent',
             color: tab === t.key ? '#e8c98c' : 'rgba(255,255,255,0.38)',
-            fontFamily: "'Outfit', sans-serif", fontSize: 13, letterSpacing: '0.05em',
+            fontFamily: "'Montserrat', sans-serif", fontSize: 13, letterSpacing: '0.05em',
             padding: '8px 16px 10px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s', marginBottom: -1,
           }}>
             {t.label}
@@ -1677,14 +1677,14 @@ export default function BookPileRoom({ onBack }) {
       </div>
 
       {/* Count */}
-      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.22)', marginBottom: 10, letterSpacing: '0.04em' }}>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.22)', marginBottom: 10, letterSpacing: '0.04em' }}>
         {loading ? 'loading...' : `${filtered.length} book${filtered.length !== 1 ? 's' : ''}`}
       </div>
 
       {/* List */}
       {!loading && (
         filtered.length === 0 ? (
-          <div style={{ fontFamily: "'Crimson Pro', Georgia, serif", fontSize: 16, color: 'rgba(255,255,255,0.28)', fontStyle: 'italic', padding: '32px 0' }}>
+          <div style={{ fontFamily: "'Montserrat', Georgia, serif", fontSize: 16, color: 'rgba(255,255,255,0.28)', fontStyle: 'italic', padding: '32px 0' }}>
             {search || filterCount > 0 ? 'no matches found' : 'nothing here yet'}
           </div>
         ) : (

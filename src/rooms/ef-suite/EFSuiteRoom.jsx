@@ -18,7 +18,7 @@ function EFSuiteLanding({ onSelect }) {
   return (
     <div style={{ padding: '24px 0 40px' }}>
       <p style={{
-        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontFamily: "'Montserrat', Georgia, serif",
         fontSize: 18,
         color: 'rgba(230,210,165,0.75)',
         margin: '0 0 28px',

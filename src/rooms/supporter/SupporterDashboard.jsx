@@ -46,7 +46,7 @@ export default function SupporterDashboard({ profile, onTree, onLibrary }) {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       padding: '40px 24px',
       gap: '28px',
     }}>
@@ -109,7 +109,7 @@ export default function SupporterDashboard({ profile, onTree, onLibrary }) {
             padding: '18px 24px',
             color: '#f5edd6',
             fontSize: '16px',
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
             cursor: 'pointer',
             letterSpacing: '0.02em',
             transition: 'background 0.2s, border-color 0.2s',
@@ -126,7 +126,7 @@ export default function SupporterDashboard({ profile, onTree, onLibrary }) {
             padding: '18px 24px',
             color: 'rgba(245,237,214,0.6)',
             fontSize: '16px',
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
             cursor: 'pointer',
             letterSpacing: '0.02em',
           }}

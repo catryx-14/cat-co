@@ -40,7 +40,7 @@ export default function SuiteCard({ icon, title, subtitle, onClick }) {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
         <span style={{
-          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontFamily: "'Montserrat', Georgia, serif",
           fontSize: 20,
           color: '#e8c98c',
           lineHeight: 1.2,
@@ -48,7 +48,7 @@ export default function SuiteCard({ icon, title, subtitle, onClick }) {
           {title}
         </span>
         <span style={{
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           fontSize: 13,
           color: 'rgba(230,210,165,0.75)',
           lineHeight: 1.5,

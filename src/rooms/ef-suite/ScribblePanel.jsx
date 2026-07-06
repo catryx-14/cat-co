@@ -148,7 +148,7 @@ function ChatMessage({ msg }) {
         borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
         background: isUser ? 'rgba(232,201,140,0.08)' : 'rgba(110,192,191,0.07)',
         border: `1px solid ${isUser ? 'rgba(232,201,140,0.18)' : 'rgba(110,192,191,0.15)'}`,
-        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontFamily: "'Montserrat', Georgia, serif",
         fontSize: 15,
         lineHeight: 1.6,
         color: '#f2f0e6',
@@ -637,7 +637,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
           <ScribbleAvatar size={46} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontFamily: "'Cagliostro', serif",
+              fontFamily: "'Montserrat', serif",
               fontSize: 21,
               color: '#6ec0bf',
               letterSpacing: '0.04em',
@@ -656,7 +656,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
               cursor: isLoading ? 'not-allowed' : 'pointer',
               color: 'rgba(255,255,255,0.2)',
               fontSize: 12,
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               letterSpacing: '0.04em',
               padding: '4px 6px',
               transition: 'color 0.15s',
@@ -695,7 +695,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
         }}>
           {displayMessages.length === 0 && !isLoading && (
             <div style={{
-              fontFamily: "'Crimson Pro', Georgia, serif",
+              fontFamily: "'Montserrat', Georgia, serif",
               fontSize: 14,
               fontStyle: 'italic',
               color: 'rgba(255,255,255,0.15)',
@@ -708,7 +708,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
           ))}
           {isLoading && (
             <div style={{
-              fontFamily: "'Crimson Pro', Georgia, serif",
+              fontFamily: "'Montserrat', Georgia, serif",
               fontSize: 14,
               fontStyle: 'italic',
               color: 'rgba(110,192,191,0.35)',
@@ -740,7 +740,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
                 border: '1px solid rgba(110,192,191,0.18)',
                 borderRadius: 8,
                 color: '#f2f0e6',
-                fontFamily: "'Crimson Pro', Georgia, serif",
+                fontFamily: "'Montserrat', Georgia, serif",
                 fontSize: 14,
                 lineHeight: 1.5,
                 padding: '9px 12px',
@@ -765,7 +765,7 @@ export default function ScribblePanel({ open, onToggle, books, filteredCount, on
                 border: '1px solid rgba(110,192,191,0.28)',
                 background: isLoading || !input.trim() ? 'transparent' : 'rgba(110,192,191,0.1)',
                 color: isLoading || !input.trim() ? 'rgba(110,192,191,0.25)' : 'rgba(110,192,191,0.8)',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 13,
                 cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
                 transition: 'all 0.15s',

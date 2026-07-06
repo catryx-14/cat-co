@@ -139,12 +139,12 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
   }
 
   if (loading) return (
-    <div style={{ padding: "40px", color: "rgba(245,237,214,0.4)", fontFamily: "'Outfit', sans-serif", fontSize: "14px" }}>
+    <div style={{ padding: "40px", color: "rgba(245,237,214,0.4)", fontFamily: "'Montserrat', sans-serif", fontSize: "14px" }}>
       loading…
     </div>
   );
   if (error) return (
-    <div style={{ padding: "40px", color: "rgba(255,120,100,0.7)", fontFamily: "'Outfit', sans-serif", fontSize: "14px" }}>
+    <div style={{ padding: "40px", color: "rgba(255,120,100,0.7)", fontFamily: "'Montserrat', sans-serif", fontSize: "14px" }}>
       {error}
     </div>
   );
@@ -152,7 +152,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
   const tiers = Object.keys(tierGroups).map(Number).sort();
 
   return (
-    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", fontFamily: "'Outfit', sans-serif" }}>
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", fontFamily: "'Montserrat', sans-serif" }}>
 
       {/* ── Standard room header ── */}
       <div className="room-header-wrap">
@@ -236,7 +236,7 @@ export default function FirstAidToolsScreen({ mechanism, onChangeState, onReset,
                   borderRadius: isOpen ? "10px 10px 0 0" : "10px",
                   padding: "11px 16px",
                   cursor: "pointer",
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   color: "#f5edd6",
                   fontSize: "13px",
                   letterSpacing: "0.04em",
@@ -420,7 +420,7 @@ function btnReset(extra = {}) {
     border: "none",
     padding: 0,
     cursor: "pointer",
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Montserrat', sans-serif",
     ...extra,
   };
 }
@@ -443,7 +443,7 @@ const overlayBox = {
   maxWidth: "320px",
   width: "90%",
   textAlign: "center",
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
 };
 
 const confirmBtn = {
@@ -453,7 +453,7 @@ const confirmBtn = {
   color: "#f5edd6",
   padding: "10px 22px",
   cursor: "pointer",
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
   fontSize: "13px",
 };
 
@@ -464,7 +464,7 @@ const cancelBtn = {
   color: "rgba(245,237,214,0.55)",
   padding: "10px 22px",
   cursor: "pointer",
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
   fontSize: "13px",
 };
 

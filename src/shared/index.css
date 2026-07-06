@@ -68,16 +68,43 @@
   --color-border-tertiary:   rgba(232, 201, 140, 0.15);   /* very subtle inner borders   */
   --color-background-primary:    rgba(255, 255, 255, 0.03);   /* subtle raised card surface */
   --color-background-secondary:  rgba(232, 201, 140, 0.06);   /* inactive pill background   */
-  --font-serif: "Crimson Pro", Georgia, serif;             /* body / expression text      */
-  --font-sans:  "Cagliostro", serif;                       /* chip / UI label text        */
   --border-radius-lg: 12px;
   --border-radius-md: 8px;
 
-  /* NIGHT GARDEN THEME VALUE: display/title font was Italiana, serif */
-  /* NIGHT GARDEN THEME VALUE: hero font was 'Cormorant Garamond', Georgia, serif italic */
-  --font-primary: "Crimson Pro", Georgia, serif;
-  --font-display: "Crimson Pro", Georgia, serif;
-  --font-hero: "Crimson Pro", Georgia, serif;
+  /* ══ JEWELRY & JOY typography wardrobe (Engine Room id=171) ═══════════════
+     Italiana = logo + every room/page title (the brand thread).
+     Cormorant Garamond = Threshold hero + special serif moments (quotes,
+       the Today's Sky poetry line).
+     Montserrat = body, tabs, nav rail, buttons — all everyday working text
+       (300 for airy prose, 400 where small text needs sturdiness).
+     Poiret One = the Threshold tagline presence (NEVER faux-italicised).      */
+  --font-body:    "Montserrat", system-ui, sans-serif;   /* prose / working text  */
+  --font-ui:      "Montserrat", system-ui, sans-serif;   /* labels / tabs / UI    */
+  --font-title:   "Italiana", "Cormorant Garamond", serif; /* room + page titles  */
+  --font-hero:    "Cormorant Garamond", Georgia, serif;  /* hero display serif    */
+  --font-tagline: "Poiret One", "Montserrat", sans-serif;/* threshold tagline     */
+
+  /* Back-compat aliases for existing consumers — mapped to the new wardrobe. */
+  --font-serif:   var(--font-body);   /* was body/expression serif */
+  --font-sans:    var(--font-ui);     /* was chip/label sans       */
+  --font-primary: var(--font-ui);     /* was eyebrow/nav text      */
+  --font-display: var(--font-title);  /* was display/title         */
+
+  /* ══ JEWELRY & JOY — mood tokens ══════════════════════════════════════════
+     The "joy" layer: base gradient + drifting-bokeh palette + deco stroke.
+     A future per-page mood = swap THESE values only — nothing else moves.
+     Twilight & First Light are already specced (Engine Room id=171).
+     This phase ships ONE default: navy.                                      */
+  --joy-bg-1: #131a33;          /* background gradient — top     */
+  --joy-bg-2: #182040;          /* background gradient — middle  */
+  --joy-bg-3: #1a2240;          /* background gradient — bottom  */
+  --joy-gold:      #e9c24c;     /* soft gold — a whisper         */
+  --joy-starlight: #f4efdf;     /* pale starlight white          */
+  --joy-amethyst:  #a673e4;     /* faint amethyst                */
+  --joy-dusk:      #6f83bd;     /* faint dusk blue               */
+  --joy-deco-stroke: #b28e4f;   /* gold art-deco linework (the "jewelry") */
+  --joy-btn-1: #2f3659;         /* button face — top (dusk indigo, opaque)  */
+  --joy-btn-2: #222a46;         /* button face — bottom (opaque)            */
 }
 
 * { box-sizing: border-box; }
@@ -99,18 +126,19 @@ select, input, textarea, label {
 }
 html, body {
   margin: 0; padding: 0;
-  background: #05122c;
+  background: var(--joy-bg-1);
   color: var(--ink);
-  font-family: "Crimson Pro", Georgia, serif;
+  font-family: var(--font-body);   /* Montserrat — everyday working text */
+  font-weight: 400;                /* sturdy + legible base; prose blocks may go 300 */
   font-size: 18px;
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
 }
-/* Page sky — sampled from the cat image's night sky (deep navy, corners
-   ~#04112d–#071c40) so the banner dissolves into the page at the fade zone. */
+/* Page sky — Jewelry & Joy default (navy mood). Token-driven so a future
+   page mood is a palette swap, not a rebuild (Engine Room id=171). */
 body {
-  background: linear-gradient(180deg, #0a1a40 0%, #08183a 24%, #061631 46%, #05122c 68%, #040f27 100%) fixed;
+  background: linear-gradient(168deg, var(--joy-bg-1) 0%, var(--joy-bg-2) 50%, var(--joy-bg-3) 100%) fixed;
 }
 
 .stars, .bokeh, .haze {
@@ -119,6 +147,9 @@ body {
   z-index: 0;
 }
 .stars canvas { width: 100%; height: 100%; display: block; }
+/* JEWELRY & JOY: the site-wide starfield is retired as the default mood
+   (it may return later as the "night" mood). Bokeh replaces it. */
+.stars { display: none; }
 .haze {
   --w: var(--warmth, 0.7);
   background:
@@ -147,8 +178,22 @@ body {
      animation thresholdOrbFloat 10–24s, dx/dy ±15px
 */
 .bokeh {
-  mix-blend-mode: screen;
-  opacity: .55;
+  overflow: hidden;
+}
+/* ── JEWELRY & JOY — flat drifting bokeh (the "joy" layer) ─────────────────
+   Solid soft circles; blur IS the softness (no rims, no highlights, no 3D).
+   No pulsing — everything just drifts. Depth comes from speed, not rendering:
+   small = fast (feels close), large = slow (feels far). Colors are mood
+   tokens (--joy-*) so a palette swap re-skins the whole field.              */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  animation: joy-drift ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes joy-drift {
+  from { transform: translateY(0)     translateX(0);    }
+  to   { transform: translateY(-60px) translateX(26px); }
 }
 .bokeh-dot {
   position: absolute;
@@ -213,7 +258,7 @@ body {
 @keyframes sp-amb-rot-b { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .bokeh-dot, .star-twinkle, .room-star, .gloaming { animation: none !important; }
+  .orb, .bokeh-dot, .star-twinkle, .room-star, .gloaming { animation: none !important; }
 }
 
 .stage {
@@ -312,7 +357,7 @@ body {
   flex-shrink: 0;
 }
 .rail-nav-item .label-text {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 11px;
   letter-spacing: 0.04em;
   line-height: 1.15;
@@ -474,7 +519,11 @@ body {
    dark edge so they stay readable where they cross the bright moon. */
 .threshold-title { filter: drop-shadow(0 1px 1px rgba(8,6,2,0.9)) drop-shadow(0 0 2px rgba(8,6,2,0.6)) drop-shadow(0 0 24px rgba(242,205,140,0.24)); }
 .threshold-title-word {
-  background: linear-gradient(180deg, #f4dc90 0%, #e6c470 17%, #d0a047 37%, #ab7827 55%, #74491b 72%, #bd8c37 87%, #e3c26f 100%);
+  /* JEWELRY & JOY: gradient rebuilt from the pendant artwork's own sampled
+     golds (highlight #fefac2 · light #fde984 · warm #d7a636 · mid #b5861f ·
+     deep #906206 · shadow #573501) so the text and the cat pendant read as
+     one piece of jewelry. Same top-lit metallic structure, less brass. */
+  background: linear-gradient(180deg, #fbeaa3 0%, #e6c06a 16%, #c9971f 34%, #a06e14 52%, #6b400a 70%, #b5861f 86%, #d7a636 100%);
   -webkit-background-clip: text;
           background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -516,16 +565,88 @@ body {
 /* Soft dark rounded panel behind the tagline + room buttons.
    The subtly darker edge is intentional — keep it. */
 .threshold-panel {
-  background: rgba(9, 13, 28, 0.52);
-  border: 1px solid rgba(0, 0, 0, 0.38);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(3px);
-          backdrop-filter: blur(3px);
+  /* JEWELRY & JOY: box backgrounds removed — the dark panels existed for
+     contrast against the old busy banner. On the calm sky the hero text and
+     buttons sit directly on the bokeh (buttons' own borders define them). */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* ══ JEWELRY & JOY — buttons (ported from kit-final-three.html) ═════════════
+   Gently raised off the surface: soft top-lit gradient fill + fine gold wire
+   + top-edge light / bottom-edge shadow insets + a soft lift shadow. Hover:
+   the metal catches light (brighter wire + gold halo). Press: settles in like
+   a real key (translateY(1px) + inset). Primary wears more gold; .secondary is
+   quieter. Font follows the type wardrobe (Montserrat), not the mockup serif.
+   Apply className="jbtn" (or "jbtn secondary"); size via font-size/padding.   */
+.jbtn {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  padding: 12px 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #f2e8d5;
+  border: 1px solid rgba(233, 194, 76, 0.55);
+  /* A SOLID opaque material sitting in FRONT of the sky — no transparency in
+     the button body. Face colors are mood tokens (amethyst on the navy
+     default). The gold wire, edge insets, lift shadow, hover halo and the
+     translateY press all ride on top. */
+  background: linear-gradient(180deg, var(--joy-btn-1) 0%, var(--joy-btn-2) 100%);
+  box-shadow:
+    0 1px 0 rgba(255,244,214,.14) inset,   /* light catching the top edge   */
+    0 -1px 0 rgba(0,0,0,.18) inset,        /* shadow settling at the bottom  */
+    0 2px 6px rgba(0,0,0,.28);             /* soft lift off the sky          */
+  transition: box-shadow .18s ease, background .18s ease, border-color .18s ease, transform .12s ease;
+}
+.jbtn:hover {
+  border-color: rgba(246,227,160,.85);
+  background: linear-gradient(180deg, #3d4674 0%, #2c375b 100%);   /* brighter step */
+  box-shadow:
+    0 1px 0 rgba(255,248,224,.22) inset,
+    0 -1px 0 rgba(0,0,0,.16) inset,
+    0 3px 10px rgba(0,0,0,.3),
+    0 0 14px rgba(233,194,76,.18);         /* gold halo — metal catching light */
+}
+.jbtn:active {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #242a44 0%, #2d3556 100%);   /* pressed: top darker */
+  box-shadow:
+    0 1px 3px rgba(0,0,0,.3) inset,        /* pressed in */
+    0 1px 2px rgba(0,0,0,.2);
+}
+.jbtn.secondary {
+  border-color: rgba(201,164,78,.4);
+  color: #d9cdb8;
+  background: linear-gradient(180deg, #2e3350 0%, #22273c 100%);   /* quieter, opaque */
+  box-shadow:
+    0 1px 0 rgba(255,244,214,.08) inset,
+    0 -1px 0 rgba(0,0,0,.14) inset,
+    0 1px 4px rgba(0,0,0,.22);
+}
+.jbtn.secondary:hover {
+  border-color: rgba(233,194,76,.6);
+  color: #efe5cf;
+  background: linear-gradient(180deg, #363c5c 0%, #2a3048 100%);
+  box-shadow:
+    0 1px 0 rgba(255,244,214,.14) inset,
+    0 -1px 0 rgba(0,0,0,.14) inset,
+    0 2px 8px rgba(0,0,0,.26),
+    0 0 10px rgba(233,194,76,.12);
+}
+.jbtn.secondary:active {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #22273c 0%, #2a3048 100%);
+  box-shadow: 0 1px 3px rgba(0,0,0,.28) inset, 0 1px 2px rgba(0,0,0,.18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jbtn { transition: none; }
 }
 
 .gloaming {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   letter-spacing: 0.34em;
@@ -542,7 +663,7 @@ body {
   color: var(--candle);
 }
 .hub-mark {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: clamp(44px, 6.2vw, 76px);
   font-weight: 400;
   text-align: center;
@@ -734,7 +855,7 @@ body {
   72%      { opacity: 0;    transform: scale(0.7);  }
 }
 .room-star .label {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 22px;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -744,7 +865,7 @@ body {
   transition: color .35s ease, transform .35s ease, letter-spacing .35s ease;
 }
 .room-star .sub {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--ink-faint);
@@ -817,7 +938,7 @@ body {
   border-top: 1px solid rgba(232,201,140,0.12);
 }
 .footer .left {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 18px;
   color: var(--ink-soft);
@@ -898,7 +1019,7 @@ body {
   }
   .rail.expanded .rail-threshold-btn::after {
     content: "home";
-    font-family: "Cagliostro", serif;
+    font-family: "Montserrat", serif;
     font-size: 8px !important;
     color: var(--candle-soft);
     letter-spacing: 0.08em;
@@ -993,7 +1114,7 @@ body {
   flex-wrap: wrap;
 }
 .room-title {
-  font-family: "Cagliostro", serif;
+  font-family: var(--font-title);   /* Italiana — the brand thread through every room */
   font-size: 32px;
   letter-spacing: 0.02em;
   margin: 0;
@@ -1004,7 +1125,7 @@ body {
   min-width: 0;
 }
 .room-date {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 16px;
   letter-spacing: 0.06em;
@@ -1054,7 +1175,7 @@ body {
   margin: 0;
 }
 .room-tab {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 17px;
   letter-spacing: 0.06em;
   padding: 5px 22px 7px;
@@ -1144,7 +1265,7 @@ body {
   gap: 3px;
 }
 .sky-orb-num {
-  font-family: "Cagliostro", serif;
+  font-family: "Cagliostro", serif;   /* specialty stat-number font — exempt from Montserrat */
   line-height: 1;
   letter-spacing: -0.02em;
 }
@@ -1185,7 +1306,7 @@ body {
   border: 1px solid rgba(168,144,212,0.35);
   border-radius: 4px;
   color: rgba(168,144,212,0.75);
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 12px;
   padding: 3px 10px;
   cursor: pointer;
@@ -1337,7 +1458,7 @@ body {
   }
 
   .sky-mob-num {
-    font-family: "Cagliostro", serif;
+    font-family: "Cagliostro", serif;   /* specialty stat-number font — exempt from Montserrat */
     font-size: 46px;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -1373,13 +1494,13 @@ body {
   margin-bottom: 14px;
 }
 .ledger-title {
-  font-family: "Cagliostro", serif;
+  font-family: var(--font-title);   /* Italiana */
   font-size: 22px;
   letter-spacing: 0.04em;
   color: var(--candle-soft);
 }
 .ledger-count {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 14px;
   color: var(--ink-faint);
@@ -1402,7 +1523,7 @@ body {
 }
 .event:hover { background: rgba(232,201,140,0.03); }
 .event-time {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   color: var(--ink-faint);
@@ -1434,7 +1555,7 @@ body {
 .event-tag.flow { color: var(--soft-purple); }
 .event-tag.system-tag {
   color: var(--ink-faint);
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   letter-spacing: 0.04em;
@@ -1442,7 +1563,7 @@ body {
 .event.system { cursor: default; opacity: 0.92; }
 .event.system:hover { background: transparent; }
 .autistic-tax-line {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 22px;
   letter-spacing: 0.04em;
   color: var(--candle-soft);
@@ -1509,7 +1630,7 @@ body {
   border: 1px solid rgba(232,201,140,0.25);
   border-radius: 6px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: normal;
   font-size: 13px;
   line-height: 1.4;
@@ -1524,7 +1645,7 @@ body {
   animation: tipIn .3s ease;
 }
 .axis-tip b {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 14px;
   letter-spacing: 0.04em;
   color: var(--candle-soft);
@@ -1616,7 +1737,7 @@ body {
   border: 1px solid rgba(232,201,140,0.2);
   border-radius: 4px;
   padding: 3px 6px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   cursor: pointer;
@@ -1625,7 +1746,7 @@ body {
 
 .reg-section { margin-top: 36px; }
 .recovery-toggle {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--ink-soft);
@@ -1668,7 +1789,7 @@ body {
   box-shadow: 0 0 8px var(--reg-blue-glow);
 }
 .reg-name {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 12px;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
@@ -1695,7 +1816,7 @@ body {
   background: rgba(232,201,140,0.06);
   border: 1px solid rgba(232,201,140,0.25);
   color: var(--ink-soft);
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 14px;
   cursor: pointer;
   transition: background .25s ease, color .25s ease;
@@ -1726,7 +1847,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
   color: var(--ink-faint);
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 11px;
   letter-spacing: 0.04em;
   transition: border-color .35s ease, color .35s ease, background .35s ease, transform .25s ease;
@@ -1782,7 +1903,7 @@ body {
   gap: 16px;
 }
 .si-flow-label {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--ink-faint);
@@ -1794,7 +1915,7 @@ body {
   border: 1px solid rgba(232,201,140,0.18);
   border-radius: 6px;
   color: var(--ink);
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 12px;
   padding: 6px 10px;
   cursor: pointer;
@@ -1813,7 +1934,7 @@ body {
 .event-edit-hint {
   display: inline-block;
   margin-left: 10px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 11px;
   color: var(--ink-faint);
@@ -1835,7 +1956,7 @@ body {
   border: 1px solid rgba(232,201,140,0.2);
   border-radius: 4px;
   padding: 3px 6px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   cursor: pointer;
@@ -1865,7 +1986,7 @@ body {
   align-items: center;
   margin-top: 12px;
   flex-wrap: wrap;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   color: var(--ink-faint);
@@ -1877,7 +1998,7 @@ body {
   border: 1px solid rgba(232,201,140,0.2);
   border-radius: 4px;
   padding: 4px 12px;
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-style: normal;
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -1907,33 +2028,28 @@ body {
   display: flex;
   gap: 18px;
   margin-top: 12px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-size: 13px;
   font-style: italic;
   color: var(--ink-faint);
 }
 .composer-meta label { cursor: pointer; }
 .composer-meta input { margin-right: 6px; vertical-align: middle; }
+/* JEWELRY & JOY: now the raised .jbtn (markup: className="save jbtn").
+   Only geometry kept here — fill / wire / shadow / hover come from .jbtn. */
 .composer-meta .save {
   margin-left: auto;
-  font-family: "Cagliostro", serif;
   font-size: 14px;
   letter-spacing: 0.08em;
-  color: var(--candle-soft);
-  background: transparent;
-  border: 1px solid rgba(232,201,140,0.4);
-  padding: 6px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 7px 18px;
+  border-radius: 6px;
   font-style: normal;
-  transition: background .25s ease;
 }
-.composer-meta .save:hover { background: rgba(232,201,140,0.08); }
 
 .placeholder {
   padding: 60px 0;
   text-align: center;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 16px;
   color: var(--ink-faint);
@@ -2012,7 +2128,7 @@ body {
 }
 
 .cal-week-label {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   letter-spacing: 0.08em;
@@ -2206,7 +2322,7 @@ body {
 }
 
 .cal-tip-date {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   color: rgba(232, 201, 140, 0.90);
@@ -2269,7 +2385,7 @@ body {
   margin-top: 32px;
   padding: 16px 0;
   text-align: center;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   color: var(--ink-faint);
@@ -2309,7 +2425,7 @@ body {
   gap: 24px;
 }
 .auth-title {
-  font-family: "Cagliostro", serif;
+  font-family: var(--font-title);   /* Italiana */
   font-size: 28px;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -2317,7 +2433,7 @@ body {
   margin: 0;
 }
 .auth-sub {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 15px;
   color: var(--ink-faint);
@@ -2341,29 +2457,24 @@ body {
   border: 1px solid rgba(232,201,140,0.22);
   border-radius: 6px;
   padding: 10px 14px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-size: 16px;
   color: var(--ink);
   outline: 0;
   transition: border-color .25s ease;
 }
 .auth-input:focus { border-color: rgba(232,201,140,0.55); }
+/* JEWELRY & JOY: primary auth button is now .jbtn (className="auth-btn jbtn").
+   Geometry kept; fill / wire / shadow / hover come from .jbtn. */
 .auth-btn {
-  font-family: "Cagliostro", serif;
   font-size: 16px;
   letter-spacing: 0.08em;
-  color: var(--night-1);
-  background: var(--candle);
-  border: 0;
-  border-radius: 6px;
-  padding: 12px 20px;
-  cursor: pointer;
-  transition: background .25s ease, opacity .25s ease;
+  padding: 12px 22px;
+  border-radius: 7px;
 }
-.auth-btn:hover { background: var(--candle-soft); }
 .auth-btn:disabled { opacity: 0.5; cursor: default; }
 .auth-error {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--rose);
@@ -2386,12 +2497,9 @@ body {
   height: 1px;
   background: rgba(232,201,140,0.14);
 }
-.auth-btn--ghost {
-  background: transparent;
-  border: 1px solid rgba(232,201,140,0.3);
-  color: var(--ink);
-}
-.auth-btn--ghost:hover { background: rgba(232,201,140,0.07); }
+/* JEWELRY & JOY: ghost auth button is now .jbtn.secondary
+   (markup: className="auth-btn auth-btn--ghost jbtn secondary").
+   The quieter look comes entirely from .jbtn.secondary. */
 
 /* save bar */
 .save-bar {
@@ -2409,27 +2517,19 @@ body {
   z-index: 10;
 }
 .save-bar-status {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--ink-faint);
   flex: 1;
 }
+/* JEWELRY & JOY: save-bar button is now .jbtn (className="save-bar-btn jbtn").
+   Geometry kept; fill / wire / shadow / hover come from .jbtn. */
 .save-bar-btn {
-  font-family: "Cagliostro", serif;
   font-size: 14px;
   letter-spacing: 0.08em;
-  color: var(--candle-soft);
-  background: transparent;
-  border: 1px solid rgba(232,201,140,0.4);
-  padding: 8px 22px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background .25s ease, border-color .25s ease;
-}
-.save-bar-btn:hover {
-  background: rgba(232,201,140,0.08);
-  border-color: rgba(232,201,140,0.65);
+  padding: 9px 24px;
+  border-radius: 7px;
 }
 .save-bar-btn:disabled { opacity: 0.4; cursor: default; }
 
@@ -2460,7 +2560,7 @@ body {
 .history-loading {
   padding: 40px 0;
   text-align: center;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 15px;
   color: var(--ink-faint);
@@ -2472,7 +2572,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--ink-faint);
@@ -2515,12 +2615,12 @@ body {
   border-bottom: 1px solid rgba(232,201,140,0.08);
 }
 .settings-field-row label {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-size: 14px;
   color: var(--ink-dim);
 }
 .settings-field-row .settings-field-desc {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 12px;
   color: var(--ink-faint);
@@ -2533,7 +2633,7 @@ body {
   border: 0.5px solid rgba(232,201,140,0.25);
   border-radius: 4px;
   color: var(--candle-soft);
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 18px;
   text-align: center;
   padding: 6px 8px;
@@ -2560,7 +2660,7 @@ body {
 }
 .event-si-btns { display: inline-flex; gap: 4px; }
 .event-si-btn {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 10px;
   letter-spacing: 0.05em;
   padding: 2px 9px;
@@ -2592,7 +2692,7 @@ body {
 
 /* Date header when editing a historical entry */
 .history-edit-date {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 16px;
   letter-spacing: 0.06em;
@@ -2623,7 +2723,7 @@ body {
 }
 .hed-back:hover { color: var(--candle-soft); }
 .hed-date-label {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 17px;
   color: var(--ink-soft);
@@ -2698,7 +2798,7 @@ body {
   color: rgba(255,255,255,0.28);
 }
 .hed-day-num {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 17px;
   line-height: 1;
   color: rgba(255,255,255,0.2);
@@ -2733,7 +2833,7 @@ body {
   gap: 3px;
 }
 .hed-sky-val {
-  font-family: "Cagliostro", serif;
+  font-family: "Cagliostro", serif;   /* specialty stat-number font — exempt from Montserrat */
   font-size: 40px;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -2746,7 +2846,7 @@ body {
   color: rgba(255,255,255,0.28);
 }
 .hed-sky-sep {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-size: 30px;
   color: rgba(255,255,255,0.1);
   margin-top: -10px;
@@ -2760,8 +2860,10 @@ body {
 
 /* 1 — day greeting: bold, non-italic, slightly larger than body, the loudest voice */
 .tsky-greeting {
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-weight: 700;
+  /* JEWELRY & JOY: greeting moved off the poetry serif to Montserrat medium.
+     (If 500 reads heavy in place, drop to 400 — flagged for a live check.) */
+  font-family: var(--font-body);
+  font-weight: 500;
   font-size: 27px;
   line-height: 1.25;
   text-align: center;
@@ -2802,6 +2904,14 @@ body {
 .tsky-strip-days {
   display: flex; justify-content: space-between;
   gap: 2px; flex: 1; min-width: 0;
+  position: relative;
+  /* JEWELRY & JOY: a sparse scatter of tiny round dots drifting between days */
+  background-image:
+    radial-gradient(circle 1.4px at 11% 24%, rgba(253,244,212,0.5), transparent 100%),
+    radial-gradient(circle 1.1px at 33% 80%, rgba(253,244,212,0.38), transparent 100%),
+    radial-gradient(circle 1.5px at 57% 16%, rgba(253,244,212,0.46), transparent 100%),
+    radial-gradient(circle 1.2px at 79% 84%, rgba(253,244,212,0.4), transparent 100%),
+    radial-gradient(circle 1.3px at 91% 30%, rgba(253,244,212,0.46), transparent 100%);
 }
 .tsky-day {
   flex: 1; min-width: 0;
@@ -2823,12 +2933,16 @@ body {
   transition: box-shadow 0.18s ease, border-color 0.15s ease;
 }
 .tsky-day-num {
-  font-family: "Cagliostro", serif;
+  font-family: "Montserrat", serif;
   font-size: 15px; line-height: 1;
   color: rgba(255,255,255,0.5);
+  position: relative; z-index: 1;   /* above the metallic ring SVG */
 }
+/* JEWELRY & JOY: the metallic WeekRing SVG sits centred behind the number. */
+.tsky-ring-art { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 /* entered → solid ring in the day's lived-experience band colour */
-.tsky-day--entered .tsky-ring { border-style: solid; border-color: var(--tsky-day-color, rgba(255,255,255,0.6)); }
+/* entered days wear the metallic SVG ring, so the CSS border steps aside */
+.tsky-day--entered .tsky-ring { border-color: transparent; }
 .tsky-day--entered .tsky-day-num { color: var(--tsky-day-color, rgba(255,255,255,0.85)); }
 /* placeholder → dashed ring: the math's carry-forward exists, but nothing entered */
 .tsky-day--placeholder .tsky-ring { border-style: dashed; border-color: rgba(255,255,255,0.24); }
@@ -2845,6 +2959,9 @@ body {
   border-color: rgba(255,255,255,0.4);
   box-shadow: 0 0 11px 1px rgba(255,255,255,0.30);
 }
+/* JEWELRY & JOY: today already wears the full gold jewel (ring + glow + sparkle),
+   so drop the band-coloured editing ring on today — one colour, not two. */
+.tsky-day--today.tsky-day--editing .tsky-ring { box-shadow: none; }
 .tsky-today-star { position: absolute; top: -3px; right: -3px; }
 
 .tsky-editing {
@@ -2878,7 +2995,9 @@ body {
 }
 .tsky-sugline {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  font-family: "Cormorant Garamond", Georgia, serif;
+  /* JEWELRY & JOY: suggestions in Montserrat light; gold middots unchanged. */
+  font-family: var(--font-body);
+  font-weight: 300;
   font-size: 16.5px; line-height: 1.6;
   color: var(--ink-soft);
   max-width: 820px; margin: 0 auto;
@@ -2908,7 +3027,7 @@ body {
 
 /* Recalculate status line */
 .settings-recalc-status {
-  font-family: "Crimson Pro", serif;
+  font-family: "Montserrat", serif;
   font-style: italic;
   font-size: 13px;
   color: var(--ink-faint);

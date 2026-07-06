@@ -296,7 +296,7 @@ function FireflySpark({ spark, fieldW, fieldH, onClick, focused, dimmed, idx, to
         padding: size * 0.16,
       }}>
         <div style={{
-          fontFamily: '"Crimson Pro", Georgia, serif',
+          fontFamily: '"Montserrat", Georgia, serif',
           fontStyle: 'italic', fontWeight: 500,
           fontSize: Math.max(13, Math.min(18, size * 0.155)),
           lineHeight: 1.22, color: '#ffffff', textAlign: 'center',
@@ -431,7 +431,7 @@ function CaptureBox({ value, onChange, tag, onTagChange, editing, onSave, onCanc
         rows={2}
         style={{
           width: '100%', background: 'transparent', border: 0, outline: 'none', resize: 'none',
-          color: 'var(--ink)', fontFamily: '"Crimson Pro", Georgia, serif',
+          color: 'var(--ink)', fontFamily: '"Montserrat", Georgia, serif',
           fontSize: 19, lineHeight: 1.55, padding: '4px 0 14px', minHeight: 56,
         }}
       />
@@ -447,7 +447,7 @@ function CaptureBox({ value, onChange, tag, onTagChange, editing, onSave, onCanc
                 border: `1px solid ${sel ? hslOff(def.hue, 12, 0, 0.7) : 'rgba(232,201,140,0.18)'}`,
                 color: sel ? hslOff(def.hue, 28, 12) : 'var(--ink-soft)',
                 padding: '6px 10px', borderRadius: 999,
-                fontFamily: '"Crimson Pro", Georgia, serif', fontSize: 13.5,
+                fontFamily: '"Montserrat", Georgia, serif', fontSize: 13.5,
                 cursor: 'pointer', transition: 'all 180ms ease',
               }}>
                 <GemPip color={def.gem} dark={def.gemDark} size={10} />
@@ -459,7 +459,7 @@ function CaptureBox({ value, onChange, tag, onTagChange, editing, onSave, onCanc
         <button onClick={onSave} disabled={!value.trim()} style={{
           background: 'transparent', border: 0,
           color: value.trim() ? 'var(--candle-soft)' : 'rgba(240,227,194,0.32)',
-          fontFamily: '"Crimson Pro", Georgia, serif', fontSize: 14,
+          fontFamily: '"Montserrat", Georgia, serif', fontSize: 14,
           letterSpacing: '0.32em', textTransform: 'uppercase',
           cursor: value.trim() ? 'pointer' : 'default',
           padding: '6px 0 6px 14px', flexShrink: 0,
@@ -494,7 +494,7 @@ function ListView({ sparks, onClick }) {
               <GemPip color={tag.gem} dark={tag.gemDark} size={9} />
               {tag.label}
             </span>
-            <span style={{ fontFamily: '"Crimson Pro", Georgia, serif', fontSize: 17, lineHeight: 1.5 }}>{s.content}</span>
+            <span style={{ fontFamily: '"Montserrat", Georgia, serif', fontSize: 17, lineHeight: 1.5 }}>{s.content}</span>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: 'rgba(240,227,194,0.4)', letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>
               {relTime(s.created_at)}
             </span>
@@ -514,7 +514,7 @@ function ViewToggle({ value, onChange }) {
         <button key={o.k} onClick={() => onChange(o.k)} style={{
           background: value === o.k ? 'rgba(232,201,140,0.10)' : 'transparent',
           border: 0, color: value === o.k ? 'var(--candle-soft)' : 'var(--ink-soft)',
-          fontFamily: '"Crimson Pro", Georgia, serif', fontSize: 13.5,
+          fontFamily: '"Montserrat", Georgia, serif', fontSize: 13.5,
           padding: '6px 14px', borderRadius: 999,
           cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
           transition: 'all 220ms ease',
@@ -632,12 +632,12 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0' }}>
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
-          <div style={{ fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)', marginBottom: 32, lineHeight: 1.6 }}>
+          <div style={{ fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)', marginBottom: 32, lineHeight: 1.6 }}>
             hold them gently — sign in to access your sparks.
           </div>
           <button onClick={signIn} style={{
             background: 'transparent', border: '1px solid rgba(232,201,140,0.35)',
-            color: 'var(--candle-soft)', fontFamily: '"Crimson Pro", serif', fontSize: 14,
+            color: 'var(--candle-soft)', fontFamily: '"Montserrat", serif', fontSize: 14,
             letterSpacing: '0.18em', textTransform: 'uppercase',
             padding: '10px 28px', borderRadius: 4, cursor: 'pointer',
             transition: 'all 250ms ease',
@@ -687,7 +687,7 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
             </div>
             <ViewToggle value={view} onChange={setView} />
           </div>
-          <div style={{ fontFamily: '"Crimson Pro", Georgia, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(240,227,194,0.38)', letterSpacing: '0.04em', marginBottom: 16 }}>
+          <div style={{ fontFamily: '"Montserrat", Georgia, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(240,227,194,0.38)', letterSpacing: '0.04em', marginBottom: 16 }}>
             sparks, fireflies and fleeting thoughts
           </div>
         </>
@@ -718,11 +718,11 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
             />
           ))}
           {sparks.length === 0 && (
-            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 15, color: 'rgba(240,227,194,0.3)', textAlign: 'center' }}>
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 15, color: 'rgba(240,227,194,0.3)', textAlign: 'center' }}>
               no sparks yet — catch your first thought above
             </div>
           )}
-          <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 12, color: 'rgba(240,227,194,0.28)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+          <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)', fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 12, color: 'rgba(240,227,194,0.28)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
             ✶ hover to peek · click to open
           </div>
         </div>
@@ -736,7 +736,7 @@ export default function SparksRoom({ onSettings, roomName = 'Sparks' }) {
       )}
 
       {!loading && view === 'list' && sparks.length === 0 && (
-        <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: '"Crimson Pro", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)' }}>
+        <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: '"Montserrat", serif', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-faint)' }}>
           no sparks yet — catch your first thought above
         </div>
       )}

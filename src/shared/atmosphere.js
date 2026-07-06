@@ -1,159 +1,55 @@
+// ── JEWELRY & JOY — the "joy" layer (drifting bokeh) ────────────────────────
+// Replaces the old starfield canvas as the site's default background mood.
+// Recipe is Cat-approved (Engine Room id=171): flat soft circles, pure drift,
+// three size tiers with speed inversely proportional to size (small = fast =
+// feels close; large = slow = feels far — depth from speed, not rendering).
+// Colors are CSS mood tokens (--joy-*), so a future page mood is a palette
+// swap, not a rebuild. The retired starfield lives in git history if the
+// "night" mood ever wants it back.
+
 export function initAtmosphere() {
-  window.__warmth = 0.7;
-  initStars();
-  /* NIGHT GARDEN THEME VALUE — bokeh disabled for MVP.
-     Restore by calling: buildBokeh(0.7); window.__rebuildBokeh = buildBokeh; */
+  buildBokeh();
+  window.__rebuildBokeh = buildBokeh;
 }
 
-function initStars() {
-  const canvas = document.getElementById('star-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let W = 0, H = 0, stars = [];
+// Exact orb set from the approved mockup, re-dressed in the default navy
+// palette. Positions/sizes/blur/opacity/durations are ported verbatim; only
+// the colors map to mood tokens. Each entry: [w, blur, opacity, css-position,
+// drift-seconds, color-token].
+const ORBS = [
+  // Large washes — slowest (40–55s), live at the edges.
+  { d: 170, blur: 20, op: 0.28, pos: { top: '58%',    left: '3%'   }, dur: 48, c: '--joy-dusk'      },
+  { d: 130, blur: 16, op: 0.22, pos: { top: '70%',    left: '55%'  }, dur: 55, c: '--joy-gold'      },
+  { d: 150, blur: 18, op: 0.24, pos: { bottom: '-30px', right: '5%' }, dur: 42, c: '--joy-amethyst'  },
+  // Mid drifters — 24–30s.
+  { d: 70, blur: 4, op: 0.40, pos: { top: '14%', left: '8%'   }, dur: 28, c: '--joy-gold'     },
+  { d: 52, blur: 3, op: 0.40, pos: { top: '24%', right: '12%' }, dur: 25, c: '--joy-amethyst' },
+  { d: 44, blur: 3, op: 0.30, pos: { top: '46%', left: '23%'  }, dur: 30, c: '--joy-dusk'     },
+  { d: 36, blur: 3, op: 0.38, pos: { top: '66%', right: '24%' }, dur: 24, c: '--joy-amethyst' },
+  // Glitter specks — fastest (14–18s).
+  { d: 13, blur: 1,   op: 0.38, pos: { top: '20%', left: '30%'  }, dur: 15, c: '--joy-starlight' },
+  { d: 10, blur: 1,   op: 0.45, pos: { top: '36%', right: '27%' }, dur: 14, c: '--joy-gold'      },
+  { d: 8,  blur: 0.5, op: 0.32, pos: { top: '56%', right: '37%' }, dur: 17, c: '--joy-starlight' },
+  { d: 11, blur: 1,   op: 0.40, pos: { top: '64%', left: '38%'  }, dur: 16, c: '--joy-gold'      },
+  { d: 9,  blur: 1,   op: 0.42, pos: { top: '10%', right: '35%' }, dur: 18, c: '--joy-amethyst'  },
+  { d: 12, blur: 1,   op: 0.40, pos: { top: '80%', left: '18%'  }, dur: 15, c: '--joy-gold'      },
+];
 
-  function resize() {
-    W = canvas.width = window.innerWidth * devicePixelRatio;
-    H = canvas.height = window.innerHeight * devicePixelRatio;
-    const N = Math.min(150, Math.round((W * H) / 12000));
-
-    function makeGrad(x, y, orbR, cr, cg, cb) {
-      const g = ctx.createRadialGradient(x - orbR * 0.22, y - orbR * 0.22, 0, x, y, orbR);
-      g.addColorStop(0,    'rgba(255,255,255,0.92)');
-      g.addColorStop(0.13, `rgba(${cr},${cg},${cb},1)`);
-      g.addColorStop(0.42, `rgba(${cr},${cg},${cb},0.32)`);
-      g.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
-      return g;
-    }
-
-    stars = Array.from({ length: N }, () => {
-      const x = Math.random() * W;
-      const y = Math.random() * H;
-      const r = 0.4 + Math.random() * 1.4;
-      const orbR = r * devicePixelRatio * 3.5;
-      return {
-        x, y, orbR,
-        base: 0.25 + Math.random() * 0.55,
-        tw: Math.random() * Math.PI * 2,
-        spd: 0.6 + Math.random() * 1.4,
-        warmRoll: Math.random(),
-        gradWarm: makeGrad(x, y, orbR, 232, 201, 140),
-        gradCool: makeGrad(x, y, orbR, 200, 210, 240),
-      };
-    });
-  }
-
-  function tick(t) {
-    ctx.clearRect(0, 0, W, H);
-    const w = window.__warmth ?? 0.7;
-    const warmThresh = 0.05 + Math.min(1.5, w) * 0.17;
-    for (const s of stars) {
-      const a = s.base + Math.sin(t * 0.001 * s.spd + s.tw) * 0.25;
-      ctx.globalAlpha = a;
-      ctx.fillStyle = s.warmRoll < warmThresh ? s.gradWarm : s.gradCool;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.orbR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    if (!window.__shootingStars) window.__shootingStars = [];
-    if (!window.__nextShoot) window.__nextShoot = t + 4000 + Math.random() * 8000;
-    if (t >= window.__nextShoot) {
-      const angle = (Math.random() < 0.5)
-        ? (Math.random() * 0.4 + 0.15) * Math.PI
-        : (Math.random() * 0.4 + 0.55) * Math.PI;
-      const startEdge = Math.random();
-      const sx = startEdge < 0.5
-        ? Math.random() * W
-        : (Math.cos(angle) > 0 ? 0 : W);
-      const sy = Math.random() * H * 0.4;
-      const speed = (520 + Math.random() * 380) * devicePixelRatio;
-      window.__shootingStars.push({
-        x: sx, y: sy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        born: t,
-        life: 900 + Math.random() * 500,
-        len: 110 + Math.random() * 90,
-      });
-      window.__nextShoot = t + 8000 + Math.random() * 16000;
-    }
-
-    const live = [];
-    for (const ss of window.__shootingStars) {
-      const age = t - ss.born;
-      if (age > ss.life) continue;
-      const dt = 1 / 60;
-      ss.x += ss.vx * dt;
-      ss.y += ss.vy * dt;
-      const k = age / ss.life;
-      const alpha = k < 0.15 ? (k / 0.15) : (k > 0.7 ? (1 - (k - 0.7) / 0.3) : 1);
-      const len = ss.len * devicePixelRatio;
-      const mag = Math.hypot(ss.vx, ss.vy) || 1;
-      const tx = ss.x - (ss.vx / mag) * len;
-      const ty = ss.y - (ss.vy / mag) * len;
-      const grad = ctx.createLinearGradient(ss.x, ss.y, tx, ty);
-      grad.addColorStop(0, `rgba(255, 250, 230, ${0.95 * alpha})`);
-      grad.addColorStop(0.25, `rgba(220, 230, 255, ${0.55 * alpha})`);
-      grad.addColorStop(1, `rgba(180, 200, 255, 0)`);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.6 * devicePixelRatio;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(tx, ty);
-      ctx.lineTo(ss.x, ss.y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(ss.x, ss.y, 1.6 * devicePixelRatio, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 250, 230, ${alpha})`;
-      ctx.fill();
-      live.push(ss);
-    }
-    window.__shootingStars = live;
-    requestAnimationFrame(tick);
-  }
-
-  window.addEventListener('resize', resize);
-  resize();
-  requestAnimationFrame(tick);
-}
-
-export function buildBokeh(_warmth) {
+export function buildBokeh() {
   const layer = document.getElementById('bokeh-layer');
   if (!layer) return;
   layer.innerHTML = '';
 
-  const jewels = [
-    [180, 40,  220],  // deep purple
-    [220, 60,  160],  // magenta
-    [40,  100, 220],  // sapphire
-    [160, 30,  200],  // deep violet
-    [60,  180, 200],  // teal
-    [220, 100, 40],   // amber
-    [200, 40,  120],  // ruby
-  ];
-
-  const count = window.innerWidth >= 768 ? 16 : 32;
-  for (let i = 0; i < count; i++) {
-    const d = document.createElement('div');
-    d.className = 'bokeh-dot';
-    const sz = 55 + Math.random() * 45; // 55–100 px diameter (~half original size)
-    d.style.width = sz + 'px';
-    d.style.height = sz + 'px';
-    d.style.left = (Math.random() * 105 - 2.5) + '%';
-    d.style.top  = (Math.random() * 105 - 2.5) + '%';
-    const [r, g, b] = jewels[Math.floor(Math.random() * jewels.length)];
-    const alpha = (0.22 + Math.random() * 0.06).toFixed(3);
-    d.style.setProperty('--c', `rgba(${r},${g},${b},${alpha})`);
-    d.style.filter = `blur(${Math.round(sz * 0.17)}px)`;
-    d.style.opacity = '1';
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 34 + Math.random() * 28;
-    d.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
-    d.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-    d.style.animationDuration = (70 + Math.random() * 40) + 's';
-    d.style.animationDelay = -(Math.random() * 80) + 's';
-    d.style.animationDirection = 'normal';
-    layer.appendChild(d);
+  for (const o of ORBS) {
+    const el = document.createElement('div');
+    el.className = 'orb';
+    el.style.width = o.d + 'px';
+    el.style.height = o.d + 'px';
+    el.style.background = `var(${o.c})`;
+    el.style.filter = `blur(${o.blur}px)`;
+    el.style.opacity = String(o.op);
+    el.style.animationDuration = o.dur + 's';
+    for (const [k, v] of Object.entries(o.pos)) el.style[k] = v;
+    layer.appendChild(el);
   }
 }

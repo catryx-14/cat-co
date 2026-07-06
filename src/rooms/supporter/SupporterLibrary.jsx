@@ -20,7 +20,7 @@ const overlayBox = {
   maxWidth: '400px',
   width: '90%',
   textAlign: 'left',
-  fontFamily: "'Outfit', sans-serif",
+  fontFamily: "'Montserrat', sans-serif",
   position: 'relative',
   maxHeight: '80vh',
   display: 'flex',
@@ -41,7 +41,7 @@ const cardText = {
 }
 
 function btnReset(extra = {}) {
-  return { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", ...extra }
+  return { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Montserrat', sans-serif", ...extra }
 }
 
 export default function SupporterLibrary({ onBack }) {
@@ -63,7 +63,7 @@ export default function SupporterLibrary({ onBack }) {
   }, [])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Montserrat', sans-serif" }}>
       {/* Header */}
       <div style={{
         display: 'flex',

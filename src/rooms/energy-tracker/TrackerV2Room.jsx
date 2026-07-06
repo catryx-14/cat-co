@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
+import WeekRing from '../../components/jewelry/WeekRing.jsx'
 import TrackerHistory from './TrackerHistory.jsx'
 import { supabase } from '../../shared/lib/supabase.js'
 import {
@@ -296,7 +297,7 @@ function Composer({ onAdd }) {
             ))}
           </span>
         </span>
-        <button className="save" onClick={save}>save</button>
+        <button className="save jbtn" onClick={save}>save</button>
       </div>
     </div>
   )
@@ -939,7 +940,7 @@ function ThresholdSettings({ settings, onThresholdsChange }) {
       </div>
       <div className="save-bar">
         <span className="save-bar-status">{status}</span>
-        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+        <button className="save-bar-btn jbtn" onClick={handleSave} disabled={saving}>
           {saving ? 'saving…' : 'save thresholds'}
         </button>
       </div>
@@ -978,7 +979,7 @@ function AutisticTaxSettings({ settings, onTaxChange }) {
       </div>
       <div className="save-bar">
         <span className="save-bar-status">{status}</span>
-        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+        <button className="save-bar-btn jbtn" onClick={handleSave} disabled={saving}>
           {saving ? 'saving…' : 'save'}
         </button>
       </div>
@@ -1026,7 +1027,7 @@ function PurpleSettings({ settings, onPurpleChange }) {
       </div>
       <div className="save-bar">
         <span className="save-bar-status">{status}</span>
-        <button className="save-bar-btn" onClick={handleSave} disabled={saving}>
+        <button className="save-bar-btn jbtn" onClick={handleSave} disabled={saving}>
           {saving ? 'saving…' : 'save'}
         </button>
       </div>
@@ -1121,8 +1122,10 @@ function RollingStrip({ anchorEnd, selectedDate, entryMap, thresholds, todayStr,
               style={color ? { '--tsky-day-color': color } : undefined}>
               <span className="tsky-dow">{HED_DOW[(day.getDay() + 6) % 7]}</span>
               <span className="tsky-ring">
+                {entered
+                  ? <WeekRing color={color} size={52} className="tsky-ring-art" />
+                  : null}
                 <span className="tsky-day-num">{day.getDate()}</span>
-                {isToday && <StarMark size={5} className="tsky-today-star" />}
               </span>
             </button>
           )
@@ -1599,7 +1602,7 @@ export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, s
                   <label>engine room</label>
                   <div className="settings-field-desc">project docs, formula reference, and architecture notes</div>
                 </div>
-                <button className="save-bar-btn" onClick={() => onRoom('engine-room')}>
+                <button className="save-bar-btn jbtn" onClick={() => onRoom('engine-room')}>
                   open
                 </button>
               </div>

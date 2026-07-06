@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import RoomMark from '../../shared/components/RoomMark.jsx'
+import JewelRoomOval from '../../components/jewelry/JewelRoomOval.jsx'
 import { todayDisplayStr } from '../../shared/lib/dates.js'
 import { supabase } from '../../shared/lib/supabase.js'
 import herdingCatsIcon from '../../assets/herding-cats-icon.png'
@@ -13,47 +14,33 @@ const ROOM_ICONS = {
   'book-pile':    bookPileIcon,
 }
 
-// ── Oval art placeholder ─────────────────────────────────────────────────────
+// ── Room oval — the Jewelry & Joy metallic ring (JewelRoomOval) frames the room
+// icon (or, for coming-soon rooms with no art, shows the ring's centre diamond).
+// Hovering a live room lights it to the "active" state: glow + brighter ring +
+// dot sparkle. Coming-soon rooms are dimmed. ───────────────────────────────────
 function OvalPlaceholder({ hov, live, icon }) {
+  const active = live && hov
   return (
-    <div style={{
-      width: 88,
-      height: 108,
-      borderRadius: '50%',
-      border: `1.5px solid ${
-        !live ? 'rgba(232,201,140,0.12)'
-        : hov  ? 'rgba(232,201,140,0.7)'
-               : 'rgba(232,201,140,0.3)'
-      }`,
-      background: live && hov
-        ? 'rgba(232,201,140,0.06)'
-        : 'rgba(232,201,140,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      overflow: 'hidden',
-      transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
-      boxShadow: live && hov ? '0 0 20px rgba(232,201,140,0.1)' : 'none',
-    }}>
-      {icon ? (
-        <img src={icon} alt="" draggable={false} style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: !live ? 0.25 : hov ? 1 : 0.82,
-          transition: 'opacity 0.2s',
-          userSelect: 'none',
-        }} />
-      ) : (
-        <span style={{
-          fontSize: 22,
-          color: live
-            ? hov ? 'rgba(232,201,140,0.6)' : 'rgba(232,201,140,0.18)'
-            : 'rgba(232,201,140,0.1)',
-          transition: 'color 0.2s',
-          userSelect: 'none',
-        }}>◆</span>
+    <div style={{ position: 'relative', width: 96, height: 120, flexShrink: 0 }}>
+      <JewelRoomOval
+        variant="quiet"
+        active={active}
+        centerDiamond={!icon}
+        dim={!live}
+        width={96}
+        style={{ position: 'absolute', left: 0, top: 0 }}
+      />
+      {icon && (
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+          width: 70, height: 90, borderRadius: '50%', overflow: 'hidden',
+        }}>
+          <img src={icon} alt="" draggable={false} style={{
+            width: '100%', height: '100%', objectFit: 'cover',
+            opacity: !live ? 0.25 : hov ? 1 : 0.82,
+            transition: 'opacity 0.2s', userSelect: 'none',
+          }} />
+        </div>
       )}
     </div>
   )
@@ -124,7 +111,7 @@ function RoomCard({ room, pinned, pinCount, onPin, onNavigate }) {
       <OvalPlaceholder hov={hov} live={isLive} icon={ROOM_ICONS[room.slug]} />
 
       <span style={{
-        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontFamily: "'Montserrat', Georgia, serif",
         fontSize: 14,
         lineHeight: 1.3,
         textAlign: 'center',
@@ -139,7 +126,7 @@ function RoomCard({ room, pinned, pinCount, onPin, onNavigate }) {
 
       {!isLive && (
         <span style={{
-          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontFamily: "'Montserrat', Georgia, serif",
           fontStyle: 'italic',
           fontSize: 12,
           color: 'rgba(232,201,140,0.22)',
@@ -194,7 +181,7 @@ function WingAccordion({ wing, rooms, open, onToggle, pinSlugs, pinCount, onPin,
         }}>▶</span>
 
         <span style={{
-          fontFamily: 'Cagliostro, sans-serif',
+          fontFamily: 'Montserrat, sans-serif',
           fontSize: 19,
           color: 'var(--candle-soft)',
           letterSpacing: '0.01em',
@@ -204,7 +191,7 @@ function WingAccordion({ wing, rooms, open, onToggle, pinSlugs, pinCount, onPin,
 
         {wing.subtitle && (
           <span style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
+            fontFamily: "'Montserrat', Georgia, serif",
             fontStyle: 'italic',
             fontSize: 14,
             color: 'rgba(232,201,140,0.42)',
@@ -215,7 +202,7 @@ function WingAccordion({ wing, rooms, open, onToggle, pinSlugs, pinCount, onPin,
 
         <span style={{
           marginLeft: 'auto',
-          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontFamily: "'Montserrat', Georgia, serif",
           fontSize: 12,
           color: 'rgba(232,201,140,0.22)',
           flexShrink: 0,
@@ -302,7 +289,7 @@ export default function MoreLightsRoom({ onRoom, onSettings, pinSlugs, pinCount,
       <div style={{ padding: '8px 32px 80px', maxWidth: 700 }}>
         {nudge && (
           <div style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
+            fontFamily: "'Montserrat', Georgia, serif",
             fontStyle: 'italic',
             fontSize: 14,
             color: 'rgba(232,201,140,0.6)',
@@ -314,7 +301,7 @@ export default function MoreLightsRoom({ onRoom, onSettings, pinSlugs, pinCount,
 
         {loading ? (
           <div style={{
-            fontFamily: "'Crimson Pro', Georgia, serif",
+            fontFamily: "'Montserrat', Georgia, serif",
             fontStyle: 'italic',
             fontSize: 16,
             color: 'rgba(232,201,140,0.3)',

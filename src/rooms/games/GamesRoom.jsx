@@ -441,7 +441,7 @@ function GameCard({ tile, onSelect }) {
       />
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
         <span style={{
-          fontFamily: "'Crimson Pro', Georgia, serif",
+          fontFamily: "'Montserrat', Georgia, serif",
           fontSize: 20,
           color: '#e8c98c',
           lineHeight: 1.2,
@@ -449,7 +449,7 @@ function GameCard({ tile, onSelect }) {
           {tile.title}
         </span>
         <span style={{
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           fontSize: 13,
           color: 'rgba(230,210,165,0.75)',
           lineHeight: 1.5,
@@ -559,7 +559,7 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
     }}>
       {/* Counter */}
       <div style={{
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
         fontSize: 12,
         color: 'rgba(255,240,200,0.75)',
         letterSpacing: '0.08em',
@@ -711,7 +711,7 @@ function CatViewer({ cats, viewIndex, placed, selected, catAnim, onPrev, onNext,
 
       {/* Instruction */}
       <div style={{
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
         fontSize: 12,
         color: 'rgba(255,240,200,0.7)',
         letterSpacing: '0.06em',
@@ -741,20 +741,20 @@ function RoundComplete({ score, roundNumber, onNext, onMenu }) {
     }}>
       <div style={{ fontSize: 38, letterSpacing: 10 }}>✦ ✦ ✦</div>
       <div style={{
-        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontFamily: "'Montserrat', Georgia, serif",
         fontSize: 'clamp(24px, 5vw, 38px)',
         color: '#e8c98c', textAlign: 'center', lineHeight: 1.2,
       }}>
         round {roundNumber} complete
       </div>
       <div style={{
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
         fontSize: 15, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.05em',
       }}>
         score so far
       </div>
       <div style={{
-        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontFamily: "'Montserrat', Georgia, serif",
         fontSize: 'clamp(52px, 10vw, 76px)',
         color: '#fff', lineHeight: 1,
       }}>
@@ -799,7 +799,7 @@ function btnStyle(col) {
     padding: '12px 32px', borderRadius: 999,
     border: `1.5px solid ${withA(col, 0.25)}`,
     background: withA(col, 0.07),
-    color: col, fontFamily: "'Outfit', sans-serif",
+    color: col, fontFamily: "'Montserrat', sans-serif",
     fontSize: 14, letterSpacing: '0.08em',
     cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
   }
@@ -919,7 +919,7 @@ function CatSortGame({ onBack }) {
   return (
     <div style={{
       minHeight: '100%', display: 'flex', flexDirection: 'column',
-      position: 'relative', fontFamily: "'Outfit', sans-serif",
+      position: 'relative', fontFamily: "'Montserrat', sans-serif",
     }}>
       {/* Top bar: score + streak + back */}
       <div style={{
@@ -933,7 +933,7 @@ function CatSortGame({ onBack }) {
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'rgba(255,240,200,0.65)', fontSize: 13,
-            fontFamily: "'Outfit', sans-serif", letterSpacing: '0.05em',
+            fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.05em',
             padding: 0, transition: 'color 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,240,200,1)'}
@@ -1059,7 +1059,7 @@ export default function GamesRoom({ roomName = 'games', onSettings, initialGame 
       <style>{css}{burlapCss}</style>
       <div className={inGame ? 'game-mode' : ''} style={{
         minHeight: '100%', display: 'flex', flexDirection: 'column',
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
         position: 'relative',
       }}>
         {/* Basket weave background — only in game */}
