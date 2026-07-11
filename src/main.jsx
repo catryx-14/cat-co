@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './shared/index.css'
 import { initAtmosphere } from './shared/atmosphere.js'
 import App from './App.jsx'
@@ -15,6 +16,8 @@ if (new URLSearchParams(window.location.search).has('kit')) {
   root.render(<JewelKitGallery />)
 } else {
   root.render(
-    <AuthGate>{(session, profile) => <App session={session} profile={profile} />}</AuthGate>
+    <BrowserRouter>
+      <AuthGate>{(session, profile) => <App session={session} profile={profile} />}</AuthGate>
+    </BrowserRouter>
   )
 }

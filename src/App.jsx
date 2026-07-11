@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
@@ -34,6 +35,39 @@ const SLUG_TONE = {
   'lost-found':       'blue',
   'book-pile':        'purple',
   'herding-cats':     'teal',
+}
+
+// ── URL routing map — legible room slugs (hub_rooms.slug) ⇆ internal view keys ─
+// The URL uses the human-friendly slug (e.g. /first-aid); the app keeps its
+// existing internal `view` keys (e.g. 'physio'). Most match already — only these
+// two differ. `hub` is the Threshold landing at `/`.
+const VIEW_TO_SLUG = {
+  hub:     '',
+  tracker: 'capacity-tracker',
+  physio:  'first-aid',
+}
+// Every internal view key the app can render (used to validate incoming paths).
+const KNOWN_VIEWS = new Set([
+  'hub', 'tracker', 'sparks', 'physio', 'regulation', 'fuel-foundation',
+  'lost-found', 'more-lights', 'herding-cats', 'book-pile', 'engine-room', 'library',
+])
+// Reverse lookup slug → view, built from VIEW_TO_SLUG.
+const SLUG_TO_VIEW = Object.fromEntries(
+  Object.entries(VIEW_TO_SLUG).map(([view, slug]) => [slug, view])
+)
+
+// view key → URL path (e.g. 'physio' → '/first-aid', 'hub' → '/')
+function viewToPath(view) {
+  const slug = VIEW_TO_SLUG[view] ?? view
+  return '/' + slug
+}
+// URL path → view key, or null if the path is unknown (caller redirects to '/')
+function pathToView(pathname) {
+  const slug = pathname.replace(/^\/+/, '').replace(/\/+$/, '')
+  if (slug === '') return 'hub'
+  if (slug in SLUG_TO_VIEW) return SLUG_TO_VIEW[slug]      // mapped (capacity-tracker, first-aid)
+  if (KNOWN_VIEWS.has(slug)) return slug                    // slug === view key
+  return null                                               // unknown path
 }
 
 function useViewport() {
@@ -509,13 +543,20 @@ export default function App({ session, profile }) {
 }
 
 function HubApp({ session }) {
-  const [view, setView] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('room') || 'hub'
-  })
+  // Routing: the URL path is the single source of truth for which room shows.
+  // `view` is derived from the path, so browser Back/Forward step through rooms
+  // and every room has its own bookmarkable address.
+  const navigate = useNavigate()
+  const location = useLocation()
+  const view = pathToView(location.pathname) ?? 'hub'
   const [settings, setSettings] = useState(null)
   const [pins, setPins] = useState(null)
   const inRoom = view !== 'hub'
+
+  // Unknown path → send to the Threshold (replace so Back doesn't re-hit it).
+  useEffect(() => {
+    if (pathToView(location.pathname) === null) navigate('/', { replace: true })
+  }, [location.pathname, navigate])
 
   useEffect(() => {
     loadSettings()
@@ -609,12 +650,12 @@ function HubApp({ session }) {
 
   const goRoom = (key) => {
     if (key === 'tracker') setTrackerInitTab(null)
-    setView(key)
+    navigate(viewToPath(key))
   }
-  const goHome = () => setView('hub')
-  const goSettings = () => { setTrackerInitTab('settings'); setView('tracker') }
+  const goHome = () => navigate('/')
+  const goSettings = () => { setTrackerInitTab('settings'); navigate(viewToPath('tracker')) }
   // Jump from the Tracker's picker to a specific action's card in the Regulation room.
-  const goEditAction = (actionId) => { setRegulationInitAction(actionId); setView('regulation') }
+  const goEditAction = (actionId) => { setRegulationInitAction(actionId); navigate(viewToPath('regulation')) }
 
   const fadeClass = `view-fade ${view === 'hub' ? 'is-hub' : 'is-room'}`
 
