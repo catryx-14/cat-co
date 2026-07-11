@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import TrackerV2Room from './rooms/energy-tracker/TrackerV2Room.jsx'
 import SparksRoom from './rooms/sparks/SparksRoom.jsx'
 import EngineRoom from './rooms/engine-room/EngineRoom.jsx'
+import FuelFoundation from './rooms/fuel-foundation/FuelFoundation.jsx'
 import FirstAidRoom from './rooms/first-aid/FirstAidRoom.jsx'
 import GamesRoom from './rooms/games/GamesRoom.jsx'
 import MoreLightsRoom from './rooms/more-lights/MoreLightsRoom.jsx'
@@ -471,6 +472,9 @@ function RoomView({ roomKey, onHome, onRoom, onSettings, onEditAction, session, 
   }
   if (roomKey === 'engine-room') {
     return <EngineRoom roomName={room?.name ?? 'Engine Room'} onSettings={onSettings} />
+  }
+  if (roomKey === 'fuel-foundation') {
+    return <FuelFoundation roomName={room?.name ?? 'Fuel Foundation'} onSettings={onSettings} />
   }
   if (roomKey === 'physio') {
     return <FirstAidRoom onSettings={onSettings} />

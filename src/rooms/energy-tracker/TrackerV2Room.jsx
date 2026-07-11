@@ -1606,6 +1606,15 @@ export default function TrackerV2Room({ onHome, onRoom, onEditAction, session, s
                   open
                 </button>
               </div>
+              <div className="settings-field-row">
+                <div>
+                  <label>fuel foundation</label>
+                  <div className="settings-field-desc">the why beneath food, fuel &amp; the body — model before method</div>
+                </div>
+                <button className="save-bar-btn jbtn" onClick={() => onRoom('fuel-foundation')}>
+                  open
+                </button>
+              </div>
             </div>
           )}
           <div className="settings-signout">
