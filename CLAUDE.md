@@ -65,13 +65,15 @@ A previous Claude was confused by an archived doc and treated a completed projec
 
 ## Working rules
 
-1. Before touching the database, read the engine room (categories `schema` and
+1. **At the start of any Hub session, `git pull` first.** Cat works from two laptops —
+   the local copy may be behind whatever was last pushed from the other one.
+2. Before touching the database, read the engine room (categories `schema` and
    `architecture`) to understand the structure.
-2. After a meaningful change or decision, record it in the engine room under the right
+3. After a meaningful change or decision, record it in the engine room under the right
    category — and set the right status.
-3. Never delete data or run a destructive change without explaining it to Cat and
+4. Never delete data or run a destructive change without explaining it to Cat and
    getting an OK.
-4. **At the end of every session**, tidy the engine room:
+5. **At the end of every session**, tidy the engine room:
    - Mark completed todos as `done`
    - Create a session summary (category `session`) with the date and what was built or decided
    - Update any `schema` or `architecture` docs that changed
