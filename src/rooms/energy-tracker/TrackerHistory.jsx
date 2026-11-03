@@ -271,8 +271,11 @@ function DayCell({ date, entry, entryMap, entriesArr, thresholds, settings, onCl
   if (entry) {
     stars = ARC_STARS
     const isCritical = leVal >= (thresholds.critical ?? 30)
-    if (isCritical) {
-      // Red (crisis) takes priority over purple — purple is a recovery state, not a crisis state
+    const extendOverride = d?.purpleOverride === 'extend'
+    if (isCritical && !extendOverride) {
+      // Red (crisis) takes priority over automatic purple — purple is a recovery
+      // state, not a crisis state. But an explicit "extend" override is Cat's own
+      // call that today is recovery, so purple wins over red there.
       starColor = bandColor(leVal, thresholds)
       glowClass = peakGlowClass(leVal, thresholds)
     } else if (isPurple) {
