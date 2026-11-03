@@ -18,7 +18,7 @@ import {
 import { seedEntry, loadSeededEventIds } from '../lost-found/lib/lostFoundDb.js'
 import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib/db.js'
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
-import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState } from '../../shared/lib/math.js'
+import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState, entryThresholds } from '../../shared/lib/math.js'
 import RegulationGrid from './RegulationGrid.jsx'
 import { openingBand, greetingWindowFor, loadSetTheDay } from '../../shared/lib/setTheDay.js'
 import {
@@ -610,7 +610,7 @@ function WeekStrip({ weekStart, selectedDate, entryMap, thresholds, todayStr, on
           const isSelected = ds === selectedDate
           const isToday   = ds === todayStr
           const isFuture  = ds > todayStr
-          const color     = entry ? hedPeakColor(leVal, thresholds) : undefined
+          const color     = entry ? hedPeakColor(leVal, entryThresholds(entry.entry_data, thresholds)) : undefined
           return (
             <button key={ds}
               className={[
@@ -650,6 +650,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus]   = useState('')
   const [stampedTax, setStampedTax]   = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [stampedThr, setStampedThr]   = useState(settings.livedExperienceThresholds)
   const [seededIds,  setSeededIds]    = useState(new Set())
   const [purpleOverride, setPurpleOverride] = useState(null)
   const todayStr = todayDateStr()
@@ -691,6 +692,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
         const existing = rows.find(e => e.date === dateStr)
         if (existing) {
           setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setStampedThr(entryThresholds(existing.entry_data, settings.livedExperienceThresholds))
           setPurpleOverride(existing.entry_data.purpleOverride ?? null)
           const state = dbToInternal(existing)
           setUserEvents(state.userEvents)
@@ -700,6 +702,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
           setGoodSigns(state.goodSigns)
           setMeltdown(state.meltdown)
         } else {
+          setStampedThr(settings.livedExperienceThresholds)
           setUserEvents([])
           setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
           setRecovery(false)
@@ -830,7 +833,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
         <div className="hed-sky-num">
           {/* lived experience takes the day's band colour — same logic the today
               sky view uses for its LE figure (gold/orange/red/purple). */}
-          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), settings.livedExperienceThresholds, purpleState.isPurple) }}>
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, purpleState.isPurple) }}>
             {loading ? '·' : skyNums.le}
           </span>
           <span className="hed-sky-lbl">lived exp</span>
@@ -1106,7 +1109,7 @@ function RollingStrip({ anchorEnd, selectedDate, entryMap, thresholds, todayStr,
           if (entered) {
             const leVal = entry.entry_data?.livedExperience ?? entry.entry_data?.closingBalance ?? 0
             const ps    = getPurpleState(ds, allEntries, purpleFloors, entry.entry_data?.purpleOverride ?? null)
-            color = bandColor(Math.round(leVal), thresholds, ps.isPurple)
+            color = bandColor(Math.round(leVal), entryThresholds(entry.entry_data, thresholds), ps.isPurple)
           }
           const cls = [
             'tsky-day',
@@ -1177,6 +1180,7 @@ function TodayLanding({ session, settings, resetKey, onEditAction }) {
   const [yesterdayClosing, setYesterdayClosing] = useState(0)
   const [saveStatus, setSaveStatus] = useState('')
   const [stampedTax, setStampedTax] = useState(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+  const [stampedThr, setStampedThr] = useState(settings.livedExperienceThresholds)
   const [seededIds, setSeededIds]   = useState(new Set())
   const [purpleOverride, setPurpleOverride] = useState(null)
   const backfilledRef = useRef(false)
@@ -1212,6 +1216,7 @@ function TodayLanding({ session, settings, resetKey, onEditAction }) {
         const existing = entries.find(e => e.date === dateStr)
         if (existing) {
           setStampedTax(existing.entry_data.autisticTaxRate ?? settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setStampedThr(entryThresholds(existing.entry_data, settings.livedExperienceThresholds))
           setPurpleOverride(existing.entry_data.purpleOverride ?? null)
           const state = dbToInternal(existing)
           setUserEvents(state.userEvents)
@@ -1222,6 +1227,7 @@ function TodayLanding({ session, settings, resetKey, onEditAction }) {
           setMeltdown(state.meltdown)
         } else {
           setStampedTax(settings.taxValue ?? DEFAULT_AUTISTIC_TAX)
+          setStampedThr(settings.livedExperienceThresholds)
           setPurpleOverride(null)
           setUserEvents([])
           setRegulation({ sensory: 0, av: 0, env: 0, body: 0 })
@@ -1421,7 +1427,7 @@ function TodayLanding({ session, settings, resetKey, onEditAction }) {
         </div>
         <div className="hed-sky-sep">·</div>
         <div className="hed-sky-num">
-          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), settings.livedExperienceThresholds, purpleState.isPurple) }}>
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, purpleState.isPurple) }}>
             {loading ? '·' : skyNums.le}
           </span>
           <span className="hed-sky-lbl">lived exp</span>

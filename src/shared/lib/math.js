@@ -197,6 +197,17 @@ export function bandColor(leVal, thresholds, isPurple = false) {
   return '#2FBE86'                         // jade
 }
 
+// Per-day thresholds: the values stamped onto the entry when it was saved, so a
+// day is always banded under the rules it was lived under (e.g. the Nov 2026
+// re-banding applies from Sep 1 only). Falls back to current settings.
+export function entryThresholds(entryData, fallback) {
+  return {
+    yellow:   entryData?.yellowThreshold   ?? fallback?.yellow   ?? 15,
+    orange:   entryData?.orangeThreshold   ?? fallback?.orange   ?? 25,
+    critical: entryData?.criticalThreshold ?? fallback?.critical ?? 30,
+  }
+}
+
 export function bandGlowClass(leVal, thresholds, isPurple = false) {
   if (isPurple) return 'arc-glow--purple'
   const band = bandOf(leVal, thresholds)
