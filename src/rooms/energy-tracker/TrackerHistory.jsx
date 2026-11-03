@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 // db.js (old table) import removed — history always uses loadAllEntriesV2 via prop
-import { computeDisplayValues, bandColor, resolveOpeningBalance, entryThresholds } from '../../shared/lib/math.js'
+import { computeDisplayValues, bandColor, resolveOpeningBalance, entryThresholds, paintsPurple } from '../../shared/lib/math.js'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -270,17 +270,10 @@ function DayCell({ date, entry, entryMap, entriesArr, thresholds, settings, onCl
   let stars, starColor, glowClass = ''
   if (entry) {
     stars = ARC_STARS
-    // Band each day under its own stamped thresholds, not today's settings
+    // Band each day under its own stamped thresholds, not today's settings;
+    // paintsPurple (math.js) holds the shared purple-vs-red priority rule.
     const dayThr = entryThresholds(d, thresholds)
-    const isCritical = leVal >= (dayThr.critical ?? 30)
-    const extendOverride = d?.purpleOverride === 'extend'
-    if (isCritical && !extendOverride) {
-      // Red (crisis) takes priority over automatic purple — purple is a recovery
-      // state, not a crisis state. But an explicit "extend" override is Cat's own
-      // call that today is recovery, so purple wins over red there.
-      starColor = bandColor(leVal, dayThr)
-      glowClass = peakGlowClass(leVal, dayThr)
-    } else if (isPurple) {
+    if (paintsPurple({ isPurple, override: d?.purpleOverride ?? null, meltdown: d?.meltdown ?? false, leVal, thresholds: dayThr })) {
       starColor = '#A673E4'
       glowClass = 'arc-glow--purple'
     } else {

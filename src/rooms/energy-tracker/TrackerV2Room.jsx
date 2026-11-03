@@ -18,7 +18,7 @@ import {
 import { seedEntry, loadSeededEventIds } from '../lost-found/lib/lostFoundDb.js'
 import { saveThresholds, saveTaxValue, savePurpleFloors } from '../../shared/lib/db.js'
 import { todayDateStr, todayDisplayStr } from '../../shared/lib/dates.js'
-import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState, entryThresholds } from '../../shared/lib/math.js'
+import { computeDisplayValues, taxActive, resolveOpeningBalance, DEFAULT_AUTISTIC_TAX, bandOf, bandColor, getPurpleState, entryThresholds, paintsPurple } from '../../shared/lib/math.js'
 import RegulationGrid from './RegulationGrid.jsx'
 import { openingBand, greetingWindowFor, loadSetTheDay } from '../../shared/lib/setTheDay.js'
 import {
@@ -833,7 +833,7 @@ function HistoryDateEditor({ session, settings, dateStr: initialDateStr, onBack,
         <div className="hed-sky-num">
           {/* lived experience takes the day's band colour — same logic the today
               sky view uses for its LE figure (gold/orange/red/purple). */}
-          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, purpleState.isPurple) }}>
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, paintsPurple({ isPurple: purpleState.isPurple, override: purpleOverride, meltdown, leVal: Math.round(skyNums.le), thresholds: stampedThr })) }}>
             {loading ? '·' : skyNums.le}
           </span>
           <span className="hed-sky-lbl">lived exp</span>
@@ -1107,9 +1107,16 @@ function RollingStrip({ anchorEnd, selectedDate, entryMap, thresholds, todayStr,
           const entered    = !!entry && !entry.entry_data?.autoFilled
           let color
           if (entered) {
-            const leVal = entry.entry_data?.livedExperience ?? entry.entry_data?.closingBalance ?? 0
-            const ps    = getPurpleState(ds, allEntries, purpleFloors, entry.entry_data?.purpleOverride ?? null)
-            color = bandColor(Math.round(leVal), entryThresholds(entry.entry_data, thresholds), ps.isPurple)
+            const leVal  = entry.entry_data?.livedExperience ?? entry.entry_data?.closingBalance ?? 0
+            const ps     = getPurpleState(ds, allEntries, purpleFloors, entry.entry_data?.purpleOverride ?? null)
+            const dayThr = entryThresholds(entry.entry_data, thresholds)
+            color = bandColor(Math.round(leVal), dayThr, paintsPurple({
+              isPurple: ps.isPurple,
+              override: entry.entry_data?.purpleOverride ?? null,
+              meltdown: entry.entry_data?.meltdown ?? false,
+              leVal: Math.round(leVal),
+              thresholds: dayThr,
+            }))
           }
           const cls = [
             'tsky-day',
@@ -1427,7 +1434,7 @@ function TodayLanding({ session, settings, resetKey, onEditAction }) {
         </div>
         <div className="hed-sky-sep">·</div>
         <div className="hed-sky-num">
-          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, purpleState.isPurple) }}>
+          <span className="hed-sky-val" style={{ color: bandColor(Math.round(skyNums.le), stampedThr, paintsPurple({ isPurple: purpleState.isPurple, override: purpleOverride, meltdown, leVal: Math.round(skyNums.le), thresholds: stampedThr })) }}>
             {loading ? '·' : skyNums.le}
           </span>
           <span className="hed-sky-lbl">lived exp</span>

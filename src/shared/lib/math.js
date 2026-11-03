@@ -197,6 +197,20 @@ export function bandColor(leVal, thresholds, isPurple = false) {
   return '#2FBE86'                         // jade
 }
 
+// THE one purple-vs-red display rule — every view that paints a day must use
+// this, so the calendar, strips and editor never disagree:
+//   1. Cat's explicit "extend" override → purple, always.
+//   2. Otherwise crisis outranks purple (purple is a recovery state, not a
+//      crisis state): a day with crisis marked (meltdown), or whose lived
+//      experience is at/above its critical threshold, paints its real band.
+//   3. Otherwise purple when the day is a purple (recovery) day.
+export function paintsPurple({ isPurple, override, meltdown, leVal, thresholds }) {
+  if (!isPurple) return false
+  if (override === 'extend') return true
+  if (meltdown) return false
+  return leVal < (thresholds?.critical ?? 30)
+}
+
 // Per-day thresholds: the values stamped onto the entry when it was saved, so a
 // day is always banded under the rules it was lived under (e.g. the Nov 2026
 // re-banding applies from Sep 1 only). Falls back to current settings.
